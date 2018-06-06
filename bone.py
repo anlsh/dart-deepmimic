@@ -42,6 +42,7 @@ class Bone:
                                                             [0,0,0])
         self.ttrans, self.ttrans_inv = get_transform_matrix([0,0,0], [0,0,0])
 
+        # TODO All of these need to be updated to form "set_theta_radians"
         def set_rx(tx):
             self.theta_degrees = np.array([tx, 0, 0])
 

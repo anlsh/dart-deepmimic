@@ -42,6 +42,8 @@ def dump_bodies(skeleton, skeleton_xml):
     # TODO Currently it does not dump the root. This should probably(?) be fixed
     """
 
+    skeleton.root.direction = np.array([0, 0, 0])
+    skeleton.root.set_theta(90, 0, 0)
     skeleton.update_bone_positions()
 
     for bone in [skeleton.root] + skeleton.bones:
@@ -56,7 +58,7 @@ def dump_bodies(skeleton, skeleton_xml):
 
         inertia_xml = ET.SubElement(body_xml, "inertia")
         mass_xml = ET.SubElement(inertia_xml, "mass")
-        mass_xml.text = str(0)
+        mass_xml.text = str(1)
         ET.SubElement(inertia_xml, "offset").text = "0 0 0"
 
         def add_cylinder(xml_parent):
@@ -219,5 +221,3 @@ if __name__ == "__main__":
                            start_flag + "\n" + new_skel + "\n" + end_flag,
                            file_text, flags=re.DOTALL)
         f.write(file_text)
-
-    print(file_text)
