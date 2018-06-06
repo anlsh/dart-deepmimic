@@ -87,10 +87,9 @@ def rmatrix_v2x(vector):
     theta = -atan2(-1 * z, y)
     alpha = -atan2((z * sin(theta) - y * cos(theta)), x)
 
-    reverse = np.array([[cos(alpha), -1 * sin(alpha) * cos(theta), sin(alpha) * sin(theta)],
+    return np.array([[cos(alpha), -1 * sin(alpha) * cos(theta), sin(alpha) * sin(theta)],
                         [sin(alpha), cos(alpha) * cos(theta), -1 * cos(alpha) * sin(theta)],
                         [0, sin(theta), cos(theta)]])
-    return np.linalg.inv(reverse)
 
 def x2v_angles(vector):
 

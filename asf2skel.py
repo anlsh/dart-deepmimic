@@ -29,6 +29,9 @@ def vec2string(vec):
     """
     return " ".join([num2string(i) for i in vec])
 
+def bodyname(bone):
+    return bone.name + "_body"
+
 def dump_bodies(skeleton, skeleton_xml):
     """
     Given an XML element (an ETElement), dump the skeleton's bone objects
@@ -39,17 +42,16 @@ def dump_bodies(skeleton, skeleton_xml):
 
     It also handles all the calculations concerning axes and joints
 
-    # TODO Currently it does not dump the root. This should probably(?) be fixed
     """
 
-    skeleton.root.direction = np.array([0, 0, 0])
-    skeleton.root.set_theta(90, 0, 0)
+    # Ensure all positions are at their "default" values; also, we need to make use
+    # of the per-instance attributes which the function adds/sets
     skeleton.update_bone_positions()
 
     for bone in [skeleton.root] + skeleton.bones:
 
         body_xml = ET.SubElement(skeleton_xml, "body")
-        body_xml.set("name", bone.name)
+        body_xml.set("name", bodyname(bone))
 
         tform_text = vec2string(np.append(bone.base_pos, \
                                     rotationMatrixToEulerAngles( \
@@ -81,104 +83,100 @@ def dump_bodies(skeleton, skeleton_xml):
 
 
         # TODO Figure out how to do things properly
-        # TODO Add collision xml back in
+        # TODO Add collision xml back in, the process will be exactly as below
+        # Dart doesn't provde functions for putting a bone along an vector, so I
+        # construct a transformation bringing the vector to the x-axis, invert it
+        # then define the geometry along the x-axis
         vis_xml = ET.SubElement(body_xml, "visualization_shape")
         direction_matrix = rmatrix_v2x(bone.direction)
-        direction_matrix = np.linalg.inv(direction_matrix)
-        # rangles = x2v_angles(bone.direction)
         rangles = rotationMatrixToEulerAngles(direction_matrix)
 
+        # The coordinate for a box is that of its center instead of an edge, so I move the
+        # center out so that the bone is positioned properly
         trans_offset = np.average([bone.base_pos, bone.end_pos], axis=0) - bone.base_pos
         ET.SubElement(vis_xml, "transformation").text = vec2string(trans_offset) + " " + \
                                                         vec2string(rangles)
         add_box(vis_xml)
 
+def write_joint_xml(skeleton_xml, bone):
+
+    joint_xml = ET.SubElement(skeleton_xml, "joint")
+
+    ET.SubElement(joint_xml, "transformation").text = "0 0 0 0 0 0"
+    ET.SubElement(joint_xml, "parent").text = bodyname(bone.parent)
+    ET.SubElement(joint_xml, "child").text = bodyname(bone)
+    # TODO Come up with a better naming scheme if needed
+    joint_xml.set("name", bone.name)
+
+    axes = bone.dofs.replace("r", "").split(" ") if bone.dofs \
+            is not None else ""
+
+
+    jtype = ""
+    if len(axes) == 0:
+        # TODO turns out that fixed joint type is unsupported, lucky me...
+        # I can maybe make a revolute joint with upper and lower limit of 0?
+        # raise NotImplementedError("Fixed joint type unsupported" + child.name)
+        jtype = "free"
+    elif len(axes) == 1:
+        jtype = "revolute"
+    elif len(axes) == 2:
+        jtype = "universal"
+    elif len(axes) == 3:
+        jtype = "euler"
+        ET.SubElement(joint_xml, "axis_order").text = "xyz"
+    else:
+        raise RuntimeError("Invalid number of axes")
+
+    joint_xml.set("type", jtype)
+    for index, axis in enumerate(axes):
+        axis_tag = "axis" + ("" if index == 0 else str(index + 1))
+
+        axis_vstr = ""
+        if axis == "x":
+            axis_vstr = "1 0 0"
+        elif axis == "y":
+            axis_vstr = "0 1 0"
+        elif axis == "z":
+            axis_vstr = "0 0 1"
+
+        axis_xml = ET.SubElement(joint_xml, axis_tag)
+
+        ET.SubElement(axis_xml, "xyz").text = axis_vstr
+        # TODO Insert this and hope things work
+        # TODO I dont think it does anything
+        # ET.SubElement(axis_xml, "use_parent_model_frame")
+        # TODO implement joint limits!!
+        # limit_xml = ET.SubElement(axis_xml, "limit")
+        # ET.SubElement(limit_xml, "lower").text = "-3"
+        # ET.SubElement(limit_xml, "upper").text = "3"
+
+        # TODO implement dynamics
+        # dynamics = ET.SubElement(axis_xml, "dynamics")
+        # ET.SubElement(dynamics, "damping").text = "1"
+        # ET.SubElement(dynamics, "stiffness").text = "0"
+
+
+    # TODO Setting positions to 0 makes me a bit nervous as to why it
+    # doesn't work...
+    # Stuff that shouldnt be required but included just to be safe
+    # ET.SubElement(joint_xml, "init_pos").text = " ".join(["0"] * len(axes))
+    # ET.SubElement(joint_xml, "init_vel").text = "0"
+
 def dump_joints(skeleton, skeleton_xml):
     """Given a skeleton object and an xml root, dump joints
-
-    # TODO It does not properly handle the root. Fix that
     """
-
-    # # Root gets a special joint
-    # root_joint_xml = ET.SubElement(skeleton_xml, "joint")
-    # root_joint_xml.set("name", "world--root")
-    # root_joint_xml.set("type", "free")
-
-    def write_joint_xml(joint_xml_root, parent, child):
-
-        ET.SubElement(joint_xml_root, "transformation").text = "0 0 0 0 0 0"
-        ET.SubElement(joint_xml_root, "parent").text = parent.name
-        ET.SubElement(joint_xml_root, "child").text = child.name
-        # TODO Come up with a better naming scheme if needed
-        joint_xml_root.set("name", parent.name + "_to_" + child.name)
-
-        axes = parent.dofs.replace("r", "").split(" ") if parent.dofs \
-               is not None else ""
-
-
-        # Setting the joint type is what causes things to crap out
-        jtype = ""
-        if len(axes) == 0:
-            # TODO turns out that fixed joint type is unsupported, lucky me...
-            # I can maybe make a revolute joint with upper and lower limit of 0?
-            # raise NotImplementedError("Fixed joint type unsupported" + child.name)
-            jtype = "free"
-        elif len(axes) == 1:
-            jtype = "revolute"
-        elif len(axes) == 2:
-            jtype = "universal"
-        elif len(axes) == 3:
-            jtype = "euler"
-            ET.SubElement(joint_xml_root, "axis_order").text = "xyz"
-        else:
-            raise RuntimeError("Invalid number of axes")
-
-        joint_xml_root.set("type", jtype)
-        for index, axis in enumerate(axes):
-            axis_tag = "axis" + ("" if index == 0 else str(index + 1))
-
-            axis_vstr = ""
-            if axis == "x":
-                axis_vstr = "1 0 0"
-            elif axis == "y":
-                axis_vstr = "0 1 0"
-            elif axis == "z":
-                axis_vstr = "0 0 1"
-
-            axis_xml = ET.SubElement(joint_xml_root, axis_tag)
-
-            ET.SubElement(axis_xml, "xyz").text = axis_vstr
-            # TODO Insert this and hope things work
-            # TODO I dont think it does anything
-            # ET.SubElement(axis_xml, "use_parent_model_frame")
-            # TODO implement joint limits!!
-            # limit_xml = ET.SubElement(axis_xml, "limit")
-            # ET.SubElement(limit_xml, "lower").text = "-3"
-            # ET.SubElement(limit_xml, "upper").text = "3"
-
-            # TODO implement dynamics
-            # dynamics = ET.SubElement(axis_xml, "dynamics")
-            # ET.SubElement(dynamics, "damping").text = "1"
-            # ET.SubElement(dynamics, "stiffness").text = "0"
-
-
-        # Stuff that shouldnt be required but included just to be safe
-        # ET.SubElement(joint_xml_root, "init_pos").text = " ".join(["0"] * len(axes))
-        # ET.SubElement(joint_xml_root, "init_vel").text = "0"
 
     # Setup a special joint for the root
     root_joint = ET.SubElement(skeleton_xml, "joint")
     root_joint.set("name", "world_to_root")
     ET.SubElement(root_joint, "parent").text = "world"
-    ET.SubElement(root_joint, "child").text = skeleton.root.name
+    ET.SubElement(root_joint, "child").text = bodyname(skeleton.root)
     root_joint.set("type", "free")
 
     for bone in skeleton.bones:
 
-        parent, child = bone.parent, bone
-
-        joint_xml = ET.SubElement(skeleton_xml, "joint")
-        write_joint_xml(joint_xml, parent, child)
+        write_joint_xml(skeleton_xml, bone)
 
 def dump_asf_to_skel(skeleton):
 
