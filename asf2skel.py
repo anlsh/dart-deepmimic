@@ -160,8 +160,9 @@ def write_joint_xml(skeleton_xml, bone):
     # TODO Setting positions to 0 makes me a bit nervous as to why it
     # doesn't work...
     # Stuff that shouldnt be required but included just to be safe
-    # ET.SubElement(joint_xml, "init_pos").text = " ".join(["0"] * len(axes))
-    # ET.SubElement(joint_xml, "init_vel").text = "0"
+    if len(axes) != 0:
+        ET.SubElement(joint_xml, "init_pos").text = " ".join(["0"] * len(axes))
+        ET.SubElement(joint_xml, "init_vel").text = "0"
 
 def dump_joints(skeleton, skeleton_xml):
     """Given a skeleton object and an xml root, dump joints
