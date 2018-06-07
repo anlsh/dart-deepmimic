@@ -76,9 +76,9 @@ def dvector2rads(degrees):
     """
     return np.multiply(pi/180, degrees)
 
-def rmatrix_v2x(vector):
+def rmatrix_x2v(vector):
     """
-    Gives the rotation matrix which will rotate the given vector to the x axis
+    Gives the rotation matrix which will rotate x axis to the given vector
     vector should be a unit 3d vector
 
     Sourced from https://goo.gl/ZGjFEs

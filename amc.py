@@ -27,4 +27,4 @@ class AMC:
         skeleton.root.theta_degrees = np.array(root_data[3:])
 
         for bone_name, bone_data in frame[1:]:
-            skeleton.name2bone[bone_name].set_theta(*bone_data)
+            skeleton.name2bone[bone_name].set_theta_degrees(*bone_data)

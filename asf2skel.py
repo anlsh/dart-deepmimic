@@ -32,6 +32,24 @@ def vec2string(vec):
 def bodyname(bone):
     return bone.name + "_body"
 
+def add_cylinder(xml_parent, length):
+
+    geo_xml = ET.SubElement(xml_parent, "geometry")
+
+    geo_cylinder = ET.SubElement(geo_xml, "cylinder")
+    radius = ET.SubElement(geo_cylinder, "radius")
+    height = ET.SubElement(geo_cylinder, "height")
+    radius.text = num2string(CYLINDER_RADIUS)
+    height.text = num2string(length)
+
+def add_box(xml_parent, length):
+    geo_xml = ET.SubElement(xml_parent, "geometry")
+    geo_box = ET.SubElement(geo_xml, "box")
+    box_size = ET.SubElement(geo_box, "size")
+    # Having bone length along x definitely the right move
+    box_size.text = vec2string([length, CYLINDER_RADIUS,
+                                CYLINDER_RADIUS])
+
 def dump_bodies(skeleton, skeleton_xml):
     """
     Given an XML element (an ETElement), dump the skeleton's bone objects
@@ -53,50 +71,54 @@ def dump_bodies(skeleton, skeleton_xml):
         body_xml = ET.SubElement(skeleton_xml, "body")
         body_xml.set("name", bodyname(bone))
 
-        tform_text = vec2string(np.append(bone.base_pos, \
-                                    rotationMatrixToEulerAngles( \
-                                                bone.sum_transform[:3, :3])))
+        ################################
+        # POSITION AND COORDINATE AXES #
+        ################################
+
+        rmatrix = bone.sum_ctrans
+        rslice = rmatrix
+        rslice = rmatrix[:3, :3]
+        print("For " + bone.name + ", rmatrix is \n" + str(rmatrix))
+
+        tform_text = vec2string(np.append(bone.base_pos,
+                                          # [0,0,0]))
+                                          rotationMatrixToEulerAngles(rslice)))
         ET.SubElement(body_xml, "transformation").text = tform_text
 
-        inertia_xml = ET.SubElement(body_xml, "inertia")
-        mass_xml = ET.SubElement(inertia_xml, "mass")
-        mass_xml.text = str(1)
-        ET.SubElement(inertia_xml, "offset").text = "0 0 0"
-
-        def add_cylinder(xml_parent):
-
-            geo_xml = ET.SubElement(xml_parent, "geometry")
-
-            geo_cylinder = ET.SubElement(geo_xml, "cylinder")
-            radius = ET.SubElement(geo_cylinder, "radius")
-            height = ET.SubElement(geo_cylinder, "height")
-            radius.text = num2string(CYLINDER_RADIUS)
-            height.text = num2string(bone.length)
-
-        def add_box(xml_parent):
-            geo_xml = ET.SubElement(xml_parent, "geometry")
-            geo_box = ET.SubElement(geo_xml, "box")
-            box_size = ET.SubElement(geo_box, "size")
-            # Having bone length along x definitely the right move
-            box_size.text = vec2string([bone.length, CYLINDER_RADIUS,
-                                        CYLINDER_RADIUS])
+        ########################################
+        # VISUALIZATION AND COLLISION GEOMETRY #
+        ########################################
 
 
         # TODO Figure out how to do things properly
         # TODO Add collision xml back in, the process will be exactly as below
         # Dart doesn't provde functions for putting a bone along an vector, so I
-        # construct a transformation bringing the vector to the x-axis, invert it
-        # then define the geometry along the x-axis
+        # construct a transformation bringing the x-axis to the vector,
+        # then define the geometry along the "x-axis""
         vis_xml = ET.SubElement(body_xml, "visualization_shape")
-        direction_matrix = rmatrix_v2x(bone.direction)
+        direction_matrix = rmatrix_x2v(bone.direction)
+        direction_matrix = np.linalg.inv(direction_matrix)
         rangles = rotationMatrixToEulerAngles(direction_matrix)
+
+        rangles = [0, 0, 0]
 
         # The coordinate for a box is that of its center instead of an edge, so I move the
         # center out so that the bone is positioned properly
-        trans_offset = np.average([bone.base_pos, bone.end_pos], axis=0) - bone.base_pos
+        # trans_offset = np.average([bone.base_pos, bone.end_pos], axis=0) - bone.base_pos
+        trans_offset = [0, 0, 0]
         ET.SubElement(vis_xml, "transformation").text = vec2string(trans_offset) + " " + \
                                                         vec2string(rangles)
-        add_box(vis_xml)
+        add_box(vis_xml, bone.length)
+
+
+        ###################
+        # INERTIA SECTION #
+        ###################
+
+        inertia_xml = ET.SubElement(body_xml, "inertia")
+        mass_xml = ET.SubElement(inertia_xml, "mass")
+        mass_xml.text = str(1)
+        ET.SubElement(inertia_xml, "offset").text = "0 0 0"
 
 def write_joint_xml(skeleton_xml, bone):
 
@@ -115,12 +137,12 @@ def write_joint_xml(skeleton_xml, bone):
     # TODO maybe I use the raw rotation transform instead of the
     # coordinate-augmented one? I dont think so, but it's something to keep in
     # mind
-
-    # TODO Fantastic, both of the below produce the same result... On the other
+    # TODO Fantastic, both produce the same result... On the other
     # hand, setting positions works now, though that might be entirely
     # unrelated...
     p2c_angular = bone.local_transform[:3, :3]
-    # p2c_angular = angular_transform(bone.theta_radians)
+    p2c_angular = angular_transform(bone.theta_radians)
+    # c2p_angular = p2c_angular
     c2p_angular = np.linalg.inv(p2c_angular)
     c2p_angles = rotationMatrixToEulerAngles(c2p_angular)
     ET.SubElement(joint_xml, "transformation").text = "0 0 0 " + vec2string(c2p_angles)

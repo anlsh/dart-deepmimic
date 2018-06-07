@@ -58,12 +58,15 @@ class Skeleton:
                                                           self.root.direction)
         self.root.base_pos = self.root.offset
         self.root.end_pos = self.root.offset
+        self.root.sum_ctrans = self.root.ctrans
 
 
         for bone in self.bones:
 
             bone.sum_transform = np.matmul(bone.parent.sum_transform,
                                            bone.local_transform)
+
+            bone.sum_ctrans = np.matmul(bone.parent.sum_ctrans, bone.ctrans)
 
             bone.base_pos = np.matmul(bone.sum_transform,
                                       np.array([0,0,0,1]))[:-1]

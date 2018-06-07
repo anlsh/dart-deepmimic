@@ -47,6 +47,8 @@ if __name__ == "__main__":
     s = Skeleton(args.asf)
     amc = AMC(args.amc) if args.amc else None
 
+    s.name2bone["ltibia"].set_theta_degrees(180)
+
     pydart.init()
     world = DotWorld(s, amc, args.scale)
     pydart.gui.viewer.launch(world)

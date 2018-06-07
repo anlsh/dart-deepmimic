@@ -42,7 +42,6 @@ class Bone:
                                                             [0,0,0])
         self.ttrans, self.ttrans_inv = get_transform_matrix([0,0,0], [0,0,0])
 
-        # TODO All of these need to be updated to form "set_theta_radians"
         def set_rx(tx):
             self.theta_degrees = np.array([tx, 0, 0])
 
@@ -68,21 +67,21 @@ class Bone:
             raise RuntimeError("Can't set angles on this joint!")
 
         if dofs == None:
-            self.set_theta = set_invalid
+            self.set_theta_degrees = set_invalid
         elif dofs == "rx":
-            self.set_theta = set_rx
+            self.set_theta_degrees = set_rx
         elif dofs == "ry":
-            self.set_theta = set_ry
+            self.set_theta_degrees = set_ry
         elif dofs == "rz":
-            self.set_theta = set_rz
+            self.set_theta_degrees = set_rz
         elif dofs == "rx ry":
-            self.set_theta = set_rxy
+            self.set_theta_degrees = set_rxy
         elif dofs == "ry rz":
-            self.set_theta = set_ryz
+            self.set_theta_degrees = set_ryz
         elif dofs == "rx rz":
-            self.set_theta = set_rxz
+            self.set_theta_degrees = set_rxz
         elif dofs == "rx ry rz":
-            self.set_theta = set_rxyz
+            self.set_theta_degrees = set_rxyz
         else:
             raise RuntimeError("Invalid dofs: " + str(dofs))
 
@@ -140,11 +139,17 @@ class Bone:
         return self.length * self.direction
 
     @property
+    def rtrans(self):
+
+        ret, _ = get_transform_matrix(self.theta_radians,
+                                      np.array([0,0,0]))
+
+        return ret
+
+    @property
     def local_transform(self):
 
-        rtrans, _ = get_transform_matrix(self._theta,
-                                         np.array([0,0,0]))
         return np.matmul(self.ttrans,
                               np.matmul(self.ctrans,
-                                    np.matmul(rtrans,
+                                    np.matmul(self.rtrans,
                                               self.ctrans_inv)))
