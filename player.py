@@ -38,14 +38,14 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='ASF/AMC Movie player')
 
-    parser.add_argument("--skel", dest="skel")
-    parser.add_argument("--mov", dest="mov", default=None)
+    parser.add_argument("--asf", dest="asf")
+    parser.add_argument("--amc", dest="amc", default=None)
     parser.add_argument("--scale", default=1, type=float)
 
     args = parser.parse_args()
 
-    s = Skeleton(args.skel)
-    amc = AMC(args.mov) if args.mov else None
+    s = Skeleton(args.asf)
+    amc = AMC(args.amc) if args.amc else None
 
     pydart.init()
     world = DotWorld(s, amc, args.scale)
