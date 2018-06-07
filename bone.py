@@ -1,6 +1,7 @@
 import numpy as np
 import math
-from utils3d import *
+
+from transformations import compose_matrix
 
 class Bone:
 
@@ -38,9 +39,12 @@ class Bone:
         self._parent = None
         self.parent = parent
 
-        self.ctrans, self.ctrans_inv = get_transform_matrix(self.axis_radians,
-                                                            [0,0,0])
-        self.ttrans, self.ttrans_inv = get_transform_matrix([0,0,0], [0,0,0])
+        self.ctrans = compose_matrix(angles=self.axis_radians,
+                                     translate=[0,0,0])
+        self.ctrans_inv = np.linalg.inv(self.ctrans)
+
+        self.ttrans = compose_matrix()
+        self.ttrans_inv = np.linalg.inv(self.ttrans)
 
         def set_rx(tx):
             self.theta_degrees = np.array([tx, 0, 0])
@@ -93,8 +97,8 @@ class Bone:
     def parent(self, new):
         self._parent = new
         if self.parent is not None:
-            self.ttrans, self.ttrans_inv = get_transform_matrix([0, 0, 0],
-                                                                self.parent.offset)
+            self.ttrans = compose_matrix(translate=self.parent.offset)
+            self.ttrans_inv = np.linalg.inv(self.ttrans)
 
     @property
     def axis_degrees(self):
@@ -115,8 +119,9 @@ class Bone:
         self.__update_ctransform()
 
     def __update_ctransform(self):
-        self.ctrans, self.ctrans_inv = get_transform_matrix(self.axis_radians,
-                                                                    [0,0,0])
+        self.ctrans = compose_matrix(angles=self.axis_radians,
+                                     translate=[0,0,0])
+        self.ctrans_inv = np.linalg.inv(self.ctrans)
 
     @property
     def theta_degrees(self):
@@ -141,8 +146,7 @@ class Bone:
     @property
     def rtrans(self):
 
-        ret, _ = get_transform_matrix(self.theta_radians,
-                                      np.array([0,0,0]))
+        ret = compose_matrix(angles=self.theta_radians)
 
         return ret
 

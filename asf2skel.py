@@ -1,5 +1,4 @@
 from skeleton import Skeleton
-from utils3d import *
 from xml.dom import minidom
 from xml.etree import ElementTree
 import argparse
@@ -8,6 +7,7 @@ import numpy as np
 import os
 import re
 import xml.etree.ElementTree as ET
+from transformations import euler_from_matrix, compose_matrix
 
 CYLINDER_RADIUS = .5
 
@@ -76,40 +76,37 @@ def dump_bodies(skeleton, skeleton_xml):
         ################################
 
         rmatrix = bone.sum_ctrans
-        rslice = rmatrix
-        rslice = rmatrix[:3, :3]
-        print("For " + bone.name + ", rmatrix is \n" + str(rmatrix))
 
+        print(bone.name + "\n" + str(rmatrix))
         tform_text = vec2string(np.append(bone.base_pos,
                                           # [0,0,0]))
-                                          rotationMatrixToEulerAngles(rslice)))
+                                          euler_from_matrix(rmatrix[:3, :3])))
         ET.SubElement(body_xml, "transformation").text = tform_text
 
         ########################################
         # VISUALIZATION AND COLLISION GEOMETRY #
         ########################################
 
-
-        # TODO Figure out how to do things properly
         # TODO Add collision xml back in, the process will be exactly as below
         # Dart doesn't provde functions for putting a bone along an vector, so I
         # construct a transformation bringing the x-axis to the vector,
         # then define the geometry along the "x-axis""
-        vis_xml = ET.SubElement(body_xml, "visualization_shape")
-        direction_matrix = rmatrix_x2v(bone.direction)
-        direction_matrix = np.linalg.inv(direction_matrix)
-        rangles = rotationMatrixToEulerAngles(direction_matrix)
-
-        rangles = [0, 0, 0]
-
         # The coordinate for a box is that of its center instead of an edge, so I move the
         # center out so that the bone is positioned properly
-        # trans_offset = np.average([bone.base_pos, bone.end_pos], axis=0) - bone.base_pos
-        trans_offset = [0, 0, 0]
-        ET.SubElement(vis_xml, "transformation").text = vec2string(trans_offset) + " " + \
-                                                        vec2string(rangles)
-        add_box(vis_xml, bone.length)
 
+        vis_xml = ET.SubElement(body_xml, "visualization_shape")
+        # direction_matrix = rmatrix_x2v(bone.direction)
+        # direction_matrix = np.linalg.inv(direction_matrix)
+        # rangles = rotationMatrixToEulerAngles(direction_matrix)
+        # rangles = x2v_angles(bone.direction)
+
+        trans_offset = [0, 0, 0]
+        rangles = [0, 0, 0]
+
+        tform_vector = np.append(trans_offset, rangles)
+
+        ET.SubElement(vis_xml, "transformation").text = vec2string(tform_vector)
+        add_box(vis_xml, bone.length)
 
         ###################
         # INERTIA SECTION #
@@ -141,10 +138,10 @@ def write_joint_xml(skeleton_xml, bone):
     # hand, setting positions works now, though that might be entirely
     # unrelated...
     p2c_angular = bone.local_transform[:3, :3]
-    p2c_angular = angular_transform(bone.theta_radians)
+    p2c_angular = compose_matrix(angles=bone.theta_radians)
     # c2p_angular = p2c_angular
     c2p_angular = np.linalg.inv(p2c_angular)
-    c2p_angles = rotationMatrixToEulerAngles(c2p_angular)
+    c2p_angles = euler_from_matrix(c2p_angular)
     ET.SubElement(joint_xml, "transformation").text = "0 0 0 " + vec2string(c2p_angles)
 
     axes = bone.dofs.replace("r", "").split(" ") if bone.dofs \

@@ -3,6 +3,8 @@ from skeleton import Skeleton
 import argparse
 import pydart2 as pydart
 
+from transformations import *
+
 class DotWorld(pydart.World):
 
     def __init__(self, skeleton, amc, scale=1):
@@ -47,7 +49,7 @@ if __name__ == "__main__":
     s = Skeleton(args.asf)
     amc = AMC(args.amc) if args.amc else None
 
-    s.name2bone["ltibia"].set_theta_degrees(180)
+    s.name2bone["lhumerus"].set_theta_degrees(0, 0, 0)
 
     pydart.init()
     world = DotWorld(s, amc, args.scale)

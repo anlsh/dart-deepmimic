@@ -1,7 +1,7 @@
 from cgkit.asfamc import ASFReader
 from bone import Bone
 import numpy as np
-from utils3d import get_transform_matrix
+from transformations import compose_matrix
 
 class Skeleton:
 
@@ -54,8 +54,8 @@ class Skeleton:
 
     def update_bone_positions(self):
 
-        self.root.sum_transform, _ = get_transform_matrix(self.root.theta_radians,
-                                                          self.root.direction)
+        self.root.sum_transform = compose_matrix(angles=self.root.theta_radians,
+                                                 translate=self.root.direction)
         self.root.base_pos = self.root.offset
         self.root.end_pos = self.root.offset
         self.root.sum_ctrans = self.root.ctrans

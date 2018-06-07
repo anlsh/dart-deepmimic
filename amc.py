@@ -2,7 +2,6 @@
 from cgkit.asfamc import AMCReader
 import numpy as np
 import math
-from utils3d import *
 
 class AMC:
 
