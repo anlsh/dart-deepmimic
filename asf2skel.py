@@ -7,6 +7,7 @@ import numpy as np
 import os
 import re
 import xml.etree.ElementTree as ET
+import utils
 from transformations import euler_from_matrix, compose_matrix
 
 CYLINDER_RADIUS = .5
@@ -47,8 +48,9 @@ def add_box(xml_parent, length):
     geo_box = ET.SubElement(geo_xml, "box")
     box_size = ET.SubElement(geo_box, "size")
     # Having bone length along x definitely the right move
-    box_size.text = vec2string([length, CYLINDER_RADIUS,
+    box_size.text = vec2string([5 * CYLINDER_RADIUS, 1.5 * CYLINDER_RADIUS,
                                 CYLINDER_RADIUS])
+    # box_size.text = vec2string([CYLINDER_RADIUS, length, CYLINDER_RADIUS])
 
 def dump_bodies(skeleton, skeleton_xml):
     """
@@ -59,7 +61,6 @@ def dump_bodies(skeleton, skeleton_xml):
     the axes and angles will be messed up
 
     It also handles all the calculations concerning axes and joints
-
     """
 
     # Ensure all positions are at their "default" values; also, we need to make use
@@ -76,8 +77,8 @@ def dump_bodies(skeleton, skeleton_xml):
         ################################
 
         rmatrix = bone.sum_ctrans
-
         print(bone.name + "\n" + str(rmatrix))
+        # print(np.multiply(180 / math.pi, euler_from_matrix(rmatrix[:3, :3])))
         tform_text = vec2string(np.append(bone.base_pos,
                                           # [0,0,0]))
                                           euler_from_matrix(rmatrix[:3, :3])))
@@ -95,11 +96,13 @@ def dump_bodies(skeleton, skeleton_xml):
         # center out so that the bone is positioned properly
 
         vis_xml = ET.SubElement(body_xml, "visualization_shape")
-        # direction_matrix = rmatrix_x2v(bone.direction)
+        direction_matrix = utils.rmatrix_x2v(bone.direction)
         # direction_matrix = np.linalg.inv(direction_matrix)
-        # rangles = rotationMatrixToEulerAngles(direction_matrix)
-        # rangles = x2v_angles(bone.direction)
+        rangles = utils.rotationMatrixToEulerAngles(direction_matrix)
+        # rangles = utils.x2v_angles(bone.direction)
 
+        # trans_offset = bone.offset / 2
+        # trans_offset = [bone.length / 2, 0, 0]
         trans_offset = [0, 0, 0]
         rangles = [0, 0, 0]
 
@@ -137,12 +140,10 @@ def write_joint_xml(skeleton_xml, bone):
     # TODO Fantastic, both produce the same result... On the other
     # hand, setting positions works now, though that might be entirely
     # unrelated...
-    p2c_angular = bone.local_transform[:3, :3]
-    p2c_angular = compose_matrix(angles=bone.theta_radians)
-    # c2p_angular = p2c_angular
-    c2p_angular = np.linalg.inv(p2c_angular)
-    c2p_angles = euler_from_matrix(c2p_angular)
-    ET.SubElement(joint_xml, "transformation").text = "0 0 0 " + vec2string(c2p_angles)
+    c2p_matrix = bone.ctrans_inv[:3, :3]
+    c2p_angles = euler_from_matrix(c2p_matrix)
+    ET.SubElement(joint_xml, "transformation").text = "0 0 0 " \
+                                                      + vec2string(c2p_angles)
 
     axes = bone.dofs.replace("r", "").split(" ") if bone.dofs \
             is not None else ""

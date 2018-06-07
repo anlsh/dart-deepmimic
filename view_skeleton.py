@@ -10,6 +10,8 @@ import pydart2 as pydart
 import argparse
 import math
 
+skel = None
+
 def getViewer(sim, title=None):
 
 	win = PyQt5Window(sim, title)
@@ -17,6 +19,15 @@ def getViewer(sim, title=None):
 	win.scene.set_camera(win.scene.num_cameras()-1)
 	#win.run()
 	return win
+
+class HelpWorld(pydart.World):
+
+    def __init__(self, *args):
+
+        pydart.World.__init__(self, *args)
+
+    def render_with_ri(self, ri):
+        ri.render_axes([0,0,0], 5, r_base_ = .2)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Views a skel file")
@@ -28,15 +39,17 @@ if __name__ == '__main__':
     pydart.init(verbose=True)
     print('pydart initialization OK')
 
-    world = pydart.World(0.0002, args.skel_path)
+    world = HelpWorld(0.0002, args.skel_path)
     skel = world.skeletons[1]
 
     print(skel.dofs)
 
 
+    # humerus: 52, 64
+    # radius: 55, 67
     # tibia: 15, 28
 
-    skel.dofs[28].set_position(math.pi / 2)
+    # skel.dofs[5].set_position(5)
     # print(type(skel.dofs[0]))
     # print(skel.joints)
     print('pydart create_world OK')

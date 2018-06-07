@@ -2,6 +2,7 @@ from amc import AMC
 from skeleton import Skeleton
 import argparse
 import pydart2 as pydart
+import numpy as np
 
 from transformations import *
 
@@ -26,11 +27,35 @@ class DotWorld(pydart.World):
 
         for bone in self.skeleton.bones:
 
-            ri.set_color(1.0, 0, 0)
-
             # if bone.name == "rfemur":
             #     ri.set_color(0.0, 0.0, 0.0)
 
+            if bone.name in ["rhumerus", "lhipjoint"]:
+                ri.set_color(1, 0.0, 0)
+                cy_length = 10
+                cy_base = np.matmul(bone.sum_ctrans, [0, 0, 0, 1])[:3] + bone.base_pos
+                cy_end = np.matmul(bone.sum_ctrans, [cy_length, 0, 0, 1])[:3] + bone.base_pos
+                ri.render_cylinder_two_points(self.scale * cy_base,
+                                              self.scale * cy_end,
+                                              3 * self.scale / 30)
+
+                ri.set_color(0, 1.0, 0)
+                cy_length = 10
+                cy_base = np.matmul(bone.sum_ctrans, [0, 0, 0, 1])[:3] + bone.base_pos
+                cy_end = np.matmul(bone.sum_ctrans, [0, cy_length, 0, 1])[:3] + bone.base_pos
+                ri.render_cylinder_two_points(self.scale * cy_base,
+                                              self.scale * cy_end,
+                                              3 * self.scale / 30)
+                ri.set_color(0, 0.0, 1)
+                cy_length = 10
+                cy_base = np.matmul(bone.sum_ctrans, [0, 0, 0, 1])[:3] + bone.base_pos
+                cy_end = np.matmul(bone.sum_ctrans, [0, 0, cy_length, 1])[:3] + bone.base_pos
+                ri.render_cylinder_two_points(self.scale * cy_base,
+                                              self.scale * cy_end,
+                                              3 * self.scale / 30)
+
+
+            ri.set_color(0.0, 0, 0)
             ri.render_sphere(self.scale * bone.base_pos, 10 * self.scale / 20)
             ri.render_cylinder_two_points(self.scale * bone.base_pos,
                                             self.scale * bone.end_pos,
@@ -49,7 +74,9 @@ if __name__ == "__main__":
     s = Skeleton(args.asf)
     amc = AMC(args.amc) if args.amc else None
 
-    s.name2bone["lhumerus"].set_theta_degrees(0, 0, 0)
+    sq = s.name2bone
+    ss = "lhumerus"
+    sq[ss].set_theta_degrees(90, 0, 0)
 
     pydart.init()
     world = DotWorld(s, amc, args.scale)
