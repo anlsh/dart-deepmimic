@@ -102,11 +102,28 @@ def write_joint_xml(skeleton_xml, bone):
 
     joint_xml = ET.SubElement(skeleton_xml, "joint")
 
-    ET.SubElement(joint_xml, "transformation").text = "0 0 0 0 0 0"
     ET.SubElement(joint_xml, "parent").text = bodyname(bone.parent)
     ET.SubElement(joint_xml, "child").text = bodyname(bone)
     # TODO Come up with a better naming scheme if needed
     joint_xml.set("name", bone.name)
+
+    # The joints are by default in the child link frame. This is a problem since
+    # the asf/amc data is parent-frame oriented (I think :) so set the angular
+    # transformation here The transformation is child frame -> joint frame, so we
+    # take (parent frame -> child frame)^-1
+
+    # TODO maybe I use the raw rotation transform instead of the
+    # coordinate-augmented one? I dont think so, but it's something to keep in
+    # mind
+
+    # TODO Fantastic, both of the below produce the same result... On the other
+    # hand, setting positions works now, though that might be entirely
+    # unrelated...
+    p2c_angular = bone.local_transform[:3, :3]
+    # p2c_angular = angular_transform(bone.theta_radians)
+    c2p_angular = np.linalg.inv(p2c_angular)
+    c2p_angles = rotationMatrixToEulerAngles(c2p_angular)
+    ET.SubElement(joint_xml, "transformation").text = "0 0 0 " + vec2string(c2p_angles)
 
     axes = bone.dofs.replace("r", "").split(" ") if bone.dofs \
             is not None else ""
