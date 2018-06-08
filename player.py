@@ -30,7 +30,7 @@ class DotWorld(pydart.World):
             # if bone.name == "rfemur":
             #     ri.set_color(0.0, 0.0, 0.0)
 
-            if bone.name in ["lhumerus", "lfemur", "ltibia"]:
+            if bone.name in ["lhumerus", "lfemur", "ltibia", "lfoot"]:
                 ri.set_color(1, 0.0, 0)
                 cy_length = 10
                 cy_base = np.matmul(bone.ctrans, [0, 0, 0, 1])[:3] + bone.base_pos

@@ -48,9 +48,9 @@ def add_box(xml_parent, length):
     geo_box = ET.SubElement(geo_xml, "box")
     box_size = ET.SubElement(geo_box, "size")
     # Having bone length along x definitely the right move
-    box_size.text = vec2string([5 * CYLINDER_RADIUS, 1.5 * CYLINDER_RADIUS,
-                                CYLINDER_RADIUS])
-    # box_size.text = vec2string([CYLINDER_RADIUS, length, CYLINDER_RADIUS])
+    # box_size.text = vec2string([5 * CYLINDER_RADIUS, 1.5 * CYLINDER_RADIUS,
+    #                             CYLINDER_RADIUS])
+    box_size.text = vec2string([length, CYLINDER_RADIUS, CYLINDER_RADIUS])
 
 def dump_bodies(skeleton, skeleton_xml):
     """
@@ -81,7 +81,7 @@ def dump_bodies(skeleton, skeleton_xml):
         # print(np.multiply(180 / math.pi, euler_from_matrix(rmatrix[:3, :3])))
         tform_text = vec2string(np.append(bone.base_pos,
                                           # [0,0,0]))
-                                          euler_from_matrix(rmatrix[:3, :3])))
+                                          euler_from_matrix(rmatrix[:3, :3], axes="rxyz")))
         ET.SubElement(body_xml, "transformation").text = tform_text
 
         ########################################
@@ -94,9 +94,8 @@ def dump_bodies(skeleton, skeleton_xml):
         rangles = utils.rotationMatrixToEulerAngles(direction_matrix)
         # rangles = utils.x2v_angles(bone.direction)
 
-        # trans_offset = bone.offset / 2
-        # trans_offset = [bone.length / 2, 0, 0]
         trans_offset = [0, 0, 0]
+        # trans_offset = [0, 0, 0]
         rangles = [0, 0, 0]
 
         tform_vector = np.append(trans_offset, rangles)
