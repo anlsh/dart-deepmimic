@@ -73,9 +73,6 @@ class Skel_AMC(AMC):
 
         frame = self.frames[framenum]
         root_data = frame[0][1]
-        # TODO Implement proper handling of root
-        # skeleton.root.direction = np.array(root_data[0:3])
-        # skeleton.root.theta_degrees = np.array(root_data[3:])
 
         def zip_dofs(dof_list, pos_list):
 

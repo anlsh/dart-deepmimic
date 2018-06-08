@@ -119,23 +119,8 @@ def write_joint_xml(skeleton_xml, bone):
 
     joint_xml = ET.SubElement(skeleton_xml, "joint")
 
-    ####################
-    # VERY DEBUG STUFF #
-    ####################
-
-    # # TODO EMERGENCY COMMENT THIS STUFF OUT
-    # ET.SubElement(joint_xml, "parent").text = "world"
-    # ET.SubElement(joint_xml, "child").text = bodyname(bone)
-    # joint_xml.set("type", "free")
-    # return
-
-    ###################
-    # END DEBUG STUFF #
-    ###################
-
     ET.SubElement(joint_xml, "parent").text = bodyname(bone.parent)
     ET.SubElement(joint_xml, "child").text = bodyname(bone)
-    # TODO Come up with a better naming scheme if needed
     joint_xml.set("name", bone.name)
 
     # The joints are by default in the child link frame. This is a problem since
@@ -143,15 +128,6 @@ def write_joint_xml(skeleton_xml, bone):
     # transformation here The transformation is child frame -> joint frame, so we
     # take (parent frame -> child frame)^-1
 
-    # c2p_matrix = bone.parent.ctrans[:3, :3]
-    # TODO What's the order of the transformation? Applied left to right or right to left?
-    # c2p_matrix = np.matmul(bone.parent.ctrans[:3, :3], bone.ctrans_inv[:3, :3])
-    # c2p2_matrix = np.matmul(bone.ctrans_inv[:3, :3], bone.parent.ctrans[:3, :3])
-
-    # print(bone.name + " \n" + str(c2p_matrix) + "\n" + str(c2p2_matrix))
-
-    # c2p_matrix = np.linalg.inv(c2p_matrix)
-    # c2p_angles = euler_from_matrix(c2p_matrix, axes="sxyz")
     ET.SubElement(joint_xml, "transformation").text = "0 0 0 "\
                                                       "0 0 0"
                                                       # + vec2string(c2p_angles)
