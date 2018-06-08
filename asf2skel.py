@@ -76,7 +76,7 @@ def dump_bodies(skeleton, skeleton_xml):
         # POSITION AND COORDINATE AXES #
         ################################
 
-        rmatrix = bone.sum_ctrans
+        rmatrix = bone.ctrans
         print(bone.name + "\n" + str(rmatrix))
         # print(np.multiply(180 / math.pi, euler_from_matrix(rmatrix[:3, :3])))
         tform_text = vec2string(np.append(bone.base_pos,
@@ -87,13 +87,6 @@ def dump_bodies(skeleton, skeleton_xml):
         ########################################
         # VISUALIZATION AND COLLISION GEOMETRY #
         ########################################
-
-        # TODO Add collision xml back in, the process will be exactly as below
-        # Dart doesn't provde functions for putting a bone along an vector, so I
-        # construct a transformation bringing the x-axis to the vector,
-        # then define the geometry along the "x-axis""
-        # The coordinate for a box is that of its center instead of an edge, so I move the
-        # center out so that the bone is positioned properly
 
         vis_xml = ET.SubElement(body_xml, "visualization_shape")
         direction_matrix = utils.rmatrix_x2v(bone.direction)
@@ -123,6 +116,20 @@ def dump_bodies(skeleton, skeleton_xml):
 def write_joint_xml(skeleton_xml, bone):
 
     joint_xml = ET.SubElement(skeleton_xml, "joint")
+
+    ####################
+    # VERY DEBUG STUFF #
+    ####################
+
+    # TODO EMERGENCY COMMENT THIS STUFF OUT
+    ET.SubElement(joint_xml, "parent").text = "world"
+    ET.SubElement(joint_xml, "child").text = bodyname(bone)
+    joint_xml.set("type", "free")
+    return
+
+    ###################
+    # END DEBUG STUFF #
+    ###################
 
     ET.SubElement(joint_xml, "parent").text = bodyname(bone.parent)
     ET.SubElement(joint_xml, "child").text = bodyname(bone)

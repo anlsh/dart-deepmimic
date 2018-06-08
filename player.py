@@ -30,26 +30,26 @@ class DotWorld(pydart.World):
             # if bone.name == "rfemur":
             #     ri.set_color(0.0, 0.0, 0.0)
 
-            if bone.name in ["rhumerus", "lhipjoint"]:
+            if bone.name in ["lhumerus", "lfemur", "ltibia"]:
                 ri.set_color(1, 0.0, 0)
                 cy_length = 10
-                cy_base = np.matmul(bone.sum_ctrans, [0, 0, 0, 1])[:3] + bone.base_pos
-                cy_end = np.matmul(bone.sum_ctrans, [cy_length, 0, 0, 1])[:3] + bone.base_pos
+                cy_base = np.matmul(bone.ctrans, [0, 0, 0, 1])[:3] + bone.base_pos
+                cy_end = np.matmul(bone.ctrans, [cy_length, 0, 0, 1])[:3] + bone.base_pos
                 ri.render_cylinder_two_points(self.scale * cy_base,
                                               self.scale * cy_end,
                                               3 * self.scale / 30)
 
                 ri.set_color(0, 1.0, 0)
                 cy_length = 10
-                cy_base = np.matmul(bone.sum_ctrans, [0, 0, 0, 1])[:3] + bone.base_pos
-                cy_end = np.matmul(bone.sum_ctrans, [0, cy_length, 0, 1])[:3] + bone.base_pos
+                cy_base = np.matmul(bone.ctrans, [0, 0, 0, 1])[:3] + bone.base_pos
+                cy_end = np.matmul(bone.ctrans, [0, cy_length, 0, 1])[:3] + bone.base_pos
                 ri.render_cylinder_two_points(self.scale * cy_base,
                                               self.scale * cy_end,
                                               3 * self.scale / 30)
                 ri.set_color(0, 0.0, 1)
                 cy_length = 10
-                cy_base = np.matmul(bone.sum_ctrans, [0, 0, 0, 1])[:3] + bone.base_pos
-                cy_end = np.matmul(bone.sum_ctrans, [0, 0, cy_length, 1])[:3] + bone.base_pos
+                cy_base = np.matmul(bone.ctrans, [0, 0, 0, 1])[:3] + bone.base_pos
+                cy_end = np.matmul(bone.ctrans, [0, 0, cy_length, 1])[:3] + bone.base_pos
                 ri.render_cylinder_two_points(self.scale * cy_base,
                                               self.scale * cy_end,
                                               3 * self.scale / 30)
