@@ -176,6 +176,15 @@ def write_joint_xml(skeleton_xml, bone):
     else:
         raise RuntimeError("Invalid number of axes")
 
+    if jtype == "free":
+        joint_xml.set("type", "revolute")
+        axis_xml = ET.SubElement(joint_xml, "axis")
+        ET.SubElement(axis_xml, "xyz").text = "1 0 0"
+        limit_xml = ET.SubElement(axis_xml, "limit")
+        ET.SubElement(limit_xml, "lower").text = "0"
+        ET.SubElement(limit_xml, "upper").text = "0"
+        return
+
     joint_xml.set("type", jtype)
     for index, axis in enumerate(axes):
         axis_tag = "axis" + ("" if index == 0 else str(index + 1))
@@ -204,7 +213,7 @@ def write_joint_xml(skeleton_xml, bone):
 
     # Stuff that shouldnt be required but included just to be safe
     if len(axes) != 0:
-        ET.SubElement(joint_xml, "init_pos").text = " ".join(["0"] * len(axes))
+        ET.SubElement(joint_xml, "init_pos").text = " ".join(["0"] * len(axes if axes != 0 else 1))
         ET.SubElement(joint_xml, "init_vel").text = "0"
 
 def dump_joints(skeleton, skeleton_xml):
