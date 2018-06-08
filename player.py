@@ -1,4 +1,4 @@
-from amc import AMC
+from amc import ASF_AMC
 from skeleton import Skeleton
 import argparse
 import pydart2 as pydart
@@ -20,8 +20,7 @@ class DotWorld(pydart.World):
 
         self.count += 1
         if self.amc:
-            self.amc.sync_angles(self.count % self.amc.num_frames,
-                                 self.skeleton)
+            self.amc.sync_angles(self.count % self.amc.num_frames)
 
         self.skeleton.update_bone_positions()
 
@@ -72,7 +71,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     s = Skeleton(args.asf)
-    amc = AMC(args.amc) if args.amc else None
+    amc = ASF_AMC(args.amc, s) if args.amc else None
 
     sq = s.name2bone
     sq["lhumerus"].set_theta_degrees(90, 90, 0)

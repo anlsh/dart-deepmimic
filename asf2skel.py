@@ -151,7 +151,7 @@ def write_joint_xml(skeleton_xml, bone):
     # print(bone.name + " \n" + str(c2p_matrix) + "\n" + str(c2p2_matrix))
 
     # c2p_matrix = np.linalg.inv(c2p_matrix)
-    c2p_angles = euler_from_matrix(c2p_matrix, axes="sxyz")
+    # c2p_angles = euler_from_matrix(c2p_matrix, axes="sxyz")
     ET.SubElement(joint_xml, "transformation").text = "0 0 0 "\
                                                       "0 0 0"
                                                       # + vec2string(c2p_angles)
@@ -213,7 +213,7 @@ def dump_joints(skeleton, skeleton_xml):
 
     # Setup a special joint for the root
     root_joint = ET.SubElement(skeleton_xml, "joint")
-    root_joint.set("name", "world_to_root")
+    root_joint.set("name", "root")
     ET.SubElement(root_joint, "parent").text = "world"
     ET.SubElement(root_joint, "child").text = bodyname(skeleton.root)
     root_joint.set("type", "free")
