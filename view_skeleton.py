@@ -45,12 +45,14 @@ if __name__ == '__main__':
     print(skel.dofs)
 
 
-    # femur: 12
+    # femur: 12 25
     # humerus: 52, 64
     # radius: 55, 67
     # tibia: 15, 28
 
-    skel.dofs[55].set_position(math.pi / 2)
+    skel.dofs[52].set_position(math.pi / 2)
+    # skel.dofs[53].set_position(math.pi / 2)
+    skel.dofs[54].set_position(-math.pi / 2)
     # print(type(skel.dofs[0]))
     # print(skel.joints)
     print('pydart create_world OK')

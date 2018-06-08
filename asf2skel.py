@@ -50,7 +50,7 @@ def add_box(xml_parent, length):
     # Having bone length along x definitely the right move
     # box_size.text = vec2string([5 * CYLINDER_RADIUS, 1.5 * CYLINDER_RADIUS,
     #                             CYLINDER_RADIUS])
-    box_size.text = vec2string([length, CYLINDER_RADIUS, CYLINDER_RADIUS])
+    box_size.text = vec2string([length, 2 * CYLINDER_RADIUS, CYLINDER_RADIUS])
 
 def dump_bodies(skeleton, skeleton_xml):
     """
@@ -143,16 +143,18 @@ def write_joint_xml(skeleton_xml, bone):
     # transformation here The transformation is child frame -> joint frame, so we
     # take (parent frame -> child frame)^-1
 
-    # TODO maybe I use the raw rotation transform instead of the
-    # coordinate-augmented one? I dont think so, but it's something to keep in
-    # mind
-    # TODO Fantastic, both produce the same result... On the other
-    # hand, setting positions works now, though that might be entirely
-    # unrelated...
-    c2p_matrix = np.matmul(bone.parent.ctrans[:3, :3], bone.ctrans_inv[:3, :3])
-    c2p_angles = euler_from_matrix(c2p_matrix)
-    ET.SubElement(joint_xml, "transformation").text = "0 0 0 " \
-                                                      + vec2string(c2p_angles)
+    # c2p_matrix = bone.parent.ctrans[:3, :3]
+    # TODO What's the order of the transformation? Applied left to right or right to left?
+    # c2p_matrix = np.matmul(bone.parent.ctrans[:3, :3], bone.ctrans_inv[:3, :3])
+    # c2p2_matrix = np.matmul(bone.ctrans_inv[:3, :3], bone.parent.ctrans[:3, :3])
+
+    # print(bone.name + " \n" + str(c2p_matrix) + "\n" + str(c2p2_matrix))
+
+    # c2p_matrix = np.linalg.inv(c2p_matrix)
+    c2p_angles = euler_from_matrix(c2p_matrix, axes="sxyz")
+    ET.SubElement(joint_xml, "transformation").text = "0 0 0 "\
+                                                      "0 0 0"
+                                                      # + vec2string(c2p_angles)
 
     axes = bone.dofs.replace("r", "").split(" ") if bone.dofs \
             is not None else ""
@@ -189,9 +191,6 @@ def write_joint_xml(skeleton_xml, bone):
         axis_xml = ET.SubElement(joint_xml, axis_tag)
 
         ET.SubElement(axis_xml, "xyz").text = axis_vstr
-        # TODO Insert this and hope things work
-        # TODO I dont think it does anything
-        # ET.SubElement(axis_xml, "use_parent_model_frame")
         # TODO implement joint limits!!
         # limit_xml = ET.SubElement(axis_xml, "limit")
         # ET.SubElement(limit_xml, "lower").text = "-3"
@@ -203,8 +202,6 @@ def write_joint_xml(skeleton_xml, bone):
         # ET.SubElement(dynamics, "stiffness").text = "0"
 
 
-    # TODO Setting positions to 0 makes me a bit nervous as to why it
-    # doesn't work...
     # Stuff that shouldnt be required but included just to be safe
     if len(axes) != 0:
         ET.SubElement(joint_xml, "init_pos").text = " ".join(["0"] * len(axes))
@@ -229,7 +226,6 @@ def dump_asf_to_skel(skeleton):
 
     skeleton_xml = ET.Element("skeleton")
     skeleton_xml.set("name", skeleton.name)
-    # TODO Again, fill this up with not-zeroes later
     ET.SubElement(skeleton_xml, "transformation").text = "0 0 0 0 0 0"
     dump_bodies(skeleton, skeleton_xml)
     dump_joints(skeleton, skeleton_xml)
