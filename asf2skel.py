@@ -81,7 +81,8 @@ def dump_bodies(skeleton, skeleton_xml):
         # print(np.multiply(180 / math.pi, euler_from_matrix(rmatrix[:3, :3])))
         tform_text = vec2string(np.append(bone.base_pos,
                                           # [0,0,0]))
-                                          euler_from_matrix(rmatrix[:3, :3], axes="rxyz")))
+                                          euler_from_matrix(rmatrix[:3, :3],
+                                                            axes="rxyz")))
         ET.SubElement(body_xml, "transformation").text = tform_text
 
         ########################################
@@ -89,14 +90,16 @@ def dump_bodies(skeleton, skeleton_xml):
         ########################################
 
         vis_xml = ET.SubElement(body_xml, "visualization_shape")
-        direction_matrix = utils.rmatrix_x2v(bone.direction)
-        # direction_matrix = np.linalg.inv(direction_matrix)
+
+        local_direction = np.matmul(bone.ctrans_inv[:3, :3], bone.direction)
+
+        direction_matrix = utils.rmatrix_x2v(local_direction)
         rangles = utils.rotationMatrixToEulerAngles(direction_matrix)
         # rangles = utils.x2v_angles(bone.direction)
 
-        trans_offset = [0, 0, 0]
+        trans_offset = bone.length * local_direction / 2
         # trans_offset = [0, 0, 0]
-        rangles = [0, 0, 0]
+        # rangles = [0, 0, 0]
 
         tform_vector = np.append(trans_offset, rangles)
 
@@ -120,11 +123,11 @@ def write_joint_xml(skeleton_xml, bone):
     # VERY DEBUG STUFF #
     ####################
 
-    # TODO EMERGENCY COMMENT THIS STUFF OUT
-    ET.SubElement(joint_xml, "parent").text = "world"
-    ET.SubElement(joint_xml, "child").text = bodyname(bone)
-    joint_xml.set("type", "free")
-    return
+    # # TODO EMERGENCY COMMENT THIS STUFF OUT
+    # ET.SubElement(joint_xml, "parent").text = "world"
+    # ET.SubElement(joint_xml, "child").text = bodyname(bone)
+    # joint_xml.set("type", "free")
+    # return
 
     ###################
     # END DEBUG STUFF #
@@ -146,7 +149,7 @@ def write_joint_xml(skeleton_xml, bone):
     # TODO Fantastic, both produce the same result... On the other
     # hand, setting positions works now, though that might be entirely
     # unrelated...
-    c2p_matrix = bone.ctrans_inv[:3, :3]
+    c2p_matrix = np.matmul(bone.parent.ctrans[:3, :3], bone.ctrans_inv[:3, :3])
     c2p_angles = euler_from_matrix(c2p_matrix)
     ET.SubElement(joint_xml, "transformation").text = "0 0 0 " \
                                                       + vec2string(c2p_angles)

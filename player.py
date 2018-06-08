@@ -30,7 +30,7 @@ class DotWorld(pydart.World):
             # if bone.name == "rfemur":
             #     ri.set_color(0.0, 0.0, 0.0)
 
-            if bone.name in ["lhumerus", "lfemur", "ltibia", "lfoot"]:
+            if False and bone.name in ["lhumerus", "lfemur", "ltibia", "lfoot"]:
                 ri.set_color(1, 0.0, 0)
                 cy_length = 10
                 cy_base = np.matmul(bone.ctrans, [0, 0, 0, 1])[:3] + bone.base_pos
@@ -75,8 +75,8 @@ if __name__ == "__main__":
     amc = AMC(args.amc) if args.amc else None
 
     sq = s.name2bone
-    ss = "lhumerus"
-    sq[ss].set_theta_degrees(90, 0, 0)
+    ss = "lradius"
+    sq[ss].set_theta_degrees(90)
 
     pydart.init()
     world = DotWorld(s, amc, args.scale)
