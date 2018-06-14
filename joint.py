@@ -3,6 +3,24 @@ import math
 
 from transformations import compose_matrix
 
+def expand_angle(in_angle, order="xyz"):
+    """
+    Given an array of 1-3 elements and an order like 'xy' 'z' or something,
+    return a tuple (theta_x, theta_y, theta_z)
+
+    in_angle and order should have same number of elements
+
+    Examples:
+    angle([1,2], "xz") -> (1, 0, 2)
+    angle([1,2,3], "yzx") -> (3, 1, 2)
+    """
+    blank = [0, 0, 0]
+    index_map = {"x": 0, "y": 1, "z": 2}
+    for axis, val in zip(order, in_angle):
+        blank[index_map[axis]] = val
+
+    return blank
+
 class Joint:
 
     def from_dict(dictionary):
@@ -15,7 +33,7 @@ class Joint:
         direction = np.array([float(i) for i in dictionary["direction"]])
         axis_degrees = np.array([float(i) for i in dictionary["axis"][:-1]])
         length = float(dictionary["length"][0])
-        dofs = " ".join(dictionary["dof"]) if "dof" in dictionary else None
+        dofs = " ".join(dictionary["dof"]) if "dof" in dictionary else ""
         theta = np.array([0, 0, 0])
         parent = None
 
@@ -34,7 +52,6 @@ class Joint:
         self.axis_degrees = axis
 
         self._theta = None
-        self.theta_degrees = [0, 0, 0]
 
         self._parent = None
         self.parent = parent
@@ -43,48 +60,7 @@ class Joint:
         self.ttrans = compose_matrix()
         self.ttrans_inv = np.linalg.inv(self.ttrans)
 
-        def set_rx(tx):
-            self.theta_degrees = np.array([tx, 0, 0])
-
-        def set_ry(ty):
-            self.theta_degrees = np.array([0, ty, 0])
-
-        def set_rz(tz):
-            self.theta_degrees = np.array([0, 0, tz])
-
-        def set_rxy(tx, ty):
-            self.theta_degrees = np.array([tx, ty, 0])
-
-        def set_rxz(tx, tz):
-            self.theta_degrees = np.array([tx, 0, tz])
-
-        def set_ryz(ty, tz):
-            self.theta_degrees = np.array([0, ty, tz])
-
-        def set_rxyz(tx, ty, tz):
-            self.theta_degrees = np.array([tx, ty, tz])
-
-        def set_invalid(theta):
-            raise RuntimeError("Can't set angles on this joint!")
-
-        if dofs == None:
-            self.set_theta_degrees = set_invalid
-        elif dofs == "rx":
-            self.set_theta_degrees = set_rx
-        elif dofs == "ry":
-            self.set_theta_degrees = set_ry
-        elif dofs == "rz":
-            self.set_theta_degrees = set_rz
-        elif dofs == "rx ry":
-            self.set_theta_degrees = set_rxy
-        elif dofs == "ry rz":
-            self.set_theta_degrees = set_ryz
-        elif dofs == "rx rz":
-            self.set_theta_degrees = set_rxz
-        elif dofs == "rx ry rz":
-            self.set_theta_degrees = set_rxyz
-        else:
-            raise RuntimeError("Invalid dofs: " + str(dofs))
+        self.dofs = dofs.replace("r", "").replace(" ", "")
 
     def __update_ctrans(self):
         self.ctrans = compose_matrix(angles=self.axis_radians,
