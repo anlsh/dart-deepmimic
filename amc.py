@@ -102,13 +102,16 @@ class Skel_AMC(AMC):
         for joint_name, joint_angles in frame[1:]:
             start_index, num_dofs, order = self.joint_info[joint_name]
 
-            # AMC data is in sequential degrees while Dart expects rotating radians,
-            # so we do some conversion here
+            # AMC data is in sequential degrees while Dart expects rotating
+            # radians, so we do some conversion here
 
             # TODO Write a converter which will export the amc angles to be in
             # the propert format ahead of time rather than perform expensive
             # computations all the time down here
 
+            # TODO Hold on... how is it so good while totally failing to
+            # account for joint dof order or number? This might be the cause of
+            # the weird foot-moving syndrome...
             theta = expand_angle(np.multiply(math.pi / 180, joint_angles),
                                  order)
             rotation_euler = sequential_to_rotating_radians(theta)
