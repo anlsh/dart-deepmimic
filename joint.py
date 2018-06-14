@@ -58,48 +58,6 @@ class Joint:
         self.__update_ctrans()
         self.__update_ttrans
 
-        # def set_rx(tx):
-        #     self.theta_degrees = np.array([tx, 0, 0])
-
-        # def set_ry(ty):
-        #     self.theta_degrees = np.array([0, ty, 0])
-
-        # def set_rz(tz):
-        #     self.theta_degrees = np.array([0, 0, tz])
-
-        # def set_rxy(tx, ty):
-        #     self.theta_degrees = np.array([tx, ty, 0])
-
-        # def set_rxz(tx, tz):
-        #     self.theta_degrees = np.array([tx, 0, tz])
-
-        # def set_ryz(ty, tz):
-        #     self.theta_degrees = np.array([0, ty, tz])
-
-        # def set_rxyz(tx, ty, tz):
-        #     self.theta_degrees = np.array([tx, ty, tz])
-
-        # def set_invalid(theta):
-        #     raise RuntimeError("Can't set angles on this joint!")
-
-        # if dofs == "":
-        #     self.set_theta_degrees = set_invalid
-        # elif dofs == "rx":
-        #     self.set_theta_degrees = set_rx
-        # elif dofs == "ry":
-        #     self.set_theta_degrees = set_ry
-        # elif dofs == "rz":
-        #     self.set_theta_degrees = set_rz
-        # elif dofs == "rx ry":
-        #     self.set_theta_degrees = set_rxy
-        # elif dofs == "ry rz":
-        #     self.set_theta_degrees = set_ryz
-        # elif dofs == "rx rz":
-        #     self.set_theta_degrees = set_rxz
-        # elif dofs == "rx ry rz":
-        #     self.set_theta_degrees = set_rxyz
-        # else:
-        #     raise RuntimeError("Invalid dofs: " + str(dofs))
         self.dofs = dofs.replace("r", "").replace(" ", "") if dofs is not None else ""
 
     def __update_ctrans(self):
@@ -160,13 +118,10 @@ class Joint:
         return self.length * self.direction
 
     @property
-    def rtrans(self):
-        return compose_matrix(angles=self.theta_radians)
-
-    @property
     def local_transform(self):
 
         return np.matmul(self.ttrans,
                               np.matmul(self.ctrans,
-                                    np.matmul(self.rtrans,
+                                    np.matmul(compose_matrix(angles=
+                                                             self.theta_radians),
                                               self.ctrans_inv)))

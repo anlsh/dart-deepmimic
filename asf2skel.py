@@ -227,8 +227,6 @@ if __name__ == "__main__":
 
     start_flag = r"<!--START-->"
     end_flag = r"<!--END-->"
-    source_fname = r"test/original/human_box.skel"
-    dest_fname = r"test/human.skel"
 
     if args.rsrc is None:
         args.rsrc = args.dest_path
