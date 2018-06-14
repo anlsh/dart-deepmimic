@@ -83,11 +83,11 @@ class Joint:
 
     @property
     def axis_degrees(self):
-        return np.multiply(180 / math.pi, self._axis)
+        return from_radians(self._axis)
 
     @axis_degrees.setter
     def axis_degrees(self, new_axis):
-        self._axis = np.multiply(math.pi / 180, new_axis)
+        self._axis = to_radians(new_axis)
         self.__update_ctrans()
 
     @property
@@ -101,11 +101,11 @@ class Joint:
 
     @property
     def theta_degrees(self):
-        return np.multiply(180 / math.pi, self.theta)
+        return from_radians(self._theta)
 
     @theta_degrees.setter
     def theta_degrees(self, new_theta):
-        self._theta = np.multiply(math.pi / 180, new_theta)
+        self._theta = to_radians(new_theta)
 
     @property
     def theta_radians(self):
