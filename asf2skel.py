@@ -169,10 +169,13 @@ def write_joint_xml(skeleton_xml, joint):
         # ET.SubElement(limit_xml, "lower").text = "-3"
         # ET.SubElement(limit_xml, "upper").text = "3"
 
-        # TODO implement dynamics
-        # dynamics = ET.SubElement(axis_xml, "dynamics")
-        # ET.SubElement(dynamics, "damping").text = "1"
-        # ET.SubElement(dynamics, "stiffness").text = "0"
+        dynamics = ET.SubElement(axis_xml, "dynamics")
+        ET.SubElement(dynamics, "damping").text = "1"
+        ET.SubElement(dynamics, "friction").text = "0"
+        # TODO In the spec document, the following fields are labelled "sprint"
+        # instead of "spring". Maybe that's an issue?
+        ET.SubElement(dynamics, "spring_rest_position").text = "0"
+        ET.SubElement(dynamics, "spring_stiffness").text = "0"
 
 def dump_joints(asf_skeleton, skeleton_xml):
     """
