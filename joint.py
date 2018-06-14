@@ -4,7 +4,7 @@ from utils import to_radians, from_radians
 
 from transformations import compose_matrix
 
-def expand_angle(in_angle, order="xyz"):
+def expand_angle(in_angle, order="xyz", initial_element=0):
     """
     Given an array of 1-3 elements and an order like 'xy' 'z' or something,
     return a tuple (theta_x, theta_y, theta_z)
@@ -15,7 +15,7 @@ def expand_angle(in_angle, order="xyz"):
     angle([1,2], "xz") -> (1, 0, 2)
     angle([1,2,3], "yzx") -> (3, 1, 2)
     """
-    blank = [0, 0, 0]
+    blank = [initial_element] * 3
     index_map = {"x": 0, "y": 1, "z": 2}
     for axis, val in zip(order, in_angle):
         blank[index_map[axis]] = val
@@ -40,17 +40,31 @@ class Joint:
         dofs = " ".join(dictionary["dof"]) if "dof" in dictionary else ""
         dofs = dofs.replace("r", "").replace(" ", "")
 
+        limits = [None] * 3
+        if "limits" in dictionary:
+            zipped = dictionary["limits"]
+            for i, lim in enumerate(zipped):
+                zipped[i] = to_radians(lim)
+
+            # expand_angle is useful for more than just angles, but this is the
+            # only place it's used in generality so far so there's not much
+            # reason to rename it
+            limits = expand_angle(zipped, dofs, None)
+
         return Joint(id_, name, direction, to_radians(axis_degrees),
-                     length, dofs, parent)
+                     length, dofs, parent, limits)
 
 
-    def __init__(self, id_, name, direction, axis, length, dofs, parent=None):
+    def __init__(self, id_, name, direction, axis, length, dofs, parent=None,
+                 limits=[None] * 3):
 
         self.id_ = id_
         self.name = name
         self.direction = direction
         self.length = length
         self.dofs = dofs
+
+        self.limits = limits
 
         self._axis = [0, 0, 0]
         self.axis_radians = axis

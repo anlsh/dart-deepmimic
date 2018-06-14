@@ -155,19 +155,24 @@ def write_joint_xml(skeleton_xml, joint):
 
         axis_vstr = ""
         if axis == "x":
+            li = 0
             axis_vstr = "1 0 0"
         elif axis == "y":
+            li = 1
             axis_vstr = "0 1 0"
         elif axis == "z":
+            li = 2
             axis_vstr = "0 0 1"
 
         axis_xml = ET.SubElement(joint_xml, axis_tag)
 
         ET.SubElement(axis_xml, "xyz").text = axis_vstr
-        # TODO implement joint limits!!
-        # limit_xml = ET.SubElement(axis_xml, "limit")
-        # ET.SubElement(limit_xml, "lower").text = "-3"
-        # ET.SubElement(limit_xml, "upper").text = "3"
+
+        if joint.limits[li] is not None:
+            limit_xml = ET.SubElement(axis_xml, "limit")
+            low, high = joint.limits[li]
+            ET.SubElement(limit_xml, "lower").text = num2string(low)
+            ET.SubElement(limit_xml, "upper").text = num2string(high)
 
         dynamics = ET.SubElement(axis_xml, "dynamics")
         ET.SubElement(dynamics, "damping").text = "1"
