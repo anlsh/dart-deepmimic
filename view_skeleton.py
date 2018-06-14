@@ -1,8 +1,5 @@
-# Copyright (c) 2015, Disney Research
-# All rights reserved.
-#
-# Author(s): Sehoon Ha <sehoon.ha@disneyresearch.com>
-# Disney Research Robotics Group
+# Author: Anish Moorthy
+
 import sys
 from pydart2.gui.pyqt5.window import PyQt5Window
 from pydart2.gui.trackball import Trackball
@@ -11,8 +8,6 @@ import argparse
 import math
 
 from amc import Skel_AMC
-
-skel = None
 
 def getViewer(sim, title=None):
 
@@ -38,7 +33,7 @@ class MovieWorld(pydart.World):
         ri.render_axes([0,0,0], 5, r_base_ = .2)
 
         if self.amc is not None:
-            self.amc.sync_angles(self.count % self.amc.num_frames)
+            self.amc.sync_angles(self.count % len(self.amc.frames))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Views a skel file")
@@ -54,24 +49,10 @@ if __name__ == '__main__':
 
     world = MovieWorld(0.0002, args.skel_path)
 
-
     skel = world.skeletons[1]
-    amc = Skel_AMC(args.amc_path, skel, args.asf_path) if args.amc_path is not None else None
+    amc = Skel_AMC(skel, args.amc_path, args.asf_path) if args.amc_path is not None else None
     world.set_amc(amc)
 
-    print(skel.joints[1].name)
-
-    # femur: 12 25
-    # humerus: 52, 64
-    # radius: 55, 67
-    # tibia: 15, 28
-
-    # skel.dofs[52].set_position(math.pi / 2)
-    # skel.dofs[53].set_position(math.pi / 2)
-    # skel.dofs[54].set_position(-math.pi / 2)
-    # print(type(skel.dofs[0]))
-    # print(skel.joints)
-    print(skel.dofs)
     print('pydart create_world OK')
 
     window = getViewer(world)

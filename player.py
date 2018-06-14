@@ -74,7 +74,7 @@ if __name__ == "__main__":
     amc = ASF_AMC(args.amc, s) if args.amc else None
 
     sq = s.name2bone
-    sq["lhumerus"].set_theta_degrees(90, 90, 0)
+    # sq["lhumerus"].set_theta_degrees(90, 90, 0)
 
     pydart.init()
     world = DotWorld(s, amc, args.scale)

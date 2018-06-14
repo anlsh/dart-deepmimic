@@ -1,4 +1,5 @@
-from skeleton import Skeleton
+from asf_skeleton import ASF_Skeleton
+from transformations import euler_from_matrix, compose_matrix
 from xml.dom import minidom
 from xml.etree import ElementTree
 import argparse
@@ -6,11 +7,13 @@ import math
 import numpy as np
 import os
 import re
-import xml.etree.ElementTree as ET
 import utils
-from transformations import euler_from_matrix, compose_matrix
+import xml.etree.ElementTree as ET
 
 CYLINDER_RADIUS = .5
+
+# XML stuff will appear opaque if you haven't read
+# https://dartsim.github.io/skel_file_format.html
 
 def prettify(elem):
     """Return a pretty-printed XML string for the Element.
@@ -21,6 +24,11 @@ def prettify(elem):
     return reparsed.toprettyxml(indent="    ")
 
 def num2string(num):
+    """
+    Function to provide common file-wide number formatting
+    """
+
+    # The "+ 0" gets rid of "-0"s being printed
     return "{0:.5f}".format(num + 0)
 
 def vec2string(vec):
@@ -30,8 +38,11 @@ def vec2string(vec):
     """
     return " ".join([num2string(i) for i in vec])
 
-def bodyname(bone):
-    return bone.name + "_body"
+def bodyname(joint):
+    """
+    Returns the name of a joint
+    """
+    return joint.name + "_body"
 
 def add_cylinder(xml_parent, length):
 
@@ -47,14 +58,11 @@ def add_box(xml_parent, length):
     geo_xml = ET.SubElement(xml_parent, "geometry")
     geo_box = ET.SubElement(geo_xml, "box")
     box_size = ET.SubElement(geo_box, "size")
-    # Having bone length along x definitely the right move
-    # box_size.text = vec2string([5 * CYLINDER_RADIUS, 1.5 * CYLINDER_RADIUS,
-    #                             CYLINDER_RADIUS])
     box_size.text = vec2string([length, 2 * CYLINDER_RADIUS, CYLINDER_RADIUS])
 
-def dump_bodies(skeleton, skeleton_xml):
+def dump_bodies(asf_skeleton, skeleton_xml):
     """
-    Given an XML element (an ETElement), dump the skeleton's bone objects
+    Given an XML element (an ETElement), dump the skeleton's joint objects
     as the element's children
 
     This method expects all joint angles in the skeleton to be zero. Else, all
@@ -63,24 +71,21 @@ def dump_bodies(skeleton, skeleton_xml):
     It also handles all the calculations concerning axes and joints
     """
 
-    # Ensure all positions are at their "default" values; also, we need to make use
-    # of the per-instance attributes which the function adds/sets
-    skeleton.update_bone_positions()
+    # Ensure all positions are at their "default" values; if the skeleton's pose
+    # is different from that in the ASF file, everything will be off :|
+    asf_skeleton.update_joint_positions()
 
-    for bone in [skeleton.root] + skeleton.bones:
+    for joint in [asf_skeleton.root] + asf_skeleton.joints:
 
         body_xml = ET.SubElement(skeleton_xml, "body")
-        body_xml.set("name", bodyname(bone))
+        body_xml.set("name", bodyname(joint))
 
         ################################
         # POSITION AND COORDINATE AXES #
         ################################
 
-        rmatrix = bone.ctrans
-        print(bone.name + "\n" + str(rmatrix))
-        # print(np.multiply(180 / math.pi, euler_from_matrix(rmatrix[:3, :3])))
-        tform_text = vec2string(np.append(bone.base_pos,
-                                          # [0,0,0]))
+        rmatrix = joint.ctrans
+        tform_text = vec2string(np.append(joint.base_pos,
                                           euler_from_matrix(rmatrix[:3, :3],
                                                             axes="rxyz")))
         ET.SubElement(body_xml, "transformation").text = tform_text
@@ -89,22 +94,20 @@ def dump_bodies(skeleton, skeleton_xml):
         # VISUALIZATION AND COLLISION GEOMETRY #
         ########################################
 
-        vis_xml = ET.SubElement(body_xml, "visualization_shape")
-
-        local_direction = np.matmul(bone.ctrans_inv[:3, :3], bone.direction)
-
+        # Direction vectors and axes are specified wrt to global reference
+        # frame in asf files (and thus in joints), so we construct a
+        # transformation to the local reference frame (as dart expects it)
+        local_direction = np.matmul(joint.ctrans_inv[:3, :3], joint.direction)
         direction_matrix = utils.rmatrix_x2v(local_direction)
         rangles = utils.rotationMatrixToEulerAngles(direction_matrix)
-        # rangles = utils.x2v_angles(bone.direction)
-
-        trans_offset = bone.length * local_direction / 2
-        # trans_offset = [0, 0, 0]
-        # rangles = [0, 0, 0]
-
+        trans_offset = joint.length * local_direction / 2
         tform_vector = np.append(trans_offset, rangles)
 
-        ET.SubElement(vis_xml, "transformation").text = vec2string(tform_vector)
-        add_box(vis_xml, bone.length)
+        for shape in ["visualization", "collision"]:
+            shape_xml = ET.SubElement(body_xml, shape + "_shape")
+            ET.SubElement(shape_xml, "transformation").text = \
+                                                        vec2string(tform_vector)
+            add_box(shape_xml, joint.length)
 
         ###################
         # INERTIA SECTION #
@@ -113,46 +116,34 @@ def dump_bodies(skeleton, skeleton_xml):
         inertia_xml = ET.SubElement(body_xml, "inertia")
         mass_xml = ET.SubElement(inertia_xml, "mass")
         mass_xml.text = str(1)
-        ET.SubElement(inertia_xml, "offset").text = "0 0 0"
+        ET.SubElement(inertia_xml, "offset").text = vec2string(trans_offset)
 
-def write_joint_xml(skeleton_xml, bone):
+def write_joint_xml(skeleton_xml, joint):
 
     joint_xml = ET.SubElement(skeleton_xml, "joint")
 
-    ET.SubElement(joint_xml, "parent").text = bodyname(bone.parent)
-    ET.SubElement(joint_xml, "child").text = bodyname(bone)
-    joint_xml.set("name", bone.name)
+    ET.SubElement(joint_xml, "parent").text = bodyname(joint.parent)
+    ET.SubElement(joint_xml, "child").text = bodyname(joint)
+    joint_xml.set("name", joint.name)
 
-    # The joints are by default in the child link frame. This is a problem since
-    # the asf/amc data is parent-frame oriented (I think :) so set the angular
-    # transformation here The transformation is child frame -> joint frame, so we
-    # take (parent frame -> child frame)^-1
-
-    ET.SubElement(joint_xml, "transformation").text = "0 0 0 "\
-                                                      "0 0 0"
-                                                      # + vec2string(c2p_angles)
-
-    axes = bone.dofs.replace("r", "").split(" ") if bone.dofs \
-            is not None else ""
-
+    ET.SubElement(joint_xml, "transformation").text = "0 0 0 0 0 0"
 
     jtype = ""
-    if len(axes) == 0:
-        # TODO turns out that fixed joint type is unsupported, lucky me...
-        # I can maybe make a revolute joint with upper and lower limit of 0?
-        # raise NotImplementedError("Fixed joint type unsupported" + child.name)
-        jtype = "free"
-    elif len(axes) == 1:
+    if len(joint.dofs) == 0:
+        jtype = "fixed"
+    elif len(joint.dofs) == 1:
         jtype = "revolute"
-    elif len(axes) == 2:
+    elif len(joint.dofs) == 2:
         jtype = "universal"
-    elif len(axes) == 3:
+    elif len(joint.dofs) == 3:
         jtype = "euler"
         ET.SubElement(joint_xml, "axis_order").text = "xyz"
     else:
         raise RuntimeError("Invalid number of axes")
 
-    if jtype == "free":
+    # Dart doesn't support fixed joints, so my current workaround is to use a
+    # revolute joint with limits (0, 0)
+    if jtype == "fixed":
         joint_xml.set("type", "revolute")
         axis_xml = ET.SubElement(joint_xml, "axis")
         ET.SubElement(axis_xml, "xyz").text = "1 0 0"
@@ -162,88 +153,109 @@ def write_joint_xml(skeleton_xml, bone):
         return
 
     joint_xml.set("type", jtype)
-    for index, axis in enumerate(axes):
+    for index, axis in enumerate(joint.dofs):
         axis_tag = "axis" + ("" if index == 0 else str(index + 1))
 
         axis_vstr = ""
         if axis == "x":
+            li = 0
             axis_vstr = "1 0 0"
         elif axis == "y":
+            li = 1
             axis_vstr = "0 1 0"
         elif axis == "z":
+            li = 2
             axis_vstr = "0 0 1"
 
         axis_xml = ET.SubElement(joint_xml, axis_tag)
 
         ET.SubElement(axis_xml, "xyz").text = axis_vstr
-        # TODO implement joint limits!!
-        # limit_xml = ET.SubElement(axis_xml, "limit")
-        # ET.SubElement(limit_xml, "lower").text = "-3"
-        # ET.SubElement(limit_xml, "upper").text = "3"
 
-        # TODO implement dynamics
-        # dynamics = ET.SubElement(axis_xml, "dynamics")
-        # ET.SubElement(dynamics, "damping").text = "1"
-        # ET.SubElement(dynamics, "stiffness").text = "0"
+        if joint.limits[li] is not None:
+            limit_xml = ET.SubElement(axis_xml, "limit")
+            low, high = joint.limits[li]
+            ET.SubElement(limit_xml, "lower").text = num2string(low)
+            ET.SubElement(limit_xml, "upper").text = num2string(high)
 
+        dynamics = ET.SubElement(axis_xml, "dynamics")
+        ET.SubElement(dynamics, "damping").text = "1"
+        ET.SubElement(dynamics, "friction").text = "0"
+        # TODO In the spec document, the following fields are labelled "sprint"
+        # instead of "spring". Maybe that's an issue?
+        ET.SubElement(dynamics, "spring_rest_position").text = "0"
+        ET.SubElement(dynamics, "spring_stiffness").text = "0"
 
-    # Stuff that shouldnt be required but included just to be safe
-    if len(axes) != 0:
-        ET.SubElement(joint_xml, "init_pos").text = " ".join(["0"] * len(axes if axes != 0 else 1))
-        ET.SubElement(joint_xml, "init_vel").text = "0"
-
-def dump_joints(skeleton, skeleton_xml):
-    """Given a skeleton object and an xml root, dump joints
+def dump_joints(asf_skeleton, skeleton_xml):
+    """
+    Given a skeleton object and an xml root, dump joints
     """
 
-    # Setup a special joint for the root
+    # Set up a special joint for the root
     root_joint = ET.SubElement(skeleton_xml, "joint")
     root_joint.set("name", "root")
     ET.SubElement(root_joint, "parent").text = "world"
-    ET.SubElement(root_joint, "child").text = bodyname(skeleton.root)
+    ET.SubElement(root_joint, "child").text = bodyname(asf_skeleton.root)
     root_joint.set("type", "free")
 
-    for bone in skeleton.bones:
+    for joint in asf_skeleton.joints:
 
-        write_joint_xml(skeleton_xml, bone)
+        write_joint_xml(skeleton_xml, joint)
 
-def dump_asf_to_skel(skeleton):
+def dump_asf_to_skel(asf_skeleton):
 
     skeleton_xml = ET.Element("skeleton")
-    skeleton_xml.set("name", skeleton.name)
+    skeleton_xml.set("name", asf_skeleton.name)
     ET.SubElement(skeleton_xml, "transformation").text = "0 0 0 0 0 0"
-    dump_bodies(skeleton, skeleton_xml)
-    dump_joints(skeleton, skeleton_xml)
+    dump_bodies(asf_skeleton, skeleton_xml)
+    dump_joints(asf_skeleton, skeleton_xml)
 
+    # The first line is always <xml_version 1.0>, so skip that
     return "\n".join(prettify(skeleton_xml).splitlines()[1:])
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Dumps an asf file to a .skel")
 
-    parser.add_argument("--asf", dest="asf_path", default=False)
+    parser.add_argument("--asf", dest="asf_path", required=True)
+    parser.add_argument("--dest", dest="dest_path", required=True)
+
+    rsrc_help = "File to replace text in; if unspecified, uses dest. " \
+                + "If it doesn't exist, it will be created"
+    parser.add_argument("--rsrc", dest="rsrc", required=False, help=rsrc_help)
+
+    replace_help = "If true, then attempt to find <!--START--> " \
+    + "and <!--END--> tags in the destination file and replace whatever is in" \
+    + "between with the generated xml"
+
+    parser.add_argument("--replace", dest="replace", help=replace_help,
+                        default=False)
 
     args = parser.parse_args()
 
-    skel = Skeleton(args.asf_path)
+    skel = ASF_Skeleton(args.asf_path)
 
-    new_skel = dump_asf_to_skel(skel)
+    skel_xml = dump_asf_to_skel(skel)
 
     start_flag = r"<!--START-->"
     end_flag = r"<!--END-->"
-    source_fname = r"test/original/human_box.skel"
-    dest_fname = r"test/human.skel"
 
-    with open(source_fname, "r") as f:
+    if args.rsrc is None:
+        args.rsrc = args.dest_path
+
+    with open(args.rsrc, "r") as f:
         file_text = "".join(f.readlines())
 
     try:
-        os.remove(dest_fname)
+        os.remove(args.dest_path)
     except FileNotFoundError:
         pass
 
-    with open(dest_fname, "w") as f:
-        file_text = re.sub(start_flag + ".*" + end_flag,
-                           start_flag + "\n" + new_skel + "\n" + end_flag,
-                           file_text, flags=re.DOTALL)
+    with open(args.dest_path, "w") as f:
+        if args.replace:
+            file_text = re.sub(start_flag + ".*" + end_flag,
+                               start_flag + "\n" + skel_xml + "\n" + end_flag,
+                               file_text, flags=re.DOTALL)
+        else:
+            file_text = skel_xml
+
         f.write(file_text)
