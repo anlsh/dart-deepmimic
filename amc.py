@@ -39,8 +39,8 @@ class ASF_AMC(AMC):
         self.skeleton.root.direction = np.array(root_data[0:3])
         self.skeleton.root.theta_degrees = np.array(root_data[3:])
 
-        for bone_name, bone_data in frame[1:]:
-            self.skeleton.name2bone[bone_name].set_theta_degrees(*bone_data)
+        for joint_name, joint_data in frame[1:]:
+            self.skeleton.name2joint[joint_name].set_theta_degrees(*joint_data)
 
 def sequential_to_rotating_radians(rvector):
 
@@ -88,13 +88,13 @@ class Skel_AMC(AMC):
                                                             root_data[3:])))
         zip_dofs(self.skeleton.dofs[3:6], root_data[:3])
 
-        for bone_name, bone_data in frame[1:]:
-            index, length = self.joint2window[bone_name]
+        for joint_name, joint_data in frame[1:]:
+            index, length = self.joint2window[joint_name]
 
             # I need this to take advantage of the auto-angle placement
-            asf_bone = self.asf_skeleton.name2bone[bone_name]
-            asf_bone.set_theta_degrees(*bone_data)
-            rotation_euler = sequential_to_rotating_radians(asf_bone.theta_radians)
+            asf_joint = self.asf_skeleton.name2joint[joint_name]
+            asf_joint.set_theta_degrees(*joint_data)
+            rotation_euler = sequential_to_rotating_radians(asf_joint.theta_radians)
 
             zip_dofs(self.skeleton.dofs[index : index + length],
                      rotation_euler)

@@ -1,4 +1,5 @@
 from skeleton import Skeleton
+from transformations import euler_from_matrix, compose_matrix
 from xml.dom import minidom
 from xml.etree import ElementTree
 import argparse
@@ -6,9 +7,8 @@ import math
 import numpy as np
 import os
 import re
-import xml.etree.ElementTree as ET
 import utils
-from transformations import euler_from_matrix, compose_matrix
+import xml.etree.ElementTree as ET
 
 CYLINDER_RADIUS = .5
 
@@ -21,6 +21,11 @@ def prettify(elem):
     return reparsed.toprettyxml(indent="    ")
 
 def num2string(num):
+    """
+    Function to provide common file-wide number formatting
+    """
+
+    # The "+ 0" gets rid of "-0"s being printed
     return "{0:.5f}".format(num + 0)
 
 def vec2string(vec):
@@ -30,8 +35,11 @@ def vec2string(vec):
     """
     return " ".join([num2string(i) for i in vec])
 
-def bodyname(bone):
-    return bone.name + "_body"
+def bodyname(joint):
+    """
+    Returns the name of a joint
+    """
+    return joint.name + "_body"
 
 def add_cylinder(xml_parent, length):
 
@@ -47,14 +55,11 @@ def add_box(xml_parent, length):
     geo_xml = ET.SubElement(xml_parent, "geometry")
     geo_box = ET.SubElement(geo_xml, "box")
     box_size = ET.SubElement(geo_box, "size")
-    # Having bone length along x definitely the right move
-    # box_size.text = vec2string([5 * CYLINDER_RADIUS, 1.5 * CYLINDER_RADIUS,
-    #                             CYLINDER_RADIUS])
     box_size.text = vec2string([length, 2 * CYLINDER_RADIUS, CYLINDER_RADIUS])
 
 def dump_bodies(skeleton, skeleton_xml):
     """
-    Given an XML element (an ETElement), dump the skeleton's bone objects
+    Given an XML element (an ETElement), dump the skeleton's joint objects
     as the element's children
 
     This method expects all joint angles in the skeleton to be zero. Else, all
@@ -63,21 +68,21 @@ def dump_bodies(skeleton, skeleton_xml):
     It also handles all the calculations concerning axes and joints
     """
 
-    # Ensure all positions are at their "default" values; also, we need to make use
-    # of the per-instance attributes which the function adds/sets
-    skeleton.update_bone_positions()
+    # Ensure all positions are at their "default" values; also, we need to make
+    # use of the per-instance attributes which update_joint_positions adds/sets
+    skeleton.update_joint_positions()
 
-    for bone in [skeleton.root] + skeleton.bones:
+    for joint in [skeleton.root] + skeleton.joints:
 
         body_xml = ET.SubElement(skeleton_xml, "body")
-        body_xml.set("name", bodyname(bone))
+        body_xml.set("name", bodyname(joint))
 
         ################################
         # POSITION AND COORDINATE AXES #
         ################################
 
-        rmatrix = bone.ctrans
-        tform_text = vec2string(np.append(bone.base_pos,
+        rmatrix = joint.ctrans
+        tform_text = vec2string(np.append(joint.base_pos,
                                           euler_from_matrix(rmatrix[:3, :3],
                                                             axes="rxyz")))
         ET.SubElement(body_xml, "transformation").text = tform_text
@@ -86,22 +91,19 @@ def dump_bodies(skeleton, skeleton_xml):
         # VISUALIZATION AND COLLISION GEOMETRY #
         ########################################
 
-        vis_xml = ET.SubElement(body_xml, "visualization_shape")
-
-        local_direction = np.matmul(bone.ctrans_inv[:3, :3], bone.direction)
-
+        # Direction vectors and axes are specified wrt to global reference
+        # frame in asf files (and thus in joints), so we construct a
+        # transformation to the local reference frame (as dart expects it)
+        local_direction = np.matmul(joint.ctrans_inv[:3, :3], joint.direction)
         direction_matrix = utils.rmatrix_x2v(local_direction)
         rangles = utils.rotationMatrixToEulerAngles(direction_matrix)
-        # rangles = utils.x2v_angles(bone.direction)
-
-        trans_offset = bone.length * local_direction / 2
-        # trans_offset = [0, 0, 0]
-        # rangles = [0, 0, 0]
-
+        trans_offset = joint.length * local_direction / 2
         tform_vector = np.append(trans_offset, rangles)
 
-        ET.SubElement(vis_xml, "transformation").text = vec2string(tform_vector)
-        add_box(vis_xml, bone.length)
+        for shape in ["visualization", "collision"]:
+            shape_xml = ET.SubElement(body_xml, shape + "_shape")
+            ET.SubElement(shape_xml, "transformation").text = vec2string(tform_vector)
+            add_box(shape_xml, joint.length)
 
         ###################
         # INERTIA SECTION #
@@ -110,35 +112,26 @@ def dump_bodies(skeleton, skeleton_xml):
         inertia_xml = ET.SubElement(body_xml, "inertia")
         mass_xml = ET.SubElement(inertia_xml, "mass")
         mass_xml.text = str(1)
-        ET.SubElement(inertia_xml, "offset").text = "0 0 0"
+        ET.SubElement(inertia_xml, "offset").text = vec2string(trans_offset)
 
-def write_joint_xml(skeleton_xml, bone):
+def write_joint_xml(skeleton_xml, joint):
 
     joint_xml = ET.SubElement(skeleton_xml, "joint")
 
-    ET.SubElement(joint_xml, "parent").text = bodyname(bone.parent)
-    ET.SubElement(joint_xml, "child").text = bodyname(bone)
-    joint_xml.set("name", bone.name)
-
-    # The joints are by default in the child link frame. This is a problem since
-    # the asf/amc data is parent-frame oriented (I think :) so set the angular
-    # transformation here The transformation is child frame -> joint frame, so we
-    # take (parent frame -> child frame)^-1
+    ET.SubElement(joint_xml, "parent").text = bodyname(joint.parent)
+    ET.SubElement(joint_xml, "child").text = bodyname(joint)
+    joint_xml.set("name", joint.name)
 
     ET.SubElement(joint_xml, "transformation").text = "0 0 0 "\
                                                       "0 0 0"
-                                                      # + vec2string(c2p_angles)
 
-    axes = bone.dofs.replace("r", "").split(" ") if bone.dofs \
+    axes = joint.dofs.replace("r", "").split(" ") if joint.dofs \
             is not None else ""
 
 
     jtype = ""
     if len(axes) == 0:
-        # TODO turns out that fixed joint type is unsupported, lucky me...
-        # I can maybe make a revolute joint with upper and lower limit of 0?
-        # raise NotImplementedError("Fixed joint type unsupported" + child.name)
-        jtype = "free"
+        jtype = "fixed"
     elif len(axes) == 1:
         jtype = "revolute"
     elif len(axes) == 2:
@@ -149,7 +142,9 @@ def write_joint_xml(skeleton_xml, bone):
     else:
         raise RuntimeError("Invalid number of axes")
 
-    if jtype == "free":
+    # Dart doesn't support fixed joints, so my current workaround is to use a
+    # revolute joint with limits (0, 0)
+    if jtype == "fixed":
         joint_xml.set("type", "revolute")
         axis_xml = ET.SubElement(joint_xml, "axis")
         ET.SubElement(axis_xml, "xyz").text = "1 0 0"
@@ -183,14 +178,9 @@ def write_joint_xml(skeleton_xml, bone):
         # ET.SubElement(dynamics, "damping").text = "1"
         # ET.SubElement(dynamics, "stiffness").text = "0"
 
-
-    # Stuff that shouldnt be required but included just to be safe
-    if len(axes) != 0:
-        ET.SubElement(joint_xml, "init_pos").text = " ".join(["0"] * len(axes if axes != 0 else 1))
-        ET.SubElement(joint_xml, "init_vel").text = "0"
-
 def dump_joints(skeleton, skeleton_xml):
-    """Given a skeleton object and an xml root, dump joints
+    """
+    Given a skeleton object and an xml root, dump joints
     """
 
     # Setup a special joint for the root
@@ -200,9 +190,9 @@ def dump_joints(skeleton, skeleton_xml):
     ET.SubElement(root_joint, "child").text = bodyname(skeleton.root)
     root_joint.set("type", "free")
 
-    for bone in skeleton.bones:
+    for joint in skeleton.joints:
 
-        write_joint_xml(skeleton_xml, bone)
+        write_joint_xml(skeleton_xml, joint)
 
 def dump_asf_to_skel(skeleton):
 
@@ -212,6 +202,7 @@ def dump_asf_to_skel(skeleton):
     dump_bodies(skeleton, skeleton_xml)
     dump_joints(skeleton, skeleton_xml)
 
+    # The first line is always <xml_version 1.0>, so skip that
     return "\n".join(prettify(skeleton_xml).splitlines()[1:])
 
 if __name__ == "__main__":

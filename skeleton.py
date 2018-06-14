@@ -1,20 +1,20 @@
+from joint import Joint
 from cgkit.asfamc import ASFReader
-from bone import Bone
-import numpy as np
 from transformations import compose_matrix
+import numpy as np
 
 class Skeleton:
 
     def __init__(self, filename):
 
         self.name = None
-        self.bones = None
+        self.joints = None
         self.root = None
         self.units = None
-        self.name2bone = {}
+        self.name2joint = {}
 
-        self.root = Bone(-1, "root", [0,0,0], [0,0,0], 1, "rx ry rz")
-        self.name2bone["root"] = self.root
+        self.root = Joint(-1, "root", [0,0,0], [0,0,0], 1, "rx ry rz")
+        self.name2joint["root"] = self.root
 
         def __init_name(name):
             self.name = name
@@ -22,11 +22,11 @@ class Skeleton:
         def __init_units(units):
             self.units = units
 
-        def __init_bones(bone_data):
+        def __init_joints(joint_data):
 
-            self.bones = [Bone.from_dict(entry) for entry in bone_data]
-            for bone in self.bones:
-                self.name2bone[bone.name] = bone
+            self.joints = [Joint.from_dict(entry) for entry in joint_data]
+            for joint in self.joints:
+                self.name2joint[joint.name] = joint
 
         def __init_root(root_data):
             self.root.direction = np.array([float(i)
@@ -39,20 +39,20 @@ class Skeleton:
             for h in hierarchy:
                 parent_name, dep_names = h
                 for dep_name in dep_names:
-                    self.name2bone[dep_name].parent = self.name2bone[parent_name]
+                    self.name2joint[dep_name].parent = self.name2joint[parent_name]
 
         reader = ASFReader(filename)
         reader.onName = __init_name
         reader.onUnits = __init_units
         reader.onRoot = __init_root
-        reader.onBonedata = __init_bones
+        reader.onBonedata = __init_joints
         reader.read()
 
         reader = ASFReader(filename)
         reader.onHierarchy = __init_hierarchy
         reader.read()
 
-    def update_bone_positions(self):
+    def update_joint_positions(self):
 
         self.root.sum_transform = compose_matrix(angles=self.root.theta_radians,
                                                  translate=self.root.direction)
@@ -61,14 +61,12 @@ class Skeleton:
         self.root.sum_ctrans = self.root.ctrans
 
 
-        for bone in self.bones:
+        for joint in self.joints:
 
-            bone.sum_transform = np.matmul(bone.parent.sum_transform,
-                                           bone.local_transform)
+            joint.sum_transform = np.matmul(joint.parent.sum_transform,
+                                           joint.local_transform)
 
-            bone.sum_ctrans = np.matmul(bone.parent.sum_ctrans, bone.ctrans)
-
-            bone.base_pos = np.matmul(bone.sum_transform,
+            joint.base_pos = np.matmul(joint.sum_transform,
                                       np.array([0,0,0,1]))[:-1]
-            bone.end_pos = np.matmul(bone.sum_transform,
-                                     np.append(bone.offset, 1))[:-1]
+            joint.end_pos = np.matmul(joint.sum_transform,
+                                     np.append(joint.offset, 1))[:-1]
