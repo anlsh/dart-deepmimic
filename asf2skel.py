@@ -12,6 +12,9 @@ import xml.etree.ElementTree as ET
 
 CYLINDER_RADIUS = .5
 
+# XML stuff will appear opaque if you haven't read
+# https://dartsim.github.io/skel_file_format.html
+
 def prettify(elem):
     """Return a pretty-printed XML string for the Element.
     """
