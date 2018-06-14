@@ -105,6 +105,10 @@ class Skel_AMC(AMC):
             # AMC data is in sequential degrees while Dart expects rotating radians,
             # so we do some conversion here
 
+            # TODO Write a converter which will export the amc angles to be in
+            # the propert format ahead of time rather than perform expensive
+            # computations all the time down here
+
             theta = expand_angle(np.multiply(math.pi / 180, joint_angles),
                                  order)
             rotation_euler = sequential_to_rotating_radians(theta)

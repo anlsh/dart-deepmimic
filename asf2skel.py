@@ -68,8 +68,8 @@ def dump_bodies(asf_skeleton, skeleton_xml):
     It also handles all the calculations concerning axes and joints
     """
 
-    # Ensure all positions are at their "default" values; also, we need to make
-    # use of the per-instance attributes which update_joint_positions adds/sets
+    # Ensure all positions are at their "default" values; if the skeleton's pose
+    # is different from that in the ASF file, everything will be off :|
     asf_skeleton.update_joint_positions()
 
     for joint in [asf_skeleton.root] + asf_skeleton.joints:
@@ -102,7 +102,8 @@ def dump_bodies(asf_skeleton, skeleton_xml):
 
         for shape in ["visualization", "collision"]:
             shape_xml = ET.SubElement(body_xml, shape + "_shape")
-            ET.SubElement(shape_xml, "transformation").text = vec2string(tform_vector)
+            ET.SubElement(shape_xml, "transformation").text = \
+                                                        vec2string(tform_vector)
             add_box(shape_xml, joint.length)
 
         ###################
@@ -122,8 +123,7 @@ def write_joint_xml(skeleton_xml, joint):
     ET.SubElement(joint_xml, "child").text = bodyname(joint)
     joint_xml.set("name", joint.name)
 
-    ET.SubElement(joint_xml, "transformation").text = "0 0 0 "\
-                                                      "0 0 0"
+    ET.SubElement(joint_xml, "transformation").text = "0 0 0 0 0 0"
 
     jtype = ""
     if len(joint.dofs) == 0:
@@ -179,7 +179,7 @@ def dump_joints(asf_skeleton, skeleton_xml):
     Given a skeleton object and an xml root, dump joints
     """
 
-    # Setup a special joint for the root
+    # Set up a special joint for the root
     root_joint = ET.SubElement(skeleton_xml, "joint")
     root_joint.set("name", "root")
     ET.SubElement(root_joint, "parent").text = "world"
@@ -205,20 +205,35 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Dumps an asf file to a .skel")
 
-    parser.add_argument("--asf", dest="asf_path", default=False)
+    parser.add_argument("--asf", dest="asf_path", required=True)
+    parser.add_argument("--dest", dest="dest_path", required=True)
+
+    rsrc_help = "File to replace text in; if unspecified, uses dest. " \
+                + "If it doesn't exist, it will be created"
+    parser.add_argument("--rsrc", dest="rsrc", required=False, help=rsrc_help)
+
+    replace_help = "If true, then attempt to find <!--START--> " \
+    + "and <!--END--> tags in the destination file and replace whatever is in" \
+    + "between with the generated xml"
+
+    parser.add_argument("--replace", dest="replace", help=replace_help,
+                        default=False)
 
     args = parser.parse_args()
 
     skel = ASF_Skeleton(args.asf_path)
 
-    new_skel = dump_asf_to_skel(skel)
+    skel_xml = dump_asf_to_skel(skel)
 
     start_flag = r"<!--START-->"
     end_flag = r"<!--END-->"
     source_fname = r"test/original/human_box.skel"
     dest_fname = r"test/human.skel"
 
-    with open(source_fname, "r") as f:
+    if args.rsrc is None:
+        args.rsrc = args.dest_path
+
+    with open(args.rsrc, "r") as f:
         file_text = "".join(f.readlines())
 
     try:
@@ -227,7 +242,11 @@ if __name__ == "__main__":
         pass
 
     with open(dest_fname, "w") as f:
-        file_text = re.sub(start_flag + ".*" + end_flag,
-                           start_flag + "\n" + new_skel + "\n" + end_flag,
-                           file_text, flags=re.DOTALL)
+        if args.replace:
+            file_text = re.sub(start_flag + ".*" + end_flag,
+                               start_flag + "\n" + skel_xml + "\n" + end_flag,
+                               file_text, flags=re.DOTALL)
+        else:
+            file_text = skel_xml
+
         f.write(file_text)
