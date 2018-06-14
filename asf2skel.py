@@ -1,4 +1,4 @@
-from skeleton import Skeleton
+from asf_skeleton import ASF_Skeleton
 from transformations import euler_from_matrix, compose_matrix
 from xml.dom import minidom
 from xml.etree import ElementTree
@@ -57,7 +57,7 @@ def add_box(xml_parent, length):
     box_size = ET.SubElement(geo_box, "size")
     box_size.text = vec2string([length, 2 * CYLINDER_RADIUS, CYLINDER_RADIUS])
 
-def dump_bodies(skeleton, skeleton_xml):
+def dump_bodies(asf_skeleton, skeleton_xml):
     """
     Given an XML element (an ETElement), dump the skeleton's joint objects
     as the element's children
@@ -70,9 +70,9 @@ def dump_bodies(skeleton, skeleton_xml):
 
     # Ensure all positions are at their "default" values; also, we need to make
     # use of the per-instance attributes which update_joint_positions adds/sets
-    skeleton.update_joint_positions()
+    asf_skeleton.update_joint_positions()
 
-    for joint in [skeleton.root] + skeleton.joints:
+    for joint in [asf_skeleton.root] + asf_skeleton.joints:
 
         body_xml = ET.SubElement(skeleton_xml, "body")
         body_xml.set("name", bodyname(joint))
@@ -174,7 +174,7 @@ def write_joint_xml(skeleton_xml, joint):
         # ET.SubElement(dynamics, "damping").text = "1"
         # ET.SubElement(dynamics, "stiffness").text = "0"
 
-def dump_joints(skeleton, skeleton_xml):
+def dump_joints(asf_skeleton, skeleton_xml):
     """
     Given a skeleton object and an xml root, dump joints
     """
@@ -183,20 +183,20 @@ def dump_joints(skeleton, skeleton_xml):
     root_joint = ET.SubElement(skeleton_xml, "joint")
     root_joint.set("name", "root")
     ET.SubElement(root_joint, "parent").text = "world"
-    ET.SubElement(root_joint, "child").text = bodyname(skeleton.root)
+    ET.SubElement(root_joint, "child").text = bodyname(asf_skeleton.root)
     root_joint.set("type", "free")
 
-    for joint in skeleton.joints:
+    for joint in asf_skeleton.joints:
 
         write_joint_xml(skeleton_xml, joint)
 
-def dump_asf_to_skel(skeleton):
+def dump_asf_to_skel(asf_skeleton):
 
     skeleton_xml = ET.Element("skeleton")
-    skeleton_xml.set("name", skeleton.name)
+    skeleton_xml.set("name", asf_skeleton.name)
     ET.SubElement(skeleton_xml, "transformation").text = "0 0 0 0 0 0"
-    dump_bodies(skeleton, skeleton_xml)
-    dump_joints(skeleton, skeleton_xml)
+    dump_bodies(asf_skeleton, skeleton_xml)
+    dump_joints(asf_skeleton, skeleton_xml)
 
     # The first line is always <xml_version 1.0>, so skip that
     return "\n".join(prettify(skeleton_xml).splitlines()[1:])
@@ -209,7 +209,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    skel = Skeleton(args.asf_path)
+    skel = ASF_Skeleton(args.asf_path)
 
     new_skel = dump_asf_to_skel(skel)
 

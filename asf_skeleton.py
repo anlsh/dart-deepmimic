@@ -3,7 +3,7 @@ from cgkit.asfamc import ASFReader
 from transformations import compose_matrix
 import numpy as np
 
-class Skeleton:
+class ASF_Skeleton:
 
     def __init__(self, filename):
 

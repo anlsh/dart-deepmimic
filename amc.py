@@ -1,7 +1,7 @@
 
 from cgkit.asfamc import AMCReader
 from joint import expand_angle
-from skeleton import Skeleton
+from asf_skeleton import ASF_Skeleton
 from transformations import compose_matrix, euler_from_matrix
 import math
 import numpy as np
@@ -69,14 +69,14 @@ class Skel_AMC(AMC):
         # Set up a map of joint names to dof indices
         # start index and window length tuple
         self.joint2window = {}
-        asf_skeleton = Skeleton(asf_filename)
+        asf_skeleton = ASF_Skeleton(asf_filename)
 
         for joint in self.skeleton.joints:
             i = 0
             while True:
                 if self.skeleton.dofs[i].name[:len(joint.name)] == joint.name:
-                    self.joint2window[joint.name] = (i, joint.num_dofs(),
-                                                     asf_skeleton.name2joint[joint.name].dofs)
+                    self.joint2window[joint.name] = (i, joint.num_dofs(), \
+                                        asf_skeleton.name2joint[joint.name].dofs)
                     break
                 i += 1
 
