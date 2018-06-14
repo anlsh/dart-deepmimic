@@ -235,11 +235,11 @@ if __name__ == "__main__":
         file_text = "".join(f.readlines())
 
     try:
-        os.remove(dest_fname)
+        os.remove(args.dest_path)
     except FileNotFoundError:
         pass
 
-    with open(dest_fname, "w") as f:
+    with open(args.dest_path, "w") as f:
         if args.replace:
             file_text = re.sub(start_flag + ".*" + end_flag,
                                start_flag + "\n" + skel_xml + "\n" + end_flag,

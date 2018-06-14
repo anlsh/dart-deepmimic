@@ -70,11 +70,17 @@ def rotationMatrixToEulerAngles(R) :
 
     return np.array([x, y, z])
 
-def dvector2rads(degrees):
+def to_radians(degrees):
     """
     Takes in a numpy
     """
-    return np.multiply(pi/180, degrees)
+    return np.multiply(pi / 180, degrees)
+
+def from_radians(radians):
+    """
+    Takes in a numpy
+    """
+    return np.multiply(180 / pi, degrees)
 
 def rmatrix_x2v(vector):
     """
@@ -91,15 +97,3 @@ def rmatrix_x2v(vector):
                         [sin(alpha), cos(alpha) * cos(theta), -1 * cos(alpha) * sin(theta)],
                         [0, sin(theta), cos(theta)]])
 
-def x2v_angles(vector):
-
-    x, y, z = vector
-    yrot = asin(z)
-
-    xy_proj = np.array([x, y, 0])
-    proj_length = np.linalg.norm(xy_proj)
-    xy_proj = xy_proj / proj_length if proj_length != 0 else np.array([0,0,0])
-
-    zrot = atan2(xy_proj[1], xy_proj[0])
-
-    return np.array([0, yrot, zrot])

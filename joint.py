@@ -1,5 +1,6 @@
 import numpy as np
 import math
+from utils import to_radians, from_radians
 
 from transformations import compose_matrix
 
@@ -33,11 +34,14 @@ class Joint:
         direction = np.array([float(i) for i in dictionary["direction"]])
         axis_degrees = np.array([float(i) for i in dictionary["axis"][:-1]])
         length = float(dictionary["length"][0])
-        dofs = " ".join(dictionary["dof"]) if "dof" in dictionary else ""
         theta = np.array([0, 0, 0])
         parent = None
 
-        return Joint(id_, name, direction, axis_degrees, length, dofs, parent)
+        dofs = " ".join(dictionary["dof"]) if "dof" in dictionary else ""
+        dofs = dofs.replace("r", "").replace(" ", "")
+
+        return Joint(id_, name, direction, to_radians(axis_degrees),
+                     length, dofs, parent)
 
 
     def __init__(self, id_, name, direction, axis, length, dofs, parent=None):
@@ -46,10 +50,10 @@ class Joint:
         self.name = name
         self.direction = direction
         self.length = length
+        self.dofs = dofs
 
-        self._axis = None
-        self.axis_degrees = axis
-
+        self._axis = [0, 0, 0]
+        self.axis_radians = axis
         self._theta = [0, 0, 0]
 
         self._parent = None
@@ -57,8 +61,6 @@ class Joint:
 
         self.__update_ctrans()
         self.__update_ttrans
-
-        self.dofs = dofs.replace("r", "").replace(" ", "") if dofs is not None else ""
 
     def __update_ctrans(self):
         self.ctrans = compose_matrix(angles=self.axis_radians,
