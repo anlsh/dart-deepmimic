@@ -1,4 +1,3 @@
-
 from cgkit.asfamc import AMCReader
 from joint import expand_angle
 from asf_skeleton import ASF_Skeleton
@@ -26,10 +25,10 @@ class AMC:
 
     def sync_angles(self, framenum):
         """
-        Call this method to set all of the skeleton's angles to the values in the
-        corresponding frame of the AMC (where 0 is the first frame)
+        Call this method to set all of the skeleton's angles to the values in
+        the corresponding frame of the AMC (where 0 is the first frame)
         """
-        raise NotImplementedError("Abstract class, use either ASF or SKEL AMC classes")
+        raise NotImplementedError("AMC is an abstract class")
 
 class ASF_AMC(AMC):
 
@@ -66,41 +65,49 @@ class Skel_AMC(AMC):
         """
         super(Skel_AMC, self).__init__(amc_filename, dart_skeleton)
 
-        # Set up a map of joint names to dof indices
-        # start index and window length tuple
-        self.joint2window = {}
+        # Set up a map of joint names to their positions in the Dart Skeleton
+        # dof array. Relevant fields are (0) Index of the first axis in dof list
+        # (2) how many dofs this joint has and (3) joint order ("xy", "yz", etc)
+        self.joint_info = {}
         asf_skeleton = ASF_Skeleton(asf_filename)
 
+        # For each joint, loop through the entire dofs list until you hit a dof
+        # whose name starts with the joint name
         for joint in self.skeleton.joints:
             i = 0
             while True:
                 if self.skeleton.dofs[i].name[:len(joint.name)] == joint.name:
-                    self.joint2window[joint.name] = (i, joint.num_dofs(), \
-                                        asf_skeleton.name2joint[joint.name].dofs)
+                    self.joint_info[joint.name] = (i, joint.num_dofs(), \
+                                    asf_skeleton.name2joint[joint.name].dofs)
                     break
                 i += 1
 
     def sync_angles(self, framenum):
 
         frame = self.frames[framenum]
-        root_data = frame[0][1]
 
-        def zip_dofs(dof_list, pos_list):
+        def map_dofs(dof_list, pos_list):
 
             for dof, pos in zip(dof_list, pos_list):
                 dof.set_position(pos)
 
-        zip_dofs(self.skeleton.dofs[3:6], root_data[:3])
-        zip_dofs(self.skeleton.dofs[0:3],
+        # World to root joint is a bit special so we handle it here...
+        root_data = frame[0][1]
+        map_dofs(self.skeleton.dofs[3:6], root_data[:3])
+        map_dofs(self.skeleton.dofs[0:3],
                  sequential_to_rotating_radians(np.multiply(math.pi / 180,
                                                             root_data[3:])))
 
+        # And handle the rest of the dofs normally
         for joint_name, joint_angles in frame[1:]:
-            start_index, num_dofs, order = self.joint2window[joint_name]
+            start_index, num_dofs, order = self.joint_info[joint_name]
+
+            # AMC data is in sequential degrees while Dart expects rotating radians,
+            # so we do some conversion here
 
             theta = expand_angle(np.multiply(math.pi / 180, joint_angles),
                                  order)
             rotation_euler = sequential_to_rotating_radians(theta)
 
-            zip_dofs(self.skeleton.dofs[start_index : start_index + num_dofs],
+            map_dofs(self.skeleton.dofs[start_index : start_index + num_dofs],
                      rotation_euler)
