@@ -69,13 +69,14 @@ class Skel_AMC(AMC):
         # Set up a map of joint names to dof indices
         # start index and window length tuple
         self.joint2window = {}
-        self.asf_skeleton = Skeleton(asf_filename)
+        asf_skeleton = Skeleton(asf_filename)
 
         for joint in self.skeleton.joints:
             i = 0
             while True:
                 if self.skeleton.dofs[i].name[:len(joint.name)] == joint.name:
-                    self.joint2window[joint.name] = (i, joint.num_dofs())
+                    self.joint2window[joint.name] = (i, joint.num_dofs(),
+                                                     asf_skeleton.name2joint[joint.name].dofs)
                     break
                 i += 1
 
@@ -94,12 +95,12 @@ class Skel_AMC(AMC):
                  sequential_to_rotating_radians(np.multiply(math.pi / 180,
                                                             root_data[3:])))
 
-        for joint_name, joint_data in frame[1:]:
-            index, length = self.joint2window[joint_name]
+        for joint_name, joint_angles in frame[1:]:
+            start_index, num_dofs, order = self.joint2window[joint_name]
 
-            asf_joint = self.asf_skeleton.name2joint[joint_name]
-            asf_joint.theta_degrees = expand_angle(joint_data, asf_joint.dofs)
-            rotation_euler = sequential_to_rotating_radians(asf_joint.theta_radians)
+            theta = expand_angle(np.multiply(math.pi / 180, joint_angles),
+                                 order)
+            rotation_euler = sequential_to_rotating_radians(theta)
 
-            zip_dofs(self.skeleton.dofs[index : index + length],
+            zip_dofs(self.skeleton.dofs[start_index : start_index + num_dofs],
                      rotation_euler)
