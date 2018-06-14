@@ -6,23 +6,28 @@ from transformations import compose_matrix, euler_from_matrix
 from skeleton import Skeleton
 
 class AMC:
+    """
+    Parent class representing information from a .amc file
+    """
 
     def __init__(self, amc_filename, skeleton):
 
         self.name = None
         self.frames = []
-        self.num_frames = 0
         self.skeleton = skeleton
 
         def __init_frame(framenum, data):
             self.frames.append(data)
-            self.num_frames += 1
 
         reader = AMCReader(amc_filename)
         reader.onFrame = __init_frame
         reader.read()
 
-    def sync_angles(self, framenum, skeleton):
+    def sync_angles(self, framenum):
+        """
+        Call this method to set all of the skeleton's angles to the values in the
+        corresponding frame of the AMC (where 0 is the first frame)
+        """
         raise NotImplementedError("Abstract class, use either ASF or SKEL AMC classes")
 
 class ASF_AMC(AMC):
@@ -39,14 +44,14 @@ class ASF_AMC(AMC):
 
 def sequential_to_rotating_radians(rvector):
 
-    # rvector = np.multiply(math.pi / 180, dvector)
-    # return rvector
     rmatrix = compose_matrix(angles=rvector, angle_order="sxyz")
-    # print("rmatrix is ----- \n" + str(rmatrix))
     return euler_from_matrix(rmatrix[:3, :3], axes="rxyz")
 
 
 class Skel_AMC(AMC):
+    """
+    A class to sync AMC frames with a Dart Skeleton object
+    """
 
     def __init__(self, amc_filename, skeleton, skeleton_filename):
         super(Skel_AMC, self).__init__(amc_filename, skeleton)
@@ -59,10 +64,9 @@ class Skel_AMC(AMC):
         dof_names = [dof.name for dof in self.skeleton.dofs]
 
         for joint in self.skeleton.joints:
-            name_length = len(joint.name)
             i = 0
             while True:
-                if skeleton.dofs[i].name[:name_length] == joint.name:
+                if skeleton.dofs[i].name[:len(joint.name)] == joint.name:
                     self.joint2window[joint.name] = (i, joint.num_dofs())
                     break
                 i += 1
@@ -84,8 +88,6 @@ class Skel_AMC(AMC):
                                                             root_data[3:])))
         zip_dofs(self.skeleton.dofs[3:6], root_data[:3])
 
-        print("----------------------------------\n")
-        print("framenum: " + str(framenum))
         for bone_name, bone_data in frame[1:]:
             index, length = self.joint2window[bone_name]
 
@@ -96,8 +98,3 @@ class Skel_AMC(AMC):
 
             zip_dofs(self.skeleton.dofs[index : index + length],
                      rotation_euler)
-
-            # print(bone_name + ": range " + str((index, index + length)) \
-            #       + " was zipped with " + str(bone_data))
-
-        # exit()

@@ -77,10 +77,7 @@ def dump_bodies(skeleton, skeleton_xml):
         ################################
 
         rmatrix = bone.ctrans
-        print(bone.name + "\n" + str(rmatrix))
-        # print(np.multiply(180 / math.pi, euler_from_matrix(rmatrix[:3, :3])))
         tform_text = vec2string(np.append(bone.base_pos,
-                                          # [0,0,0]))
                                           euler_from_matrix(rmatrix[:3, :3],
                                                             axes="rxyz")))
         ET.SubElement(body_xml, "transformation").text = tform_text
