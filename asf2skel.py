@@ -125,18 +125,14 @@ def write_joint_xml(skeleton_xml, joint):
     ET.SubElement(joint_xml, "transformation").text = "0 0 0 "\
                                                       "0 0 0"
 
-    axes = joint.dofs.replace("r", "").split(" ") if joint.dofs \
-            is not None else ""
-
-
     jtype = ""
-    if len(axes) == 0:
+    if len(joint.dofs) == 0:
         jtype = "fixed"
-    elif len(axes) == 1:
+    elif len(joint.dofs) == 1:
         jtype = "revolute"
-    elif len(axes) == 2:
+    elif len(joint.dofs) == 2:
         jtype = "universal"
-    elif len(axes) == 3:
+    elif len(joint.dofs) == 3:
         jtype = "euler"
         ET.SubElement(joint_xml, "axis_order").text = "xyz"
     else:
@@ -154,7 +150,7 @@ def write_joint_xml(skeleton_xml, joint):
         return
 
     joint_xml.set("type", jtype)
-    for index, axis in enumerate(axes):
+    for index, axis in enumerate(joint.dofs):
         axis_tag = "axis" + ("" if index == 0 else str(index + 1))
 
         axis_vstr = ""

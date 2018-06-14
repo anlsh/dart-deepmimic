@@ -1,9 +1,10 @@
 
 from cgkit.asfamc import AMCReader
-import numpy as np
-import math
-from transformations import compose_matrix, euler_from_matrix
+from joint import expand_angle
 from skeleton import Skeleton
+from transformations import compose_matrix, euler_from_matrix
+import math
+import numpy as np
 
 class AMC:
     """
@@ -40,7 +41,8 @@ class ASF_AMC(AMC):
         self.skeleton.root.theta_degrees = np.array(root_data[3:])
 
         for joint_name, joint_data in frame[1:]:
-            self.skeleton.name2joint[joint_name].set_theta_degrees(joint_data)
+            joint = self.skeleton.name2joint[joint_name].theta_degrees
+            joint.theta_degrees = expand_angle(joint_data, joint.dofs)
 
 def sequential_to_rotating_radians(rvector):
 
@@ -93,7 +95,7 @@ class Skel_AMC(AMC):
 
             # I need this to take advantage of the auto-angle placement
             asf_joint = self.asf_skeleton.name2joint[joint_name]
-            asf_joint.set_theta_degrees(joint_data)
+            asf_joint.theta_degrees = expand_angle(joint_data, asf_joint.dofs)
             rotation_euler = sequential_to_rotating_radians(asf_joint.theta_radians)
 
             zip_dofs(self.skeleton.dofs[index : index + length],
