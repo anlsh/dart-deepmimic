@@ -50,7 +50,7 @@ if __name__ == '__main__':
     world = MovieWorld(0.0002, args.skel_path)
 
     skel = world.skeletons[1]
-    amc = Skel_AMC(args.amc_path, skel, args.asf_path) if args.amc_path is not None else None
+    amc = Skel_AMC(skel, args.amc_path, args.asf_path) if args.amc_path is not None else None
     world.set_amc(amc)
 
     print('pydart create_world OK')
