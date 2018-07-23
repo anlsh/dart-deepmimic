@@ -10,11 +10,9 @@ class AMC:
     Parent class representing information from a .amc file
     """
 
-    def __init__(self, amc_filename, skeleton):
+    def __init__(self, amc_filename):
 
-        self.name = None
         self.frames = []
-        self.skeleton = skeleton
 
         def __init_frame(framenum, data):
             self.frames.append(data)
@@ -22,13 +20,6 @@ class AMC:
         reader = AMCReader(amc_filename)
         reader.onFrame = __init_frame
         reader.read()
-
-    def sync_angles(self, framenum):
-        """
-        Call this method to set all of the skeleton's angles to the values in
-        the corresponding frame of the AMC (where 0 is the first frame)
-        """
-        raise NotImplementedError("AMC is an abstract class")
 
 class ASF_AMC(AMC):
 
