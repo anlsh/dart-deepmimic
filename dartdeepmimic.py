@@ -48,6 +48,8 @@ class ActionMode:
 
     lengths = [3, 4, 4]
 
+ROOT_THETA_KEY = "root_theta"
+
 def dart_dof_data(amc_frame, skel_dofs, asf):
 
     # TODO Find a way of extracting information other than
@@ -63,7 +65,7 @@ def dart_dof_data(amc_frame, skel_dofs, asf):
 
     # Change the root just to make things a bit easier
     del dof_data["root"]
-    dof_data["root_theta"] = ([3, 4, 5], "xyz")
+    dof_data[ROOT_THETA_KEY] = ([3, 4, 5], "xyz")
 
     return dof_data
 
@@ -78,6 +80,10 @@ class DartDeepMimic(dart_env.DartEnv):
                  action_type="continuous", screen_width=80,
                  screen_height=45):
 
+        # TODO I think dt might be a property I shouldn't be overriding...
+        self.dt = dt
+        self.statemode = statemode
+        self.actionmode = actionmode
 
         ###########################################################
         # Extract dof info so that states can be converted easily #
@@ -88,8 +94,8 @@ class DartDeepMimic(dart_env.DartEnv):
 
         self.ref_skel = world.skeletons[1]
         self.mocap_data = AMC(reference_motion_path)
-        self.dart_dof_data = dart_dof_data(self.mocap_data.frames[0],
-                                           self.ref_skel.dofs, asf)
+        self.metadict = dart_dof_data(self.mocap_data.frames[0],
+                                      self.ref_skel.dofs, asf)
         # Setting control skel to ref skel is just a workaround:
         # it's set to its correct value later on
         self.control_skel = self.ref_skel
@@ -99,11 +105,17 @@ class DartDeepMimic(dart_env.DartEnv):
         ######################################################
 
         if statemode == StateMode.GEN_EULER.value:
-            self._get_obs = self.gen_as_euler
+            # self._get_obs = self.gen_as_euler
+            self._get_obs = lambda: self.gen_as_euler(self.control_skel,
+                                                      self.metadict)
         elif statemode == StateMode.GEN_QUAT.value:
-            self._get_obs = self.gen_as_quat
+            # self._get_obs = self.gen_as_quat
+            self._get_obs = lambda: self.gen_as_quat(self.control_skel,
+                                                      self.metadict)
         elif statemode == StateMode.GEN_AXIS.value:
-            self._get_obs = self.gen_as_axisangle
+            # self._get_obs = self.gen_as_axisangle
+            self._get_obs = lambda: self.gen_as_axisangle(self.control_skel,
+                                                          self.metadict)
         else:
             raise RuntimeError("Unrecognized or unimpletmented state code: "
                                + str(statemode))
@@ -112,9 +124,10 @@ class DartDeepMimic(dart_env.DartEnv):
         # Do some calculations related to action space #
         ################################################
 
-        num_actions = ActionMode.lengths[actionmode] * (len(self.dart_dof_data) - 1)
-        action_limits = [np.inf * np.ones(num_actions),
-                         -np.inf * np.ones(num_actions)]
+        self.num_actions = ActionMode.lengths[actionmode] \
+                           * (len(self.metadict) - 1)
+        self.action_limits = [np.inf * np.ones(self.num_actions),
+                              -np.inf * np.ones(self.num_actions)]
 
         if actionmode == ActionMode.GEN_EULER:
             self._target_angles = self.angles_from_euler
@@ -126,125 +139,17 @@ class DartDeepMimic(dart_env.DartEnv):
             raise RuntimeError("Unrecognized or unimpletmented action code: "
                                + str(actionmode))
 
+        # TODO Parse end effectors from the ASF or Skel, idc which #
 
         dart_env.DartEnv.__init__(self, [control_skeleton_path], frame_skip,
                                   len(self._get_obs()),
-                                  action_limits, dt, obs_type,
+                                  self.action_limits, dt, obs_type,
                                   action_type, visualize, not visualize)
 
         self.control_skel = self.dart_world.skeletons[1]
 
-        # self.control_bounds = np.array([10*np.ones(32,), -10*np.ones(32,)])
 
-        # obs_dim = 58 #+3#for phase
-        # ### POINTS ON THE FOOT PLANE
-        # self.P = np.array([0.,0.,-0.0525])
-        # self.Q = np.array([-0.05,0.,-0.05])
-        # self.R = np.array([-0.05,0.,0.])
-
-        # self.duplicate = False
-        # self.switch = -1
-        # self.impactCount = 0
-        # self.storeState = False
-        # self.init_q = np.zeros(29,)
-        # self.init_dq = np.zeros(29,)
-        # self.balance_PID = False
-        # self.swingFoot = 'Right'
-
-        # self.count = 0
-        # self.count2 = 1
-        # self.count_left = self.count_right = 0
-        # self.prev_a = np.zeros(23,)
-        # self.init_count = 0
-        # self.balance = False
-        # self.trainRelay = False
-        # self.firstPass =  False
-        # self.qpos_node0 = np.zeros(29,)
-        # self.qpos_node1 = np.zeros(29,)
-        # self.qpos_node2 = np.zeros(29,)
-        # self.qpos_node3 = np.zeros(29,)
-        # #prefix = '../../Balance_getup/'
-        # prefix = './'
-
-        #self.WalkPositions[:,1]+=0.013
-        #self.WalkVelocities/=1.0
-        #self.rarm_endeffector = self.rarm_endeffector[1:]
-        #self.larm_endeffector = self.larm_endeffector[1:]
-        #self.rfoot_endeffector = self.rfoot_endeffector[1:]
-        #self.lfoot_endeffector = self.lfoot_endeffector[1:]
-        #self.com = self.com[1:]
-
-        # high = np.inf*np.ones(obs_dim)
-        # low = -high
-        # observation_space = spaces.Box(low, high)
-        # action_space = spaces.Box(10*np.ones(31,), -10*np.ones(31,))
-
-        # if self.trainRelay:
-        #     with open("Human_node0_tuned.pkl","rb") as fp:#../../Balance_getup/
-        #         self.par = pickle.load(fp)
-        #     self.pol = MlpPolicy("Human_node_0",observation_space,action_space,hid_size=128,num_hid_layers=2)
-        #     #tf.global_variables_initializer()
-        #     sess = tf.get_default_session()
-        #     for item in self.pol.get_variables():
-        #         name = str(item.name)
-        #         if 'node_0' in name:
-        #             obj = item.assign(self.par[item.name])
-        #             sess.run(obj)
-        '''
-        with open('positions_new_walk_rightswing.txt','rb') as fp:
-            self.ref_trajectory_right = np.loadtxt(fp)
-
-        #self.ref_trajectory = self.ref_trajectory[2:,:]
-        with open('vel_new_walk_rightswing.txt','rb') as fp:
-            self.ref_vel_right = np.loadtxt(fp)
-
-        #self.ref_vel[:,3]-=np.pi/20
-        #self.ref_vel = self.ref_vel[2:,:]
-        with open("acc_new_walk_rightswing.txt","rb") as fp:
-            self.ref_acc_right = np.loadtxt(fp)
-
-
-        with open('positions_new_walk_leftswing.txt','rb') as fp:
-            self.ref_trajectory_left = np.loadtxt(fp)
-
-        #self.ref_trajectory = self.ref_trajectory[2:,:]
-        with open('vel_new_walk_leftswing.txt','rb') as fp:
-            self.ref_vel_left = np.loadtxt(fp)
-
-        #self.ref_vel[:,3]-=np.pi/20
-        #self.ref_vel = self.ref_vel[2:,:]
-        with open("acc_new_walk_leftswing.txt","rb") as fp:
-            self.ref_acc_left = np.loadtxt(fp)
-
-
-        #self.ref_acc = self.ref_acc[2:,:]
-        with open("foot_angles.txt","rb") as fp:
-            self.foot_angles = np.loadtxt(fp)
-        self.foot_angles = self.foot_angles[2:]
-        #b, a = signal.butter(4, 0.525)
-        '''
-        #self.ref_acc = signal.filtfilt(b,a,self.ref_acc)
-
-        # self.prevdq = np.zeros(29,)
-        # self.tau = np.zeros(29,)
-        # self.ndofs = 29
-        # self.target = np.zeros(self.ndofs,)
-        # self.init = np.zeros(self.ndofs,)
-        # self.edot = np.zeros(self.ndofs,)
-        # self.preverror = np.zeros(self.ndofs,)
-        # self.stance = None
-        # self.target_vel = 1.0
-        # for i in range(6, self.ndofs):
-        #     self.preverror[i] = (self.init[i] - self.target[i])
-        # self.t = 0
-
-        # dart_env.DartEnv.__init__(self, ['kima/kima_human_box.skel'],16, obs_dim, self.control_bounds, disableViewer=False)
-
-        # self.robot_skeleton.set_self_collision_check(True)
-
-        # utils.EzPickle.__init__(self)
-
-    def expand_state(self, generalized_q):
+    def expand_state(self, generalized_q, metadict):
         """
         Given an obs (q or dq, don't really matter), turn it into
         fully-expanded euler angles (w/ three params each), xyz order; returns
@@ -255,23 +160,23 @@ class DartDeepMimic(dart_env.DartEnv):
 
         root_translation = generalized_q[0:3]
         expanded_angles = {}
-        for dof_name in self.dart_dof_data:
-            indices, order = self.dart_dof_data[dof_name]
+        for dof_name in metadict:
+            indices, order = metadict[dof_name]
             fi = indices[0]
             li = indices[-1]
             expanded_angles[dof_name] = expand_angle(generalized_q[fi:li],
                                                      order)
         return root_translation, expanded_angles
 
-    def gen_state_components(self):
+    def gen_state_components(self, skeleton, metadict):
 
         ############################################################
         # TODO Is unfunctional, relies on control_skel rather than #
         # a parameter                                              #
         ############################################################
 
-        pos, angles_dict = self.expand_state(self.control_skel.q)
-        dpos, dangles_dict = self.expand_state(self.control_skel.dq)
+        pos, angles_dict = self.expand_state(skeleton.q, metadict)
+        dpos, dangles_dict = self.expand_state(skeleton.dq, metadict)
 
         angles = np.array(list(angles_dict.values()))
         dangles = np.array(list(dangles_dict.values()))
@@ -281,30 +186,32 @@ class DartDeepMimic(dart_env.DartEnv):
 
         return gen_pos, gen_angles
 
-    def gen_as_transform(self, tform):
-        pos, angles = self.gen_state_components()
+    def _gen_as_transform(self, tform, skel, metadict):
+        pos, angles = self.gen_state_components(skel, metadict)
         transformed_angles = [tform(angle) for angle in angles]
         flat_angles = np.array(transformed_angles).flatten()
         return np.concatenate([pos, flat_angles])
 
-    def gen_as_quat(self):
-        return self.gen_as_transform(lambda x: quaternion_from_euler(*x, axes="rxyz"))
+    def gen_as_quat(self, skel, metadict):
+        return self._gen_as_transform(lambda x: quaternion_from_euler(*x, axes="rxyz"),
+                                      skel, metadict)
 
-    def gen_as_euler(self):
-        return self.gen_as_transform(lambda x: x)
+    def gen_as_euler(self, skel, metadict):
+        return self._gen_as_transform(lambda x: x, skel_metadict)
 
-    def gen_as_axisangle(self):
-        return self.gen_as_transform(lambda x: axisangle_from_euler(*x, axes="rxyz"))
+    def gen_as_axisangle(self, skel, metadict):
+        return self._gen_as_transform(lambda x: axisangle_from_euler(*x, axes="rxyz"),
+                                      skel, metadict)
 
-    def compress_euler(self, angles):
+    def compress_euler(self, angles, metadict):
         """
         Given a list of 3-tuples representing euler angles, use the
         skeleton metadata to turn it into target angles for dart
         """
-        actuated_dofs = [key for key in self.dart_dof_data
-                         if key != "root_theta"]
+        actuated_dofs = [key for key in metadict
+                         if key != ROOT_THETA_KEY]
         return np.concatenate([compress_angle(angles[index],
-                                              self.dart_dof_data[key][1])
+                                              metadict[key][1])
                                for index, key in enumerate(actuated_dofs)])
 
     def angles_from_transform(self, raw_action, euler_tform, miniaction_len):
@@ -381,7 +288,7 @@ class DartDeepMimic(dart_env.DartEnv):
         raise NotImplementedError()
 
     def torques_by_pd(self, P, D, dt, target_angles, current_angles,
-                      past_angles=current_angles):
+                      past_angles):
         current_diff = target_angles - current_angles
 
         past_diff = target_angles - past_angles
