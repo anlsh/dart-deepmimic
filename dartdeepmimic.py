@@ -25,6 +25,9 @@ from enum import Enum
 import pydart2 as pydart
 import argparse
 from amc import AMC
+from asf_skeleton import ASF_Skeleton
+from joint import expand_angle
+from transformations import *
 
 class StateMode(Enum):
 
@@ -36,39 +39,72 @@ class StateMode(Enum):
     MIX_QUAT = 4
     MIX_AXIS = 5
 
-def euler_dof_data(amc_frame, skel_dofs):
+def dart_dof_data(amc_frame, skel_dofs, asf):
 
+    # TODO Find a way of extracting information other than
+    # relying on the underlying amc file
     # dof_data is dof_name -> (range of indices, order )
     dof_data = {}
     for dof_name, _ in amc_frame:
+        joint = asf.name2joint[dof_name]
+        axes_str = joint.dofs
         indices = [i for i, dof in enumerate(skel_dofs)
                    if dof.name.startswith(dof_name)]
-        dof_data[dof_name] = indices
+        dof_data[dof_name] = (indices, axes_str)
+
+    # Change the root just to make things a bit easier
+    del dof_data["root"]
+    dof_data["root_theta"] = ([3, 4, 5], "xyz")
 
     return dof_data
 
 class DartDeepMimic(dart_env.DartEnv):
 
-    def __init__(self, control_skeleton_path, reference_motion_path,
+    def __init__(self, control_skeleton_path, asf_path,
+                 reference_motion_path,
                  statemode = StateMode.GEN_EULER,
                  actionmode = StateMode.GEN_EULER,
-                 visualize=True, frame_skip=16, dt=.002, obs_type="parameter",
-                 action_type="continuous", screen_width=80, screen_height=45):
+                 visualize=True, frame_skip=16, dt=.005,
+                 obs_type="parameter",
+                 action_type="continuous", screen_width=80,
+                 screen_height=45):
 
-        # TODO Figure out what the observation dimensions are...
-        world = pydart.World(0.0005, control_skeleton_path)
-        parser_skeleton = world.skeletons[1]
-        print(type(parser_skeleton.dofs[0].name))
-        # print(parser_skeleton.dofs)
 
-        mocap_data = AMC(reference_motion_path)
-        print(mocap_data.frames[0])
+        ###########################################################
+        # Extract dof info so that states can be converted easily #
+        ###########################################################
 
-        print(euler_dof_data(mocap_data.frames[0], parser_skeleton.dofs))
+        world = pydart.World(dt, control_skeleton_path)
+        asf = ASF_Skeleton(asf_path)
+
+        self.ref_skel = world.skeletons[1]
+        self.mocap_data = AMC(reference_motion_path)
+        self.dart_dof_data = dart_dof_data(self.mocap_data.frames[0],
+                                           self.ref_skel.dofs, asf)
+        # Setting control skel to ref skel is just a workaround:
+        # it's set to its correct value later on
+        self.control_skel = self.ref_skel
+
+        ######################################################
+        # Set the _get_obs function based on the chosen mode #
+        ######################################################
+
+        if statemode == StateMode.GEN_EULER.value:
+            self._get_obs = self.gen_as_euler
+        elif statemode == StateMode.GEN_QUAT.value:
+            self._get_obs = self.gen_as_quat
+        elif statemode == StateMode.GEN_AXIS.value:
+            self._get_obs = self.gen_as_axisangle
+        else:
+            raise RuntimeError("Unrecognized or unimpletmented code: "
+                               + str(statemode))
 
         dart_env.DartEnv.__init__(self, [control_skeleton_path], frame_skip,
-                                  obs_dim, control_bounds, dt, obs_type,
+                                  len(self._get_obs()),
+                                  control_bounds, dt, obs_type,
                                   action_type, visualize, not visualize)
+
+        self.control_skel = self.dart_world.skeletons[1]
 
         # self.control_bounds = np.array([10*np.ones(32,), -10*np.ones(32,)])
 
@@ -84,16 +120,6 @@ class DartDeepMimic(dart_env.DartEnv):
         # self.storeState = False
         # self.init_q = np.zeros(29,)
         # self.init_dq = np.zeros(29,)
-        # ### LOGGING
-        # self.dumpTorques = False
-        # self.dumpRewards = False
-        # self.dumpActions = False
-        # self.dumpCOM = False
-        # self.dumpStates = False
-        # #### PRINTING
-        # self.printTorques = False
-        # self.printRewards = False
-        # self.printActions = False
         # self.balance_PID = False
         # self.swingFoot = 'Right'
 
@@ -111,25 +137,6 @@ class DartDeepMimic(dart_env.DartEnv):
         # self.qpos_node3 = np.zeros(29,)
         # #prefix = '../../Balance_getup/'
         # prefix = './'
-        # with open(prefix+"rarm_endeffector_justjump.txt","rb") as fp:
-        #     self.rarm_endeffector = np.loadtxt(fp)
-
-        # with open(prefix+"larm_endeffector_justjump.txt","rb") as fp:
-        #     self.larm_endeffector = np.loadtxt(fp)
-
-        # with open(prefix+"lfoot_endeffector_justjump.txt","rb") as fp:
-        #     self.lfoot_endeffector = np.loadtxt(fp)
-
-        # with open(prefix+"rfoot_endeffector_justjump.txt",'rb') as fp:
-        #     self.rfoot_endeffector = np.loadtxt(fp)
-
-        # with open(prefix+"com_justjump.txt",'rb') as fp:
-        #     self.com = np.loadtxt(fp)
-        # with open(prefix+"JustJumpPositions_corrected.txt","rb") as fp:
-        #     self.WalkPositions = np.loadtxt(fp)
-
-        # with open(prefix+"JustJumpVelocities_corrected.txt","rb") as fp:
-        #     self.WalkVelocities = np.loadtxt(fp)
 
         #self.WalkPositions[:,1]+=0.013
         #self.WalkVelocities/=1.0
@@ -208,6 +215,61 @@ class DartDeepMimic(dart_env.DartEnv):
         # self.robot_skeleton.set_self_collision_check(True)
 
         # utils.EzPickle.__init__(self)
+
+    def expand_state(self, generalized_q):
+        """
+        Given an obs (q or dq, don't really matter), turn it into
+        fully-expanded euler angles (w/ three params each), xyz order; returns
+        dictionary
+
+        Return tuple like root_pos, {dict of all angles}
+        """
+
+        root_translation = generalized_q[0:3]
+        expanded_angles = {}
+        for dof_name in self.dart_dof_data:
+            indices, order = self.dart_dof_data[dof_name]
+            fi = indices[0]
+            li = indices[-1]
+            expanded_angles[dof_name] = expand_angle(generalized_q[fi:li],
+                                                     order)
+        return root_translation, expanded_angles
+
+    def gen_state_components(self):
+
+        ############################################################
+        # TODO Is unfunctional, relies on control_skel rather than #
+        # a parameter                                              #
+        ############################################################
+
+        pos, angles_dict = self.expand_state(self.control_skel.q)
+        dpos, dangles_dict = self.expand_state(self.control_skel.dq)
+
+        angles = np.array(list(angles_dict.values()))
+        dangles = np.array(list(dangles_dict.values()))
+
+        gen_pos = np.concatenate([pos, dpos])
+        gen_angles = np.concatenate([angles, dangles])
+
+        return gen_pos, gen_angles
+
+    def gen_as_transform(self, tform):
+        pos, angles = self.gen_state_components()
+        transformed_angles = [tform(angle) for angle in angles]
+        flat_angles = np.array(transformed_angles).flatten()
+        return np.concatenate([pos, flat_angles])
+
+    def gen_as_quat(self):
+        return self.gen_as_transform(lambda x: quaternion_from_euler(*x, axes="rxyz"))
+
+    def gen_as_euler(self):
+        return self.gen_as_transform(lambda x: x)
+
+    def gen_as_axisangle(self):
+        return self.gen_as_transform(lambda x: axisangle_from_euler(*x, axes="rxyz"))
+
+    # def _get_obs(self):
+    #     raise NotImplementedError()
 
     def transformActions(self,actions):
         raise NotImplementedError()
@@ -821,164 +883,6 @@ class DartDeepMimic(dart_env.DartEnv):
 
         # return ob, reward, done,reward_breakup
 
-    def _get_obs(self):
-
-        raise NotImplementedError()
-        # phi = np.array([self.count/322.])
-        # links = [2,3,4,5,6,7,12,13,15,16]
-        # state = []
-
-        # # Generalized euler coordinates
-        # len_obs = len(self.robot_skeleton.q)
-        # pos_nan = np.isnan(np.sum(self.robot_skeleton.q))
-        # vel_nan = np.isnan(np.sum(self.robot_skeleton.dq))
-
-        # retpos = self.robot_skeleton.q if not pos_nan else np.zeros(len_obs)
-        # retvel = self.robot_skeleton.dq if not vel_nan else np.zeros(len_obs)
-        # return np.concatenate((retpos, retvel))
-
-
-        # # observation for left leg thigh##################################################
-        # # RelPos_lthigh = self.robot_skeleton.bodynodes[2].com() - self.robot_skeleton.bodynodes[0].com()
-        # # state = copy.deepcopy(RelPos_lthigh)
-        # # quat_lthigh = euler2quat(z=self.robot_skeleton.q[8],y=self.robot_skeleton.q[7],x=self.robot_skeleton.q[6])
-        # start, end = 6, 8
-        # print(self.robot_skeleton.q)
-        # # print(self.robot_skeleton.dq[6])
-        # obs = np.concatenate(self.robot_skeleton.q[start:end+1],
-        #                      self.robot_skeleton.dq[start:end+1])
-        # state = np.concatenate((state, obs))
-        # # LinVel_lthigh = self.robot_skeleton.bodynodes[2].dC
-        # # state = np.concatenate((state,LinVel_lthigh))
-        # # state = np.concatenate((state,self.robot_skeleton.dq[6:9]))
-        # ################################################################3
-        # # RelPos_lknee = self.robot_skeleton.bodynodes[3].com() - self.robot_skeleton.bodynodes[0].com()
-        # # state = np.concatenate((state,RelPos_lknee))
-        # # quat_lknee = euler2quat(z=0.,y=0.,x=self.robot_skeleton.q[9])
-        # # state = np.concatenate((state,quat_lknee))
-        # # LinVel_lknee = self.robot_skeleton.bodynodes[3].dC
-        # # state = np.concatenate((state,LinVel_lknee))
-        # # state = np.concatenate((state,np.array([self.robot_skeleton.dq[9]])))
-
-        # start, end = 9, 9
-        # obs = np.concatenate(self.robot_skeleton.q[start:end+1],
-        #                      self.robot_skeleton.dq[start:end+1])
-        # state = np.concatenate((state, obs))
-        # #######################################################################3
-        # # RelPos_lfoot = self.robot_skeleton.bodynodes[4].com() - self.robot_skeleton.bodynodes[0].com()
-        # # state = np.concatenate((state,RelPos_lfoot))
-        # # quat_lfoot = euler2quat(z=self.robot_skeleton.q[11],y=0.,x=self.robot_skeleton.q[10])
-        # # state = np.concatenate((state,quat_lfoot))
-        # # LinVel_lfoot = self.robot_skeleton.bodynodes[4].dC
-        # # state = np.concatenate((state,LinVel_lfoot))
-        # # state = np.concatenate((state,self.robot_skeleton.dq[10:12]))
-
-        # start, end = 10, 10
-        # obs = np.concatenate(self.robot_skeleton.q[start:end+1],
-        #                      self.robot_skeleton.dq[start:end+1])
-        # state = np.concatenate((state, obs))
-        # #######################################################################3
-        # # RelPos_rthigh = self.robot_skeleton.bodynodes[5].com() - self.robot_skeleton.bodynodes[0].com()
-        # # state = np.concatenate((state,RelPos_rthigh))
-        # # quat_rthigh = euler2quat(z=self.robot_skeleton.q[14],y=self.robot_skeleton.q[13],x=self.robot_skeleton.q[12])
-        # # state = np.concatenate((state,quat_rthigh))
-        # # LinVel_rthigh = self.robot_skeleton.bodynodes[5].dC
-        # # state = np.concatenate((state,LinVel_rthigh))
-        # # state = np.concatenate((state,self.robot_skeleton.dq[12:15]))
-
-        # start, end = 12, 14
-        # obs = np.concatenate(self.robot_skeleton.q[start:end+1],
-        #                      self.robot_skeleton.dq[start:end+1])
-        # state = np.concatenate((state, obs))
-        # ###############################################################################3
-        # # RelPos_rknee = self.robot_skeleton.bodynodes[6].com() - self.robot_skeleton.bodynodes[0].com()
-        # # state = np.concatenate((state,RelPos_rknee))
-        # # quat_rknee = euler2quat(z=0.,y=0.,x=self.robot_skeleton.q[15])
-        # # state = np.concatenate((state,quat_rknee))
-        # # LinVel_rknee = self.robot_skeleton.bodynodes[6].dC
-        # # state = np.concatenate((state,LinVel_rknee))
-        # # state = np.concatenate((state,np.array([self.robot_skeleton.dq[15]])))
-
-        # start, end = 15, 15
-        # obs = np.concatenate(self.robot_skeleton.q[start:end+1],
-        #                      self.robot_skeleton.dq[start:end+1])
-        # state = np.concatenate((state, obs))
-        # ################################################################################3
-        # # RelPos_rfoot = self.robot_skeleton.bodynodes[7].com() - self.robot_skeleton.bodynodes[0].com()
-        # # state = np.concatenate((state,RelPos_rfoot))
-        # # quat_rfoot = euler2quat(z=self.robot_skeleton.q[17],y=0.,x=self.robot_skeleton.q[16])
-        # # state = np.concatenate((state,quat_rfoot))
-        # # LinVel_rfoot = self.robot_skeleton.bodynodes[7].dC
-        # # state = np.concatenate((state,LinVel_rfoot))
-        # # state = np.concatenate((state,self.robot_skeleton.dq[16:18]))
-
-        # start, end = 16, 17
-        # obs = np.concatenate(self.robot_skeleton.q[start:end+1],
-        #                      self.robot_skeleton.dq[start:end+1])
-        # state = np.concatenate((state, obs))
-        # ###########################################################
-        # # RelPos_larm = self.robot_skeleton.bodynodes[12].com() - self.robot_skeleton.bodynodes[0].com()
-        # # state = np.concatenate((state,RelPos_larm))
-        # # quat_larm = euler2quat(z=self.robot_skeleton.q[23],y=self.robot_skeleton.q[22],x=self.robot_skeleton.q[21])
-        # # state = np.concatenate((state,quat_larm))
-        # # LinVel_larm = self.robot_skeleton.bodynodes[12].dC
-        # # state = np.concatenate((state,LinVel_larm))
-        # # state = np.concatenate((state,self.robot_skeleton.dq[21:24]))
-
-        # start, end = 21, 23
-        # obs = np.concatenate(self.robot_skeleton.q[start:end+1],
-        #                      self.robot_skeleton.dq[start:end+1])
-        # state = np.concatenate((state, obs))
-        # ##############################################################
-        # # RelPos_lelbow = self.robot_skeleton.bodynodes[13].com() - self.robot_skeleton.bodynodes[0].com()
-        # # state = np.concatenate((state,RelPos_lelbow))
-        # # quat_lelbow = euler2quat(z=0.,y=0.,x=self.robot_skeleton.q[24])
-        # # state = np.concatenate((state,quat_lelbow))
-        # # LinVel_lelbow = self.robot_skeleton.bodynodes[13].dC
-        # # state = np.concatenate((state,LinVel_lelbow))
-        # # state = np.concatenate((state,np.array([self.robot_skeleton.dq[24]])))
-
-        # start, end = 24, 24
-        # obs = np.concatenate(self.robot_skeleton.q[start:end+1],
-        #                      self.robot_skeleton.dq[start:end+1])
-        # state = np.concatenate((state, obs))
-        # ################################################################
-        # # RelPos_rarm = self.robot_skeleton.bodynodes[15].com() - self.robot_skeleton.bodynodes[0].com()
-        # # state = np.concatenate((state,RelPos_rarm))
-        # # quat_rarm = euler2quat(z=self.robot_skeleton.q[27],y=self.robot_skeleton.q[26],x=self.robot_skeleton.q[25])
-        # # state = np.concatenate((state,quat_rarm))
-        # # LinVel_rarm = self.robot_skeleton.bodynodes[15].dC
-        # # state = np.concatenate((state,LinVel_rarm))
-        # # state = np.concatenate((state,self.robot_skeleton.dq[25:28]))
-
-        # start, end = 25, 27
-        # obs = np.concatenate(self.robot_skeleton.q[start:end+1],
-        #                      self.robot_skeleton.dq[start:end+1])
-        # state = np.concatenate((state, obs))
-        # #################################################################3
-        # # RelPos_relbow = self.robot_skeleton.bodynodes[16].com() - self.robot_skeleton.bodynodes[0].com()
-        # # state = np.concatenate((state,RelPos_relbow))
-        # # quat_relbow = euler2quat(z=0.,y=0.,x=self.robot_skeleton.q[28])
-        # # state = np.concatenate((state,quat_relbow))
-        # # LinVel_relbow = self.robot_skeleton.bodynodes[16].dC
-        # # state = np.concatenate((state,LinVel_relbow))
-        # # state = np.concatenate((state,np.array([self.robot_skeleton.dq[28]])))
-        # # state = np.concatenate((state,self.robot_skeleton.q[18:21],self.robot_skeleton.dq[18:21],phi))
-
-        # start, end = 28, 28
-        # obs = np.concatenate(self.robot_skeleton.q[start:end+1],
-        #                      self.robot_skeleton.dq[start:end+1])
-        # state = np.concatenate((state, obs))
-        # ##################################################################
-
-        # #q = self.robot_skeleton.q
-        # #q = np.delete(q,[0,2],0)
-        # #state =  np.concatenate([
-        # #    q,
-        # #    np.clip(self.robot_skeleton.dq,-10,10),phi
-        # #])
-
-        return state
 
     def reset_model(self):
         raise NotImplementedError()
@@ -994,21 +898,16 @@ class DartDeepMimic(dart_env.DartEnv):
 if __name__ == "__main__":
 
 
-    # def __init__(self, control_skeleton_path, reference_motion_path,
-    #              statemode = StateMode.GEN_EULER,
-    #              actionmode = StateMode.GEN_EULER,
-    #              visualize=True, frame_skip=16, dt=.002, obs_type="parameter",
-    #              action_type="continuous", screen_width=80, screen_height=45):
-
-
     parser = argparse.ArgumentParser(description='Make a DartDeepMimic Environ')
     parser.add_argument('--control-skel-path', required=True,
                         help='Path to the control skeleton')
+    parser.add_argument('--asf-path', required=True,
+                        help='Path to asf which the skeleton was parsed from')
     parser.add_argument('--ref-motion-path', required=True,
                         help='Path to the reference motion AMC')
-    parser.add_argument('--state-mode', default=0,
+    parser.add_argument('--state-mode', default=0, type=int,
                         help="Code for the state representation")
-    parser.add_argument('--action-mode', default=0,
+    parser.add_argument('--action-mode', default=0, type=int,
                         help="Code for the action representation")
     parser.add_argument('--visualize', default=True,
                         help="True if you want a window to render to")
@@ -1027,7 +926,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    env = DartDeepMimic(args.control_skel_path, args.ref_motion_path,
+    env = DartDeepMimic(args.control_skel_path, args.asf_path,
+                        args.ref_motion_path,
                         args.state_mode, args.action_mode, args.visualize,
                         args.frame_skip, args.dt,
                         args.obs_class, args.action_class,
