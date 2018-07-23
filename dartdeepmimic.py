@@ -105,16 +105,16 @@ class DartDeepMimic(dart_env.DartEnv):
         ######################################################
 
         if statemode == StateMode.GEN_EULER.value:
-            # self._get_obs = self.gen_as_euler
-            self._get_obs = lambda: self.gen_as_euler(self.control_skel,
+            # self._get_obs = self.gencoords_as_euler
+            self._get_obs = lambda: self.gencoords_as_euler(self.control_skel,
                                                       self.metadict)
         elif statemode == StateMode.GEN_QUAT.value:
-            # self._get_obs = self.gen_as_quat
-            self._get_obs = lambda: self.gen_as_quat(self.control_skel,
+            # self._get_obs = self.gencoords_as_quat
+            self._get_obs = lambda: self.gencoords_as_quat(self.control_skel,
                                                       self.metadict)
         elif statemode == StateMode.GEN_AXIS.value:
-            # self._get_obs = self.gen_as_axisangle
-            self._get_obs = lambda: self.gen_as_axisangle(self.control_skel,
+            # self._get_obs = self.gencoords_as_axisangle
+            self._get_obs = lambda: self.gencoords_as_axisangle(self.control_skel,
                                                           self.metadict)
         else:
             raise RuntimeError("Unrecognized or unimpletmented state code: "
@@ -130,11 +130,11 @@ class DartDeepMimic(dart_env.DartEnv):
                               -np.inf * np.ones(self.num_actions)]
 
         if actionmode == ActionMode.GEN_EULER:
-            self._target_angles = self.angles_from_euler
+            self._target_angles = self.targets_from_euler
         elif actionmode == ActionMode.GEN_QUAT:
-            self._target_angles = self.angles_from_quat
+            self._target_angles = self.targets_from_quat
         elif actionmode == ActionMode.GEN_AXIS:
-            self._target_angles = self.angles_from_axisangle
+            self._target_angles = self.targets_from_axisangle
         else:
             raise RuntimeError("Unrecognized or unimpletmented action code: "
                                + str(actionmode))
@@ -149,7 +149,7 @@ class DartDeepMimic(dart_env.DartEnv):
         self.control_skel = self.dart_world.skeletons[1]
 
 
-    def expand_state(self, generalized_q, metadict):
+    def expand_skel_state(self, generalized_q, metadict):
         """
         Given an obs (q or dq, don't really matter), turn it into
         fully-expanded euler angles (w/ three params each), xyz order; returns
@@ -168,15 +168,19 @@ class DartDeepMimic(dart_env.DartEnv):
                                                      order)
         return root_translation, expanded_angles
 
-    def gen_state_components(self, skeleton, metadict):
+    def gencoords_of_skel(self, skeleton, metadict):
+        """
+        Given a skeleton and metadict, return its fully euler-expanded
+        generalized coordinates.
 
-        ############################################################
-        # TODO Is unfunctional, relies on control_skel rather than #
-        # a parameter                                              #
-        ############################################################
+        The return value is a tuple (a, b)
+        a is a 6-tuple of skel.root.q concatenated with skel.root.q
+        b is a list of 3-tuples which are the euler angles for q and dq
+        """
 
-        pos, angles_dict = self.expand_state(skeleton.q, metadict)
-        dpos, dangles_dict = self.expand_state(skeleton.dq, metadict)
+
+        pos, angles_dict = self.expand_skel_state(skeleton.q, metadict)
+        dpos, dangles_dict = self.expand_skel_state(skeleton.dq, metadict)
 
         angles = np.array(list(angles_dict.values()))
         dangles = np.array(list(dangles_dict.values()))
@@ -186,24 +190,31 @@ class DartDeepMimic(dart_env.DartEnv):
 
         return gen_pos, gen_angles
 
-    def _gen_as_transform(self, tform, skel, metadict):
-        pos, angles = self.gen_state_components(skel, metadict)
+    def __gencoords_as(self, tform, skel, metadict):
+        """
+        Flatten the generalized coordinates given by gencoords_of_skel,
+        transforming/converting the angles as specified
+
+        Returns a 1-dimensional vector suitable for plugging into a neural
+        network
+        """
+        pos, angles = self.gencoords_of_skel(skel, metadict)
         transformed_angles = [tform(angle) for angle in angles]
         flat_angles = np.array(transformed_angles).flatten()
         return np.concatenate([pos, flat_angles])
 
-    def gen_as_quat(self, skel, metadict):
-        return self._gen_as_transform(lambda x: quaternion_from_euler(*x, axes="rxyz"),
+    def gencoords_as_quat(self, skel, metadict):
+        return self.__gencoords_as(lambda x: quaternion_from_euler(*x, axes="rxyz"),
                                       skel, metadict)
 
-    def gen_as_euler(self, skel, metadict):
-        return self._gen_as_transform(lambda x: x, skel_metadict)
+    def gencoords_as_euler(self, skel, metadict):
+        return self.__gencoords_as(lambda x: x, skel_metadict)
 
-    def gen_as_axisangle(self, skel, metadict):
-        return self._gen_as_transform(lambda x: axisangle_from_euler(*x, axes="rxyz"),
+    def gencoords_as_axisangle(self, skel, metadict):
+        return self.__gencoords_as(lambda x: axisangle_from_euler(*x, axes="rxyz"),
                                       skel, metadict)
 
-    def compress_euler(self, angles, metadict):
+    def compress_euler_to_skeltheta(self, angles, metadict):
         """
         Given a list of 3-tuples representing euler angles, use the
         skeleton metadata to turn it into target angles for dart
@@ -214,28 +225,28 @@ class DartDeepMimic(dart_env.DartEnv):
                                               metadict[key][1])
                                for index, key in enumerate(actuated_dofs)])
 
-    def angles_from_transform(self, raw_action, euler_tform, miniaction_len):
+    def __targets_from(self, raw_action, euler_tform, miniaction_len):
         """
         raw_action is a 1d array (output from neural network), and
         the function returns angles suitable for Dart PID targeting
         """
         actionlist = np.reshape(raw_action, (-1, miniaction_len))
         eulerlist = np.array([euler_tform(a) for a in actionlist])
-        return compress_euler(eulerlist)
+        return compress_euler_to_skeltheta(eulerlist)
 
-    def angles_from_euler(self, raw_action):
-        return angles_from_transform(raw_action, lambda x: x,
+    def targets_from_euler(self, raw_action):
+        return __targets_from(raw_action, lambda x: x,
                                      3)
-    def angles_from_quat(self, raw_action):
-        return angles_from_transform(raw_action,
+    def targets_from_quat(self, raw_action):
+        return __targets_from(raw_action,
                                      lambda x: euler_from_quaternion(x, axes='rxyz'),
                                      4)
-    def angles_from_axisangle(self, raw_action):
-        return angles_from_transform(raw_action,
+    def targets_from_axisangle(self, raw_action):
+        return __targets_from(raw_action,
                                      lambda x: euler_from_axisangle(x, axes='rxyz'),
                                      4)
 
-    def reward(self, skel, target_skel):
+    def reward(self, old_skelq, new_skelq):
         raise NotImplementedError()
 
     def advance(self, a):
