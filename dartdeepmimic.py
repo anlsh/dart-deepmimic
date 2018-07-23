@@ -26,7 +26,7 @@ import pydart2 as pydart
 import argparse
 from amc import AMC
 from asf_skeleton import ASF_Skeleton
-from joint import expand_angle
+from joint import expand_angle, compress_angle
 from transformations import *
 
 class StateMode(Enum):
@@ -38,6 +38,15 @@ class StateMode(Enum):
     MIX_EULER = 3
     MIX_QUAT = 4
     MIX_AXIS = 5
+
+
+class ActionMode:
+
+    GEN_EULER = 0
+    GEN_QUAT = 1
+    GEN_AXIS = 2
+
+    lengths = [3, 4, 4]
 
 def dart_dof_data(amc_frame, skel_dofs, asf):
 
@@ -96,12 +105,31 @@ class DartDeepMimic(dart_env.DartEnv):
         elif statemode == StateMode.GEN_AXIS.value:
             self._get_obs = self.gen_as_axisangle
         else:
-            raise RuntimeError("Unrecognized or unimpletmented code: "
+            raise RuntimeError("Unrecognized or unimpletmented state code: "
                                + str(statemode))
+
+        ################################################
+        # Do some calculations related to action space #
+        ################################################
+
+        num_actions = ActionMode.lengths[actionmode] * (len(self.dart_dof_data) - 1)
+        action_limits = [np.inf * np.ones(num_actions),
+                         -np.inf * np.ones(num_actions)]
+
+        if actionmode == ActionMode.GEN_EULER:
+            self._target_angles = self.angles_from_euler
+        elif actionmode == ActionMode.GEN_QUAT:
+            self._target_angles = self.angles_from_quat
+        elif actionmode == ActionMode.GEN_AXIS:
+            self._target_angles = self.angles_from_axisangle
+        else:
+            raise RuntimeError("Unrecognized or unimpletmented action code: "
+                               + str(actionmode))
+
 
         dart_env.DartEnv.__init__(self, [control_skeleton_path], frame_skip,
                                   len(self._get_obs()),
-                                  control_bounds, dt, obs_type,
+                                  action_limits, dt, obs_type,
                                   action_type, visualize, not visualize)
 
         self.control_skel = self.dart_world.skeletons[1]
@@ -270,6 +298,38 @@ class DartDeepMimic(dart_env.DartEnv):
 
     # def _get_obs(self):
     #     raise NotImplementedError()
+
+    def compress_euler(self, angles):
+        """
+        Given a list of 3-tuples representing euler angles, use the
+        skeleton metadata to turn it into target angles for dart
+        """
+        actuated_dofs = [key for key in self.dart_dof_data
+                         if key != "root_theta"]
+        return np.concatenate([compress_angle(angles[index],
+                                              self.dart_dof_data[key][1])
+                               for index, key in enumerate(actuated_dofs)])
+
+    def angles_from_transform(self, raw_action, euler_tform, miniaction_len):
+        """
+        raw_action is a 1d array (output from neural network), and
+        the function returns angles suitable for Dart PID targeting
+        """
+        actionlist = np.reshape(raw_action, (-1, miniaction_len))
+        eulerlist = np.array([euler_tform(a) for a in actionlist])
+        return compress_euler(eulerlist)
+
+    def angles_from_euler(self, raw_action):
+        return angles_from_transform(raw_action, lambda x: x,
+                                     3)
+    def angles_from_quat(self, raw_action):
+        return angles_from_transform(raw_action,
+                                     lambda x: euler_from_quaternion(x, axes='rxyz'),
+                                     4)
+    def angles_from_axisangle(self, raw_action):
+        return angles_from_transform(raw_action,
+                                     lambda x: euler_from_axisangle(x, axes='rxyz'),
+                                     4)
 
     def transformActions(self,actions):
         raise NotImplementedError()

@@ -22,6 +22,15 @@ def expand_angle(in_angle, order="xyz", initial_element=0):
 
     return blank
 
+def compress_angle(in_angle, order="xyz"):
+    """
+    Given a vector of length 3, extract the relevant vector components
+    """
+    index_map = {"x": 0, "y": 1, "z": 2}
+    ret = np.array([0] * len(order))
+    for index, code in enumerate(order):
+        ret[index] = in_angle[index_map[code]]
+
 class Joint:
 
     def from_dict(dictionary):
