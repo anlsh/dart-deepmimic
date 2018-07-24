@@ -1,27 +1,13 @@
-__author__ = 'yuwenhao'
+__author__ = 'anish'
 
 import numpy as np
 from gym import utils
 from gym.envs.dart import dart_env
-import theano
-import theano.tensor as T
-import lasagne
-import lasagne.layers as L
-import pickle
-from scipy import signal
-import numpy.linalg as la
 import copy
 
 import baselines.common.tf_util as U
-import tensorflow as tf
 from baselines.ppo1.mlp_policy import MlpPolicy
-from gym import wrappers,spaces
 
-# TODO Move these things to a proper path!!
-from gym.envs.dart.euclideanSpace import *
-from gym.envs.dart.quaternions import *
-
-from enum import Enum
 import pydart2 as pydart
 import argparse
 from amc import AMC
@@ -29,7 +15,7 @@ from asf_skeleton import ASF_Skeleton
 from joint import expand_angle, compress_angle
 from transformations import quaternion_from_euler, euler_from_quaternion
 
-class StateMode(Enum):
+class StateMode:
 
     GEN_EULER = 0
     GEN_QUAT = 1
@@ -49,12 +35,33 @@ class ActionMode:
     lengths = [3, 4, 4]
 
 ROOT_THETA_KEY = "root_theta"
+ROOT_POS_KEY = "root_pos"
+# Unlike the two vars above, ROOT_KEY isn't customizeable. It should correspond
+# with whatever the root node is named in the amc (which should always be
+# "root" anyways)
+ROOT_KEY = "root"
 
-def dart_dof_data(amc_frame, skel_dofs, asf):
+def get_metadict(amc_frame, skel_dofs, asf):
+    """
+    @type amc_frame: A dictionary mapping dof names -> mocap data
+    @type skel_dofs: The array of skeleton dofs, as given by skel.dofs
+    @type asf: An instance of the ASFSkeleton class
 
+    @return: A dictionary which maps dof names WHICH APPEAR IN MOCAP DATA
+    to tuples where:
+        - the first element is the list of indices the dof occupies in skel_dofs
+        - the second element is the joint's angle order (a string such as "xz"
+          or "zyx")
+    """
     # TODO Find a way of extracting information other than
     # relying on the underlying amc file
     # dof_data is dof_name -> (range of indices, order )
+
+    # TODO README EMERGENCY!!!
+    # If the output of this function is ever changed so that the number of
+    # actuated dofs is no longer given by (size of output dict - 1), then
+    # the setting of action_dim in DartDeepMimic will need to be updated
+
     dof_data = {}
     for dof_name, _ in amc_frame:
         joint = asf.name2joint[dof_name]
@@ -62,10 +69,6 @@ def dart_dof_data(amc_frame, skel_dofs, asf):
         indices = [i for i, dof in enumerate(skel_dofs)
                    if dof.name.startswith(dof_name)]
         dof_data[dof_name] = (indices, axes_str)
-
-    # Change the root just to make things a bit easier
-    del dof_data["root"]
-    dof_data[ROOT_THETA_KEY] = ([0, 1, 2], "xyz")
 
     return dof_data
 
@@ -76,16 +79,13 @@ class DartDeepMimic(dart_env.DartEnv):
                  statemode = StateMode.GEN_EULER,
                  actionmode = StateMode.GEN_EULER,
                  visualize=True, frame_skip=16, dt=.005,
-                 obs_type="parameter",
-                 action_type="continuous",
                  max_action_magnitude=10,
                  screen_width=80,
                  screen_height=45):
 
-        # TODO I think dt might be a property I shouldn't be overriding...
-        self._dt = dt
         self.statemode = statemode
         self.actionmode = actionmode
+
         self.frame = 0
         self.old_frame = 0
 
@@ -98,54 +98,29 @@ class DartDeepMimic(dart_env.DartEnv):
 
         self.ref_skel = world.skeletons[1]
         self.mocap_data = AMC(reference_motion_path)
-        self.metadict = dart_dof_data(self.mocap_data.frames[0],
+        self.metadict = get_metadict(self.mocap_data.frames[0],
                                       self.ref_skel.dofs, asf)
         # Setting control skel to ref skel is just a workaround:
         # it's set to its correct value later on
         self.control_skel = self.ref_skel
 
-        ######################################################
-        # Set the _get_obs function based on the chosen mode #
-        ######################################################
-
-        if statemode == StateMode.GEN_EULER.value:
-            # self._get_obs = self.gencoords_as_euler
-            self._get_obs = lambda: self.gencoords_as_euler(self.control_skel)
-        elif statemode == StateMode.GEN_QUAT.value:
-            # self._get_obs = self.gencoords_as_quat
-            self._get_obs = lambda: self.gencoords_as_quat(self.control_skel)
-        elif statemode == StateMode.GEN_AXIS.value:
-            # self._get_obs = self.gencoords_as_axisangle
-            self._get_obs = lambda: self.gencoords_as_axisangle(self.control_skel)
-        else:
-            raise RuntimeError("Unrecognized or unimpletmented state code: "
-                               + str(statemode))
-
         ################################################
         # Do some calculations related to action space #
         ################################################
 
-        self.num_actions = ActionMode.lengths[actionmode] \
-                           * (len(self.metadict) - 1)
-        self.action_limits = [max_action_magnitude * np.ones(self.num_actions),
-                              -max_action_magnitude * np.ones(self.num_actions)]
+        # Calculate the size of the neural network output vector
+        self.action_dim = ActionMode.lengths[actionmode] \
+                          * (len(self.metadict) - 1)
+        self.action_limits = [max_action_magnitude * np.ones(self.action_dim),
+                              -max_action_magnitude * np.ones(self.action_dim)]
 
-        if actionmode == ActionMode.GEN_EULER:
-            self._target_angles = self.targets_from_euler
-        elif actionmode == ActionMode.GEN_QUAT:
-            self._target_angles = self.targets_from_quat
-        elif actionmode == ActionMode.GEN_AXIS:
-            self._target_angles = self.targets_from_axisangle
-        else:
-            raise RuntimeError("Unrecognized or unimpletmented action code: "
-                               + str(actionmode))
 
         # TODO Parse end effectors from the ASF or Skel, idc which #
 
         dart_env.DartEnv.__init__(self, [control_skeleton_path], frame_skip,
                                   len(self._get_obs()),
-                                  self.action_limits, dt, obs_type,
-                                  action_type, visualize, not visualize)
+                                  self.action_limits, dt, "parameter",
+                                  "continuous", visualize, not visualize)
 
         self.control_skel = self.dart_world.skeletons[1]
 
@@ -156,21 +131,45 @@ class DartDeepMimic(dart_env.DartEnv):
         self.old_frame = 0
         self.old_skelq = self.control_skel.q
 
-        self.P = .5 * np.ndarray(self.control_skel.num_dofs() - 6)
-        self.D = .1 * np.ndarray(self.control_skel.num_dofs() - 6)
+        self.P = .5 * np.ndarray(self.control_skel.num_dofs())
+        self.D = .1 * np.ndarray(self.control_skel.num_dofs())
 
-    def expand_skel_state(self, generalized_q):
+    def _get_obs(self):
         """
-        Given an obs (q or dq, don't really matter), turn it into
-        fully-expanded euler angles (w/ three params each), xyz order; returns
-        dictionary
+        Return a 1-dimensional vector of the skeleton's state, as defined by
+        the state code
+        """
 
-        Return tuple like root_pos, {dict of all angles}
+        if self.statemode == StateMode.GEN_EULER:
+            return self.gencoords_as_euler(self.control_skel)
+        elif self.statemode == StateMode.GEN_QUAT:
+            return self.gencoords_as_quat(self.control_skel)
+        elif self.statemode == StateMode.GEN_AXIS:
+            return lambda: self.gencoords_as_axisangle(self.control_skel)
+        else:
+            raise RuntimeError("Unrecognized or unimpletmented state code: "
+                               + str(statemode))
+
+
+    def q_components_euler(self, generalized_q):
+        """
+        @type generalized_q: A vector of dof values, as given by skel.q or .dq
+
+        @return: A tuple where
+            - index 0 is a 3-array representing the translational component of
+              generalized q
+            - [1] is a dictionary mapping dof names to of 3-arrays representing
+              euler angles; the first index of an element is the x-coordinate,
+              the second is y, 3rd is z
+        @type: Tuple
         """
 
         root_translation = generalized_q[3:6]
         expanded_angles = {}
+        expanded_angles[ROOT_THETA_KEY] = expand_angle(generalized_q[0:3], "xyz")
         for dof_name in self.metadict:
+            if dof_name == ROOT_KEY:
+                continue
             indices, order = self.metadict[dof_name]
             fi = indices[0]
             li = indices[-1]
@@ -180,94 +179,121 @@ class DartDeepMimic(dart_env.DartEnv):
 
     def gencoords_of_skel(self, skeleton):
         """
-        Given a skeleton and metadict, return its fully euler-expanded
-        generalized coordinates.
+        @type skeleton: A dart skeleton
 
-        The return value is a tuple (a, b)
-        a is a 6-tuple of skel.root.q concatenated with skel.root.q
-        b is a list of 3-tuples which are the euler angles for q and dq
+        You're not meant to try and extract information on specific dofs from
+        this, it's basically returns intermediate ready to be flattened and
+        passed to a neural network
+
+        @return: A tuple containing information on both q and dq
+            - [0] is a list of 2 3-arrays representing the translational parts
+                  - [0] is the pos, [1] is the velocity
+            - [1] is a list of 3-arrays representing the angular parts
+                  - Elements in the first half are angles, the second half is
+                    angular velocities
+        @type: Tuple(list of 2 3-arrays, list of 3-arrays)
         """
 
-
-        pos, angles_dict = self.expand_skel_state(skeleton.q)
-        dpos, dangles_dict = self.expand_skel_state(skeleton.dq)
+        pos, angles_dict = self.q_components_euler(skeleton.q)
+        dpos, dangles_dict = self.q_components_euler(skeleton.dq)
 
         angles = np.array(list(angles_dict.values()))
         dangles = np.array(list(dangles_dict.values()))
 
-        gen_pos = np.concatenate([pos, dpos])
+        gen_pos = np.array([pos, dpos])
         gen_angles = np.concatenate([angles, dangles])
 
         return gen_pos, gen_angles
 
-    def __gencoords_as(self, tform, skel):
+    def flatten_components(self, components):
         """
-        Flatten the generalized coordinates given by gencoords_of_skel,
-        transforming/converting the angles as specified
+        @param gencoords: A tuple formatted similarly to that returned by
+        gencoords_of_skel. However the angles may be converted into a different
+        format, such as quaternions
+            - [1] This parameter (corresponding to the angular information)
+              should be a LIST not a dictionary
 
-        Returns a 1-dimensional vector suitable for plugging into a neural
-        network
+        @return: A flattened 1-dimensional array suitable for passing into a NN
         """
-        pos, angles = self.gencoords_of_skel(skel)
-        transformed_angles = [tform(angle) for angle in angles]
-        flat_angles = np.array(transformed_angles).flatten()
-        return np.concatenate([pos, flat_angles])
+        positional, angular = components
+        pos_flat = np.concatenate(positional)
+        ang_flat = np.concatenate(angular)
+        return np.concatenate([pos_flat, ang_flat])
 
     def gencoords_as_quat(self, skel):
-        return self.__gencoords_as(lambda x: quaternion_from_euler(*x, axes="rxyz"),
-                                      skel)
+        """
+        Return a state vector where anglular quantities are in
+        quaternion format
+        """
+        pos, ang = self.gencoords_of_skel(skel)
+        ang = [quaternion_from_euler(*t, axes="rxyz") for t in ang]
+        return self.flatten_components((pos, ang))
 
     def gencoords_as_euler(self, skel):
-        return self.__gencoords_as(lambda x: x)
+        """
+        Return a state vector where anglular quantities are in
+        euler format
+        """
+        pos, ang = self.gencoords_of_skel(skel)
+        return self.flatten_components((pos, ang))
 
     def gencoords_as_axisangle(self, skel):
-        return self.__gencoords_as(lambda x: axisangle_from_euler(*x, axes="rxyz"),
-                                      skel)
-
-    def compress_euler_to_skeltheta(self, angles):
         """
-        Given a list of 3-tuples representing euler angles, use the
-        skeleton metadata to turn it into target angles for dart
-
-        Returns ONLY THE ACTUATED PARTS ie EXCLUDING THE LAST 6
+        Return a state vector where anglular quantities are in
+        axis-angle format
         """
-        # print(self.control_skel.dofs)
-        # print(self.metadict)
-        q = np.zeros(self.control_skel.num_dofs())
-        i = 0
-        for key in self.metadict:
-            if key == ROOT_THETA_KEY:
-                continue
-            indices = self.metadict[key][0]
-            f, l = indices[0], indices[-1] + 1
-            theta = compress_angle(angles[i],
-                                   self.metadict[key][1])
-            q[f:l] = theta
-            i += 1
+        pos, ang = self.gencoords_of_skel(skel)
+        ang = [axisangle_from_euler(*t, axes="rxyz") for t in ang]
+        return self.flatten_components((pos, ang))
 
-        return q[6:]
-
-
-    def __targets_from(self, raw_action, euler_tform, miniaction_len):
+    def _target_angles(self, raw_action):
         """
-        raw_action is a 1d array (output from neural network), and
-        the function returns angles suitable for Dart PID targeting
-        """
-        actionlist = np.reshape(raw_action, (-1, miniaction_len))
-        eulerlist = np.array([euler_tform(a) for a in actionlist])
-        return self.compress_euler_to_skeltheta(eulerlist)
+        Given a 1-dimensional vector representing a neural network output,
+        construct from it a set of targets for the ACTUATED degrees of freedom
+        (ie the ones in metadict, minus the root)
 
-    def targets_from_euler(self, raw_action):
-        return self.__targets_from(raw_action, lambda x: x,
-                                   3)
-    def targets_from_quat(self, raw_action):
-        return self.__targets_from(raw_action,
-                                   lambda x: euler_from_quaternion(x, axes='rxyz'),
-                                   4)
-    def targets_from_axisangle(self, raw_action):
-        return self.__targets_from(raw_action,
-                                   lambda x: euler_from_axisangle(x, axes='rxyz'),
-                                   4)
+        Because of how action_dim is defined up in __init__, raw_action
+        should always have the correct dimensions
+        """
+
+        output_angles = np.reshape(raw_action,
+                                   (-1, ActionMode.lengths[self.actionmode]))
+
+        # TODO Normalize and validate values to make sure they're actually
+        # valid euler angles / quaternions / whatever
+        if self.actionmode == ActionMode.GEN_EULER:
+            return output_angles
+        elif self.actionmode == ActionMode.GEN_QUAT:
+            return [euler_from_quaternion(*t, axes="rxyz")
+                    for t in output_angles]
+        elif self.actionmode == ActionMode.GEN_AXIS:
+            return [euler_from_axisangle(*t, axes="rxyz")
+                    for t in output_angles]
+        else:
+            raise RuntimeError("Unrecognized or unimpletmented action code: "
+                               + str(actionmode))
+
+    # def euler_to_acutated_q(self, angles):
+    #     """
+    #     Given a list of 3-tuples representing target euler angles for the
+    #     ACTUATED degrees of freedom, use the skeleton metadict to compress them
+    #     into a single vector (where angles have been truncated based on how
+    #     many degrees of freedom the relevant joint has)
+    #     """
+
+    #     q = np.zeros(self.control_skel.num_dofs())
+    #     i = 0
+    #     for key in self.metadict:
+    #         if key == ROOT_THETA_KEY:
+    #             continue
+    #         indices = self.metadict[key][0]
+    #         f, l = indices[0], indices[-1] + 1
+    #         theta = compress_angle(angles[i],
+    #                                self.metadict[key][1])
+    #         q[f:l] = theta
+    #         i += 1
+
+    #     return q[6:]
 
     def reward(self, old_skelq, new_skelq):
         raise NotImplementedError()
@@ -321,28 +347,78 @@ class DartDeepMimic(dart_env.DartEnv):
     def ClampTorques(self,torques):
         raise NotImplementedError()
 
-    def torques_by_pd(self, P, D, dt, target_angles, current_angles,
+    def torques_by_pd(self, target_angles, current_angles,
                       past_angles):
-        current_diff = target_angles - current_angles
+        """
+        Given target, current, and past angles (all lists of 3-vectors
+        representing fully-specified euler angles) of the actuated dofs, return
+        torques for the WHOLE SHEBANG.
 
-        past_diff = target_angles - past_angles
-        diff_delta = (current_diff - past_diff) / dt
+        This method returns a vector of torques for EVERY DOF in the entire
+        skeleton. This means that it takes care of compressing angles to their
+        respective orders, placing them in the right spots in a vector of size
+        skel.num_dofs, etc
 
-        return P * current_diff - D * diff_delta
+        Non actuated dofs will of course have torques of 0
+        """
+        current_error = target_angles - current_angles
+        past_error = target_angles - past_angles
+
+        error_rate = (current_error - past_error) / self.dt
+
+        # compression phase
+        actuated_dof_names = [key for key in self.metadict
+                              if key != ROOT_KEY]
+        projected_current_error = [compress_angle(current_error[i],
+                                                  self.metadict[key][1])
+                                   for i, key in enumerate(actuated_dof_names)]
+
+        projected_error_rate = [compress_angle(error_rate[i],
+                                               self.metadict[key][1])
+                                for i, key in enumerate(actuated_dof_names)]
+
+        exp_current_error = np.zeros(self.control_skel.num_dofs())
+        exp_error_rate = np.zeros(self.control_skel.num_dofs())
+
+        for index, key in enumerate(actuated_dof_names):
+            dof_indices = self.metadict[key][0]
+            f, l = dof_indices[0], dof_indices[-1] + 1
+            exp_current_error[f:l] = projected_current_error[index]
+
+        for index, key in enumerate(actuated_dof_names):
+            dof_indices = self.metadict[key][0]
+            f, l = dof_indices[0], dof_indices[-1] + 1
+            exp_error_rate[f:l] = projected_error_rate[index]
+
+        # TODO it would be nice to only specify P and D for the parameters
+        # which are actuated, but such is life I guess
+        return self.P * exp_current_error + self.D * exp_error_rate
 
     def step(self, a):
 
-        targets = self._target_angles(a)
-        torques = self.torques_by_pd(self.P, self.D, self._dt, targets,
-                                     self.control_skel.q[6:], self.old_skelq[6:])
+        actuation_targets = self._target_angles(a)
+
+        _, current_euler = self.q_components_euler(self.control_skel.q)
+        actuated_angles = np.array([current_euler[key]
+                                  for key in current_euler
+                                  if key != ROOT_THETA_KEY])
+
+        _, old_euler = self.q_components_euler(self.old_skelq)
+        old_actuated_angles = np.array([current_euler[key]
+                                        for key in old_euler
+                                        if key != ROOT_THETA_KEY])
+
+        torques = self.torques_by_pd(actuation_targets,
+                                     actuated_angles,
+                                     old_actuated_angles)
+
+        self.old_skelq = self.control_skel.q
 
         # TODO Clamp torques?
         # Also what is the difference between world step
-        tau = np.zeros(len(self.control_skel.q))
-        tau[6:] = torques
-        self.control_skel.set_forces(tau)
+        self.control_skel.set_forces(torques)
         self.dart_world.step()
-        self.do_simulation(tau, self.frame_skip)
+        self.do_simulation(torques, self.frame_skip)
 
         newstate = self._get_obs()
         reward = 4
@@ -704,10 +780,6 @@ if __name__ == "__main__":
                         help="IDK what this does")
     parser.add_argument('--dt', type=float, default=.002,
                         help="Dart simulation resolution")
-    parser.add_argument('--obs-class', default="parameter",
-                        help="I have no iea what this does")
-    parser.add_argument('--action-class', default="continuous",
-                        help="I have no iea what this does")
     parser.add_argument('--window-width', type=int, default=80,
                         help="Window width")
     parser.add_argument('--window-height', type=int, default=45,
@@ -719,11 +791,9 @@ if __name__ == "__main__":
                         args.ref_motion_path,
                         args.state_mode, args.action_mode, args.visualize,
                         args.frame_skip, args.dt,
-                        args.obs_class, args.action_class,
                         args.window_width, args.window_height)
 
     print(env._get_obs())
     for i in range(200):
         a = env.action_space.sample()
         env.step(a)
-        print(env.control_skel.q)
