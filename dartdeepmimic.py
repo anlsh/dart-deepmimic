@@ -65,7 +65,7 @@ def dart_dof_data(amc_frame, skel_dofs, asf):
 
     # Change the root just to make things a bit easier
     del dof_data["root"]
-    dof_data[ROOT_THETA_KEY] = ([3, 4, 5], "xyz")
+    dof_data[ROOT_THETA_KEY] = ([0, 1, 2], "xyz")
 
     return dof_data
 
@@ -77,13 +77,17 @@ class DartDeepMimic(dart_env.DartEnv):
                  actionmode = StateMode.GEN_EULER,
                  visualize=True, frame_skip=16, dt=.005,
                  obs_type="parameter",
-                 action_type="continuous", screen_width=80,
+                 action_type="continuous",
+                 max_action_magnitude=10,
+                 screen_width=80,
                  screen_height=45):
 
         # TODO I think dt might be a property I shouldn't be overriding...
-        self.dt = dt
+        self._dt = dt
         self.statemode = statemode
         self.actionmode = actionmode
+        self.frame = 0
+        self.old_frame = 0
 
         ###########################################################
         # Extract dof info so that states can be converted easily #
@@ -106,16 +110,13 @@ class DartDeepMimic(dart_env.DartEnv):
 
         if statemode == StateMode.GEN_EULER.value:
             # self._get_obs = self.gencoords_as_euler
-            self._get_obs = lambda: self.gencoords_as_euler(self.control_skel,
-                                                      self.metadict)
+            self._get_obs = lambda: self.gencoords_as_euler(self.control_skel)
         elif statemode == StateMode.GEN_QUAT.value:
             # self._get_obs = self.gencoords_as_quat
-            self._get_obs = lambda: self.gencoords_as_quat(self.control_skel,
-                                                      self.metadict)
+            self._get_obs = lambda: self.gencoords_as_quat(self.control_skel)
         elif statemode == StateMode.GEN_AXIS.value:
             # self._get_obs = self.gencoords_as_axisangle
-            self._get_obs = lambda: self.gencoords_as_axisangle(self.control_skel,
-                                                          self.metadict)
+            self._get_obs = lambda: self.gencoords_as_axisangle(self.control_skel)
         else:
             raise RuntimeError("Unrecognized or unimpletmented state code: "
                                + str(statemode))
@@ -126,8 +127,8 @@ class DartDeepMimic(dart_env.DartEnv):
 
         self.num_actions = ActionMode.lengths[actionmode] \
                            * (len(self.metadict) - 1)
-        self.action_limits = [np.inf * np.ones(self.num_actions),
-                              -np.inf * np.ones(self.num_actions)]
+        self.action_limits = [max_action_magnitude * np.ones(self.num_actions),
+                              -max_action_magnitude * np.ones(self.num_actions)]
 
         if actionmode == ActionMode.GEN_EULER:
             self._target_angles = self.targets_from_euler
@@ -148,8 +149,17 @@ class DartDeepMimic(dart_env.DartEnv):
 
         self.control_skel = self.dart_world.skeletons[1]
 
+        ##################################
+        # Simulation stuff for DeepMimic #
+        ##################################
+        self.frame = 0
+        self.old_frame = 0
+        self.old_skelq = self.control_skel.q
 
-    def expand_skel_state(self, generalized_q, metadict):
+        self.P = .5 * np.ndarray(self.control_skel.num_dofs() - 6)
+        self.D = .1 * np.ndarray(self.control_skel.num_dofs() - 6)
+
+    def expand_skel_state(self, generalized_q):
         """
         Given an obs (q or dq, don't really matter), turn it into
         fully-expanded euler angles (w/ three params each), xyz order; returns
@@ -158,17 +168,17 @@ class DartDeepMimic(dart_env.DartEnv):
         Return tuple like root_pos, {dict of all angles}
         """
 
-        root_translation = generalized_q[0:3]
+        root_translation = generalized_q[3:6]
         expanded_angles = {}
-        for dof_name in metadict:
-            indices, order = metadict[dof_name]
+        for dof_name in self.metadict:
+            indices, order = self.metadict[dof_name]
             fi = indices[0]
             li = indices[-1]
             expanded_angles[dof_name] = expand_angle(generalized_q[fi:li],
                                                      order)
         return root_translation, expanded_angles
 
-    def gencoords_of_skel(self, skeleton, metadict):
+    def gencoords_of_skel(self, skeleton):
         """
         Given a skeleton and metadict, return its fully euler-expanded
         generalized coordinates.
@@ -179,8 +189,8 @@ class DartDeepMimic(dart_env.DartEnv):
         """
 
 
-        pos, angles_dict = self.expand_skel_state(skeleton.q, metadict)
-        dpos, dangles_dict = self.expand_skel_state(skeleton.dq, metadict)
+        pos, angles_dict = self.expand_skel_state(skeleton.q)
+        dpos, dangles_dict = self.expand_skel_state(skeleton.dq)
 
         angles = np.array(list(angles_dict.values()))
         dangles = np.array(list(dangles_dict.values()))
@@ -190,7 +200,7 @@ class DartDeepMimic(dart_env.DartEnv):
 
         return gen_pos, gen_angles
 
-    def __gencoords_as(self, tform, skel, metadict):
+    def __gencoords_as(self, tform, skel):
         """
         Flatten the generalized coordinates given by gencoords_of_skel,
         transforming/converting the angles as specified
@@ -198,32 +208,45 @@ class DartDeepMimic(dart_env.DartEnv):
         Returns a 1-dimensional vector suitable for plugging into a neural
         network
         """
-        pos, angles = self.gencoords_of_skel(skel, metadict)
+        pos, angles = self.gencoords_of_skel(skel)
         transformed_angles = [tform(angle) for angle in angles]
         flat_angles = np.array(transformed_angles).flatten()
         return np.concatenate([pos, flat_angles])
 
-    def gencoords_as_quat(self, skel, metadict):
+    def gencoords_as_quat(self, skel):
         return self.__gencoords_as(lambda x: quaternion_from_euler(*x, axes="rxyz"),
-                                      skel, metadict)
+                                      skel)
 
-    def gencoords_as_euler(self, skel, metadict):
-        return self.__gencoords_as(lambda x: x, skel_metadict)
+    def gencoords_as_euler(self, skel):
+        return self.__gencoords_as(lambda x: x)
 
-    def gencoords_as_axisangle(self, skel, metadict):
+    def gencoords_as_axisangle(self, skel):
         return self.__gencoords_as(lambda x: axisangle_from_euler(*x, axes="rxyz"),
-                                      skel, metadict)
+                                      skel)
 
-    def compress_euler_to_skeltheta(self, angles, metadict):
+    def compress_euler_to_skeltheta(self, angles):
         """
         Given a list of 3-tuples representing euler angles, use the
         skeleton metadata to turn it into target angles for dart
+
+        Returns ONLY THE ACTUATED PARTS ie EXCLUDING THE LAST 6
         """
-        actuated_dofs = [key for key in metadict
-                         if key != ROOT_THETA_KEY]
-        return np.concatenate([compress_angle(angles[index],
-                                              metadict[key][1])
-                               for index, key in enumerate(actuated_dofs)])
+        # print(self.control_skel.dofs)
+        # print(self.metadict)
+        q = np.zeros(self.control_skel.num_dofs())
+        i = 0
+        for key in self.metadict:
+            if key == ROOT_THETA_KEY:
+                continue
+            indices = self.metadict[key][0]
+            f, l = indices[0], indices[-1] + 1
+            theta = compress_angle(angles[i],
+                                   self.metadict[key][1])
+            q[f:l] = theta
+            i += 1
+
+        return q[6:]
+
 
     def __targets_from(self, raw_action, euler_tform, miniaction_len):
         """
@@ -232,19 +255,19 @@ class DartDeepMimic(dart_env.DartEnv):
         """
         actionlist = np.reshape(raw_action, (-1, miniaction_len))
         eulerlist = np.array([euler_tform(a) for a in actionlist])
-        return compress_euler_to_skeltheta(eulerlist)
+        return self.compress_euler_to_skeltheta(eulerlist)
 
     def targets_from_euler(self, raw_action):
-        return __targets_from(raw_action, lambda x: x,
-                                     3)
+        return self.__targets_from(raw_action, lambda x: x,
+                                   3)
     def targets_from_quat(self, raw_action):
-        return __targets_from(raw_action,
-                                     lambda x: euler_from_quaternion(x, axes='rxyz'),
-                                     4)
+        return self.__targets_from(raw_action,
+                                   lambda x: euler_from_quaternion(x, axes='rxyz'),
+                                   4)
     def targets_from_axisangle(self, raw_action):
-        return __targets_from(raw_action,
-                                     lambda x: euler_from_axisangle(x, axes='rxyz'),
-                                     4)
+        return self.__targets_from(raw_action,
+                                   lambda x: euler_from_axisangle(x, axes='rxyz'),
+                                   4)
 
     def reward(self, old_skelq, new_skelq):
         raise NotImplementedError()
@@ -303,14 +326,30 @@ class DartDeepMimic(dart_env.DartEnv):
         current_diff = target_angles - current_angles
 
         past_diff = target_angles - past_angles
-        diff_delta = current_diff - past_diff
+        diff_delta = (current_diff - past_diff) / dt
 
-        # TODO I'm supposed to clamp torques somehow?
         return P * current_diff - D * diff_delta
 
-    def _step(self, a):
+    def step(self, a):
 
-        raise NotImplementedError()
+        targets = self._target_angles(a)
+        torques = self.torques_by_pd(self.P, self.D, self._dt, targets,
+                                     self.control_skel.q[6:], self.old_skelq[6:])
+
+        # TODO Clamp torques?
+        # Also what is the difference between world step
+        tau = np.zeros(len(self.control_skel.q))
+        tau[6:] = torques
+        self.control_skel.set_forces(tau)
+        self.dart_world.step()
+        self.do_simulation(tau, self.frame_skip)
+
+        newstate = self._get_obs()
+        reward = 4
+        done = False
+        extrainfo = {}
+
+        return newstate, reward, done, extrainfo
         # self.dart_world.set_text = []
         # self.dart_world.y_scale = np.clip(a[6],-2,2)
         # self.dart_world.plot = False
@@ -321,42 +360,16 @@ class DartDeepMimic(dart_env.DartEnv):
         # posbefore = self.robot_skeleton.bodynodes[0].com()[0]
 
 
-        # if self.duplicate:
-        #     dupq = self.robot_skeleton.q
-        #     dupq[0] = 1.0
-        #     self.dupSkel.set_positions(dupq)
-        #     self.dupskel.set_velocities(np.zeros(self.robot_skeleton.q.shape[0],))
-
-
         # self.advance(a)
         # if self.dumpActions:
         #     with open("a_from_net.txt","ab") as fp:
         #         np.savetxt(fp,np.array([a]),fmt='%1.5f')
-
-        # #with open("states_PID_jumpPol13.txt","ab") as fp:
-        # #    np.savetxt(fp,np.array([self.robot_skeleton.q]),fmt='%1.5f')
-        # #with open("velocities_PID_jumpPol14.txt","ab") as fp:
-        # #    np.savetxt(fp,np.array([self.robot_skeleton.dq]),fmt='%1.5f')
-        # #with open("torques_PIDPol14.txt","ab") as fp:
-        # #   np.savetxt(fp,np.array([self.tau]),fmt='%1.5f')
 
         # #print("torques",self.tau[[6,12]])
         # point_rarm = [0.,-0.60,-0.15]
         # point_larm = [0.,-0.60,-0.15]
         # point_rfoot = [0.,0.,-0.20]
         # point_lfoot = [0.,0.,-0.20]
-
-        # #with open("PID_rarm.txt","ab") as fp:
-        # #    np.savetxt(fp,np.array([self.robot_skeleton.bodynodes[16].to_world(point_rarm)]),fmt='%1.5f')
-
-        # #with open("PID_larm.txt","ab") as fp:
-        # #    np.savetxt(fp,np.array([self.robot_skeleton.bodynodes[13].to_world(point_larm)]),fmt='%1.5f')
-
-        # #with open("PID_rfoot.txt","ab") as fp:
-        # #    np.savetxt(fp,np.array([self.robot_skeleton.bodynodes[7].to_world(point_rfoot)]),fmt='%1.5f')
-
-        # #with open("PID_lfoot.txt","ab") as fp:
-        # #    np.savetxt(fp,np.array([self.robot_skeleton.bodynodes[4].to_world(point_lfoot)]),fmt='%1.5f')
 
         # global_rarm = self.robot_skeleton.bodynodes[16].to_world(point_rarm)
 
@@ -710,3 +723,7 @@ if __name__ == "__main__":
                         args.window_width, args.window_height)
 
     print(env._get_obs())
+    for i in range(200):
+        a = env.action_space.sample()
+        env.step(a)
+        print(env.control_skel.q)
