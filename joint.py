@@ -31,6 +31,8 @@ def compress_angle(in_angle, order="xyz"):
     for index, code in enumerate(order):
         ret[index] = in_angle[index_map[code]]
 
+    return ret
+
 class Joint:
 
     def from_dict(dictionary):
