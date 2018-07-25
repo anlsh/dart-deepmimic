@@ -14,6 +14,8 @@ from amc import AMC
 from asf_skeleton import ASF_Skeleton
 from joint import expand_angle, compress_angle
 from transformations import quaternion_from_euler, euler_from_quaternion
+from transformations import compose_matrix, euler_from_matrix
+import math
 
 class StateMode:
 
@@ -97,8 +99,8 @@ class DartDeepMimic(dart_env.DartEnv):
         asf = ASF_Skeleton(asf_path)
 
         self.ref_skel = world.skeletons[1]
-        self.mocap_data = AMC(reference_motion_path)
-        self.metadict = get_metadict(self.mocap_data.frames[0],
+        self.amc = AMC(reference_motion_path)
+        self.metadict = get_metadict(self.amc.frames[0],
                                       self.ref_skel.dofs, asf)
         # Setting control skel to ref skel is just a workaround:
         # it's set to its correct value later on
@@ -134,6 +136,73 @@ class DartDeepMimic(dart_env.DartEnv):
         self.P = .5 * np.ndarray(self.control_skel.num_dofs())
         self.D = .1 * np.ndarray(self.control_skel.num_dofs())
 
+        self._curr_mocap_frame = 0
+        self._past_mocap_frame = self._curr_mocap_frame
+
+    @property
+    def curr_mocap_frame(self):
+        return self._curr_mocap_frame
+
+    @curr_mocap_frame.setter
+    def curr_mocap_frame(self, new):
+
+        new = new % len(self.amc.frames)
+
+        if new == self._curr_mocap_frame + 1:
+            self._past_mocap_frame += 1
+        else:
+            self._past_mocap_frame = new
+
+        self._curr_mocap_frame = new
+
+    def sync_skel_to_frame(self, skel, frame_index):
+        """
+        Given a skeleton reference, use the metadict (assumed to be correct)
+        to sync all the dofs
+        """
+        frame = self.amc.frames[frame_index]
+        # TODO Move conversions somewhere else...
+
+        def sequential_degrees_to_rotating_radians(rvector):
+
+            rvector = np.multiply(rvector, math.pi / 180)
+
+            rmatrix = compose_matrix(angles=rvector, angle_order="sxyz")
+            return euler_from_matrix(rmatrix[:3, :3], axes="rxyz")
+
+        def map_dofs(dof_list, pos_list):
+            for dof, pos in zip(dof_list, pos_list):
+                dof.set_position(float(pos))
+
+        # World to root joint is a bit special so we handle it here...
+        root_data = frame[0][1]
+        map_dofs(skel.dofs[3:6], root_data[:3])
+        map_dofs(skel.dofs[0:3],
+                 sequential_degrees_to_rotating_radians(root_data[3:]))
+
+        # And handle the rest of the dofs normally
+        for joint_name, joint_angles in frame[1:]:
+            dof_indices, order = self.metadict[joint_name]
+            start_index, end_index = dof_indices[0], dof_indices[-1]
+
+            # AMC data is in sequential degrees while Dart expects rotating
+            # radians, so we do some conversion here
+
+            # TODO Write a converter which will export the amc angles to be in
+            # the propert format ahead of time rather than perform expensive
+            # computations all the time down here
+
+            # TODO Hold on... how is it so good while totally failing to
+            # account for joint dof order or number? This might be the cause of
+            # the weird foot-moving syndrome...
+            theta = expand_angle(joint_angles, order)
+            rotation_euler = sequential_degrees_to_rotating_radians(theta)
+            # rotation_euler = compress_angle(rotation_euler, order)
+            # print(order, rotation_euler)
+
+            map_dofs(skel.dofs[start_index : end_index + 1],
+                     rotation_euler)
+
     def _get_obs(self):
         """
         Return a 1-dimensional vector of the skeleton's state, as defined by
@@ -166,7 +235,8 @@ class DartDeepMimic(dart_env.DartEnv):
 
         root_translation = generalized_q[3:6]
         expanded_angles = {}
-        expanded_angles[ROOT_THETA_KEY] = expand_angle(generalized_q[0:3], "xyz")
+        expanded_angles[ROOT_THETA_KEY] = expand_angle(generalized_q[0:3],
+                                                       "xyz")
         for dof_name in self.metadict:
             if dof_name == ROOT_KEY:
                 continue
@@ -809,6 +879,7 @@ if __name__ == "__main__":
                         args.window_width, args.window_height)
 
     for i in range(200):
+        env.sync_skel_to_frame(env.control_skel, 0)
         a = env.action_space.sample()
-        env.step(a)
+        # env.step(a)
         env.render()
