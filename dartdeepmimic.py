@@ -197,11 +197,12 @@ class DartDeepMimic(dart_env.DartEnv):
             # the weird foot-moving syndrome...
             theta = expand_angle(joint_angles, order)
             rotation_euler = sequential_degrees_to_rotating_radians(theta)
-            # rotation_euler = compress_angle(rotation_euler, order)
+            new_rotation_euler = compress_angle(rotation_euler, order)
+            # print(str(rotation_euler) + " " + order + "\n --> " + str(new_rotation_euler))
             # print(order, rotation_euler)
 
             map_dofs(skel.dofs[start_index : end_index + 1],
-                     rotation_euler)
+                     new_rotation_euler)
 
     def _get_obs(self):
         """
