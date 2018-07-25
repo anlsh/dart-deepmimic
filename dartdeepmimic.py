@@ -756,9 +756,24 @@ class DartDeepMimic(dart_env.DartEnv):
     def viewer_setup(self):
         if not self.disableViewer:
             self._get_viewer().scene.tb.trans[0] = 5.0
-            self._get_viewer().scene.tb.trans[2] = -7.5
+            self._get_viewer().scene.tb.trans[2] = -30
             self._get_viewer().scene.tb.trans[1] = 0.0
-            #-10.0
+
+    def render(self, mode='human', close=False):
+            # if not self.disableViewer:
+        if True:
+            self._get_viewer().scene.tb.trans[0] = -self.dart_world.skeletons[self.track_skeleton_id].com()[0]*1
+        if close:
+            if self.viewer is not None:
+                self._get_viewer().close()
+                self.viewer = None
+            return
+
+        if mode == 'rgb_array':
+            data = self._get_viewer().getFrame()
+            return data
+        elif mode == 'human':
+            self._get_viewer().runSingleStep()
 
 if __name__ == "__main__":
 
@@ -793,7 +808,7 @@ if __name__ == "__main__":
                         args.frame_skip, args.dt,
                         args.window_width, args.window_height)
 
-    print(env._get_obs())
     for i in range(200):
         a = env.action_space.sample()
         env.step(a)
+        env.render()
