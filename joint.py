@@ -27,17 +27,9 @@ def compress_angle(in_angle, order="xyz"):
     Given a vector of length 3, extract the relevant vector components
     """
     index_map = {"x": 0, "y": 1, "z": 2}
-    ret = np.array([0] * len(order))
+    ret = np.array([0.0] * len(order))
     for index, code in enumerate(order):
-        # print("For index " + str(index) + " extract the " + str(in_angle[index_map[code]]))
-        # print("Before set, ret is " + str(ret))
-        print(str(ret[index]) + " is being set " + str(in_angle[index_map[code]]))
-        print(type(ret[index:index+1]))
         ret[index] = in_angle[index_map[code]]
-        print("After set, ret is " + str(ret))
-
-    print("Compress got an input of " + str(in_angle) + " " + str(order)
-          + "\n ----> " + str(ret))
 
     return ret
 
