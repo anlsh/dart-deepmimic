@@ -125,6 +125,12 @@ class DartDeepMimic(dart_env.DartEnv):
         # it's set to its correct value later on
         self.control_skel = self.ref_skel
 
+        self.__end_effector_indices = [i for i, node in enumerate(self.control_skel.bodynodes)
+                                     if len(node.child_bodynodes) == 0]
+
+        self.__end_effector_offsets = [asf.name2joint[self.control_skel.bodynodes[i].name[:-5]].offset
+                                     for i in self.__end_effector_indices]
+
         ################################################
         # Do some calculations related to action space #
         ################################################
@@ -393,16 +399,16 @@ class DartDeepMimic(dart_env.DartEnv):
 
         # TODO THe units are off, the paper specifically specifies units of meters
 
-        print("RETURNING FOUR")
-        return 4
-        raise NotImplementedError()
-
+        eediffmag = sum([np.linalg.norm(self.control_skel.bodynodes[i].to_world(offset)
+                                        - self.ref_skel.bodynodes[i].to_world(offset))
+                         for i, offset in zip(self.__end_effector_indices,
+                                              self.__end_effector_offsets)])
 
         #########################
         # CENTER OF MASS REWARD #
         #########################
 
-        comdiffmag = np.linalg.norm(self.control_skel.com - refcom)
+        comdiffmag = np.linalg.norm(self.control_skel.com() - refcom)
 
         ################
         # TOTAL REWARD #
@@ -961,7 +967,7 @@ if __name__ == "__main__":
                         args.frame_skip, args.dt,
                         args.window_width, args.window_height)
 
-    for i in range(30):
+    for i in range(3000):
         env.sync_skel_to_frame(env.control_skel, i)
         a = env.action_space.sample()
         env.step(a)
