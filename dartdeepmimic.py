@@ -223,11 +223,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             Noise is a boolean
             """
             for dof, pos, vel in zip(dof_list, pos_list, vel_list):
-                pos = pos + np.random.normal(0, self.pos_init_noise) \
-                      if noise else pos
-
-                vel = vel + np.random.normal(0, self.vel_init_noise) \
-                      if noise else vel
+                pos = np.random.normal(pos, self.pos_init_noise if noise else 0)
+                vel = np.random.normal(vel, self.vel_init_noise if noise else 0)
                 dof.set_position(float(pos))
                 dof.set_velocity(float(vel))
 
@@ -904,11 +901,11 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         return self._get_obs()
 
-    def viewer_setup(self):
-        if not self.disableViewer:
-            self._get_viewer().scene.tb.trans[0] = 5.0
-            self._get_viewer().scene.tb.trans[2] = -30
-            self._get_viewer().scene.tb.trans[1] = 0.0
+    # def viewer_setup(self):
+    #     if not self.disableViewer:
+    #         self._get_viewer().scene.tb.trans[0] = 5.0
+    #         self._get_viewer().scene.tb.trans[2] = -30
+    #         self._get_viewer().scene.tb.trans[1] = 0.0
 
     def render(self, mode='human', close=False):
             # if not self.disableViewer:
@@ -941,7 +938,7 @@ if __name__ == "__main__":
                         help="Code for the state representation")
     parser.add_argument('--action-mode', default=0, type=int,
                         help="Code for the action representation")
-    parser.add_argument('--visualize', default=True,
+    parser.add_argument('--visualize', default=False,
                         help="True if you want a window to render to")
     parser.add_argument('--frame-skip', type=int, default=1,
                         help="Number of simulation steps per frame of mocap" +
@@ -985,6 +982,7 @@ if __name__ == "__main__":
                         help="D for the PD controller")
 
     args = parser.parse_args()
+    print(args.vel_init_noise, "The vel init noise")
 
     env = DartDeepMimicEnv(args.control_skel_path, args.asf_path,
                            args.ref_motion_path,

@@ -56,15 +56,15 @@ if __name__ == '__main__':
     parser.add_argument('--frame-skip', type=int, default=1,
                         help="Number of simulation steps per frame of mocap" +
                         " data")
-    parser.add_argument('--dt', type=float, default=.002,
-                        help="Dart simulation resolution")
+    parser.add_argument('--max-action-magnitude', type=float, default=90,
+                        help="Maximum torque")
     parser.add_argument('--window-width', type=int, default=80,
                         help="Window width")
     parser.add_argument('--window-height', type=int, default=45,
                         help="Window height")
 
 
-    parser.add_argument('--pos-init-noise', type=float, default=.2,
+    parser.add_argument('--pos-init-noise', type=float, default=.05,
                         help="Standard deviation of the position init noise")
     parser.add_argument('--vel-init-noise', type=float, default=.05,
                         help="Standart deviation of the velocity init noise")
@@ -89,6 +89,11 @@ if __name__ == '__main__':
     parser.add_argument('--com-inner-weight', type=float, default=-10,
                         help="Coefficient for com difference exponentiation in reward")
 
+    parser.add_argument('--p-gain', type=float, default=300,
+                        help="P for the PD controller")
+    parser.add_argument('--d-gain', type=float, default=50,
+                        help="D for the PD controller")
+
     parser.add_argument('--train-save-interval', type=int, default=10,
                         help="Interval between saves and stuff")
     parser.add_argument('--train-params-prefix', required=True,
@@ -99,15 +104,17 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     env = DartDeepMimicEnv(args.control_skel_path, args.asf_path,
-                        args.ref_motion_path,
-                        args.state_mode, args.action_mode,
-                        args.pos_init_noise, args.vel_init_noise,
-                        args.pos_weight, args.pos_inner_weight,
-                        args.vel_weight, args.vel_inner_weight,
-                        args.ee_weight, args.ee_inner_weight,
-                        args.com_weight, args.com_inner_weight,
-                        args.visualize,
-                        args.frame_skip, args.dt,
-                        args.window_width, args.window_height)
+                           args.ref_motion_path,
+                           args.state_mode, args.action_mode,
+                           args.p_gain, args.d_gain,
+                           args.pos_init_noise, args.vel_init_noise,
+                           args.pos_weight, args.pos_inner_weight,
+                           args.vel_weight, args.vel_inner_weight,
+                           args.ee_weight, args.ee_inner_weight,
+                           args.com_weight, args.com_inner_weight,
+                           args.visualize,
+                           args.frame_skip, args.max_action_magnitude,
+                           args.window_width, args.window_height)
+
     train(env, args.train_save_interval, args.train_params_prefix,
           args.train_num_timesteps)
