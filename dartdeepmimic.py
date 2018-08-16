@@ -878,12 +878,21 @@ class DartDeepMimic(dart_env.DartEnv):
         # self.dart_world.set_text.append(str(done))
 
         # return ob, reward, done,reward_breakup
+        pass
 
 
-    def reset_model(self):
+    def reset(self):
 
-        self.sync_skel_to_frame(self.control_skel,
-                                random.randint(len(self.amc.frames)))
+        self.frame = random.randint(len(self.amc.frames))
+        self.sync_skel_to_frame(self.control_skel, self.frame)
+
+        return self._get_obs()
+
+
+    def reset_to_start(self):
+
+        self.frame = 0
+        self.sync_skel_to_frame(self.control_skel, 0)
 
         return self._get_obs()
 
@@ -967,8 +976,8 @@ if __name__ == "__main__":
                         args.frame_skip, args.dt,
                         args.window_width, args.window_height)
 
+    env.reset_to_start()
     for i in range(3000):
-        env.sync_skel_to_frame(env.control_skel, i)
         a = env.action_space.sample()
         env.step(a)
         env.render()

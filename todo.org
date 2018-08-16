@@ -1,0 +1,4 @@
+*** TODO Simulation doesn't start for space of seconds?
+*** TODO Actually step frame index (and sync it with sim time)
+*** TODO Expand the ground
+*** TODO Profile environment to make it faster
