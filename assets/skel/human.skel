@@ -15,7 +15,7 @@
                     <transformation>0 0 0 0 0 0</transformation>
                     <geometry>
                         <box>
-                            <size>500.0 0.4 2.0</size>
+                            <size>500.0 0.4 500</size>
                         </box>
                     </geometry>
                     <color>0.8 0.8 0.8</color>
@@ -24,7 +24,7 @@
                     <transformation>0 0 0 0 0 0</transformation>
                     <geometry>
                         <box>
-                            <size>500.0 0.4 2.0</size>
+                            <size>500.0 0.4 500</size>
                         </box>
                     </geometry>
                 </collision_shape>
