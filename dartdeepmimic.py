@@ -160,7 +160,7 @@ class DartDeepMimic(dart_env.DartEnv):
         Given a skeleton reference, use the metadict (assumed to be correct)
         to sync all the dofs
         """
-        frame = self.amc.frames[frame_index]
+        frame = self.amc.frames[frame_index % len(self.amc.frames)]
         # TODO Move conversions somewhere else...
 
         def sequential_degrees_to_rotating_radians(rvector):
@@ -198,8 +198,6 @@ class DartDeepMimic(dart_env.DartEnv):
             theta = expand_angle(joint_angles, order)
             rotation_euler = sequential_degrees_to_rotating_radians(theta)
             new_rotation_euler = compress_angle(rotation_euler, order)
-            # print(str(rotation_euler) + " " + order + "\n --> " + str(new_rotation_euler))
-            # print(order, rotation_euler)
 
             map_dofs(skel.dofs[start_index : end_index + 1],
                      new_rotation_euler)
@@ -210,18 +208,28 @@ class DartDeepMimic(dart_env.DartEnv):
         the state code
         """
 
+        state = None
+
         if self.statemode == StateMode.GEN_EULER:
-            return self.gencoords_as_euler(self.control_skel)
+            state = self.gencoordtuple_as_pos_and_eulerlist(
+                self.control_skel)
         elif self.statemode == StateMode.GEN_QUAT:
-            return self.gencoords_as_quat(self.control_skel)
+            state = self.gencoordtuple_as_pos_and_qautlist(
+                self.control_skel)
         elif self.statemode == StateMode.GEN_AXIS:
-            return lambda: self.gencoords_as_axisangle(self.control_skel)
+            state = self.gencoordtuple_as_pos_and_axisanglelist(
+                self.control_skel)
         else:
             raise RuntimeError("Unrecognized or unimpletmented state code: "
                                + str(statemode))
 
+        pos, vel = state
+        posvector = np.concatenate([pos[0], np.concatenate(pos[1])])
+        velvector = np.concatenate([vel[0], np.concatenate(vel[1])])
+        return np.concatenate([posvector, velvector])
 
-    def q_components_euler(self, generalized_q):
+
+    def genq_to_pos_and_eulerdict(self, generalized_q):
         """
         @type generalized_q: A vector of dof values, as given by skel.q or .dq
 
@@ -248,7 +256,7 @@ class DartDeepMimic(dart_env.DartEnv):
                                                      order)
         return root_translation, expanded_angles
 
-    def gencoords_of_skel(self, skeleton):
+    def gencoordtuple_as_pos_and_eulerlist(self, skeleton):
         """
         @type skeleton: A dart skeleton
 
@@ -265,59 +273,38 @@ class DartDeepMimic(dart_env.DartEnv):
         @type: Tuple(list of 2 3-arrays, list of 3-arrays)
         """
 
-        pos, angles_dict = self.q_components_euler(skeleton.q)
-        dpos, dangles_dict = self.q_components_euler(skeleton.dq)
+        pos, angles_dict = self.genq_to_pos_and_eulerdict(skeleton.q)
+        dpos, dangles_dict = self.genq_to_pos_and_eulerdict(skeleton.dq)
 
         angles = np.array(list(angles_dict.values()))
         dangles = np.array(list(dangles_dict.values()))
 
-        gen_pos = np.array([pos, dpos])
-        gen_angles = np.concatenate([angles, dangles])
+        return (pos, angles), (dpos, dangles)
 
-        return gen_pos, gen_angles
+    def gencoordtuple_as_pos_and_qautlist(self, skeleton):
 
-    def flatten_components(self, components):
-        """
-        @param gencoords: A tuple formatted similarly to that returned by
-        gencoords_of_skel. However the angles may be converted into a different
-        format, such as quaternions
-            - [1] This parameter (corresponding to the angular information)
-              should be a LIST not a dictionary
+        pos_info, vel_info = self.gencoords_as_poslist_and_eulerlist(skel)
+        pos, angles = pos_info
+        dpos, dangles = vel_info
 
-        @return: A flattened 1-dimensional array suitable for passing into a NN
-        """
-        positional, angular = components
-        pos_flat = np.concatenate(positional)
-        ang_flat = np.concatenate(angular)
-        return np.concatenate([pos_flat, ang_flat])
+        angles = [quaternion_from_euler(*t, axes="rxyz") for t in angles]
+        dangles = [quaternion_from_euler(*t, axes="rxyz") for t in angles]
 
-    def gencoords_as_quat(self, skel):
-        """
-        Return a state vector where anglular quantities are in
-        quaternion format
-        """
-        pos, ang = self.gencoords_of_skel(skel)
-        ang = [quaternion_from_euler(*t, axes="rxyz") for t in ang]
-        return self.flatten_components((pos, ang))
+        return (pos, angles), (dpos, dangles)
 
-    def gencoords_as_euler(self, skel):
-        """
-        Return a state vector where anglular quantities are in
-        euler format
-        """
-        pos, ang = self.gencoords_of_skel(skel)
-        return self.flatten_components((pos, ang))
 
-    def gencoords_as_axisangle(self, skel):
-        """
-        Return a state vector where anglular quantities are in
-        axis-angle format
-        """
-        pos, ang = self.gencoords_of_skel(skel)
-        ang = [axisangle_from_euler(*t, axes="rxyz") for t in ang]
-        return self.flatten_components((pos, ang))
+    def gencoordtuple_as_pos_and_qautlist(self, skeleton):
 
-    def _target_angles(self, raw_action):
+        pos_info, vel_info = self.gencoords_as_poslist_and_eulerlist(skel)
+        pos, angles = pos_info
+        dpos, dangles = vel_info
+
+        angles = [axisangle_from_euler(*t, axes="rxyz") for t in angles]
+        dangles = [axisangle_from_euler(*t, axes="rxyz") for t in angles]
+
+        return (pos, angles), (dpos, dangles)
+
+    def _target_full_euler_from_action(self, raw_action):
         """
         Given a 1-dimensional vector representing a neural network output,
         construct from it a set of targets for the ACTUATED degrees of freedom
@@ -344,29 +331,9 @@ class DartDeepMimic(dart_env.DartEnv):
             raise RuntimeError("Unrecognized or unimpletmented action code: "
                                + str(actionmode))
 
-    # def euler_to_acutated_q(self, angles):
-    #     """
-    #     Given a list of 3-tuples representing target euler angles for the
-    #     ACTUATED degrees of freedom, use the skeleton metadict to compress them
-    #     into a single vector (where angles have been truncated based on how
-    #     many degrees of freedom the relevant joint has)
-    #     """
-
-    #     q = np.zeros(self.control_skel.num_dofs())
-    #     i = 0
-    #     for key in self.metadict:
-    #         if key == ROOT_THETA_KEY:
-    #             continue
-    #         indices = self.metadict[key][0]
-    #         f, l = indices[0], indices[-1] + 1
-    #         theta = compress_angle(angles[i],
-    #                                self.metadict[key][1])
-    #         q[f:l] = theta
-    #         i += 1
-
-    #     return q[6:]
-
     def reward(self, old_skelq, new_skelq):
+        self.sync_skel_to_frame(self.ref_skel, self.frame)
+
         raise NotImplementedError()
 
     def advance(self, a):
@@ -467,14 +434,14 @@ class DartDeepMimic(dart_env.DartEnv):
 
     def step(self, a):
 
-        actuation_targets = self._target_angles(a)
+        actuation_targets = self._target_full_euler_from_action(a)
 
-        _, current_euler = self.q_components_euler(self.control_skel.q)
+        _, current_euler = self.genq_to_pos_and_eulerdict(self.control_skel.q)
         actuated_angles = np.array([current_euler[key]
                                   for key in current_euler
                                   if key != ROOT_THETA_KEY])
 
-        _, old_euler = self.q_components_euler(self.old_skelq)
+        _, old_euler = self.genq_to_pos_and_eulerdict(self.old_skelq)
         old_actuated_angles = np.array([current_euler[key]
                                         for key in old_euler
                                         if key != ROOT_THETA_KEY])
@@ -492,7 +459,7 @@ class DartDeepMimic(dart_env.DartEnv):
         self.do_simulation(torques, self.frame_skip)
 
         newstate = self._get_obs()
-        reward = 4
+        reward = self.reward(old_euler, current_euler)
         done = False
         extrainfo = {}
 
@@ -821,7 +788,10 @@ class DartDeepMimic(dart_env.DartEnv):
 
 
     def reset_model(self):
-        raise NotImplementedError()
+
+        self.sync_skel_to_frame(self.control_skel,
+                                random.randint(len(self.amc.frames)))
+
         return self._get_obs()
 
     def viewer_setup(self):
@@ -880,7 +850,7 @@ if __name__ == "__main__":
                         args.window_width, args.window_height)
 
     for i in range(200):
-        env.sync_skel_to_frame(env.control_skel, 0)
+        env.sync_skel_to_frame(env.control_skel, i)
         a = env.action_space.sample()
-        # env.step(a)
+        env.step(a)
         env.render()
