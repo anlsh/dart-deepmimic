@@ -15,7 +15,9 @@ from asf_skeleton import ASF_Skeleton
 from joint import expand_angle, compress_angle
 from transformations import quaternion_from_euler, euler_from_quaternion
 from transformations import compose_matrix, euler_from_matrix
+from transformations import quaternion_multiply, quaternion_conjugate, quaternion_inverse
 import math
+from math import exp
 
 class StateMode:
 
@@ -38,10 +40,14 @@ class ActionMode:
 
 ROOT_THETA_KEY = "root_theta"
 ROOT_POS_KEY = "root_pos"
+REFMOTION_DT = .1
 # Unlike the two vars above, ROOT_KEY isn't customizeable. It should correspond
 # with whatever the root node is named in the amc (which should always be
 # "root" anyways)
 ROOT_KEY = "root"
+
+def quaternion_difference(a, b):
+    return quaternion_multiply(b, quaternion_inverse(a))
 
 def get_metadict(amc_frame, skel_dofs, asf):
     """
@@ -80,6 +86,10 @@ class DartDeepMimic(dart_env.DartEnv):
                  reference_motion_path,
                  statemode = StateMode.GEN_EULER,
                  actionmode = StateMode.GEN_EULER,
+                 pos_weight=.65, pos_inner_weight=-2,
+                 vel_weight=.1, vel_inner_weight=-.1,
+                 ee_weight=.15, ee_inner_weight=-40,
+                 com_weight=.1, com_inner_weight=-10,
                  visualize=True, frame_skip=16, dt=.005,
                  max_action_magnitude=10,
                  screen_width=80,
@@ -90,6 +100,15 @@ class DartDeepMimic(dart_env.DartEnv):
 
         self.frame = 0
         self.old_frame = 0
+
+        self.pos_weight = pos_weight
+        self.pos_inner_weight = pos_inner_weight
+        self.vel_weight = vel_weight
+        self.vel_inner_weight = vel_inner_weight
+        self.ee_weight = ee_weight
+        self.ee_inner_weight = ee_inner_weight
+        self.com_weight = com_weight
+        self.com_inner_weight = com_inner_weight
 
         ###########################################################
         # Extract dof info so that states can be converted easily #
@@ -161,7 +180,6 @@ class DartDeepMimic(dart_env.DartEnv):
         to sync all the dofs
         """
         frame = self.amc.frames[frame_index % len(self.amc.frames)]
-        # TODO Move conversions somewhere else...
 
         def sequential_degrees_to_rotating_radians(rvector):
 
@@ -281,26 +299,26 @@ class DartDeepMimic(dart_env.DartEnv):
 
         return (pos, angles), (dpos, dangles)
 
-    def gencoordtuple_as_pos_and_qautlist(self, skeleton):
+    def gencoordtuple_as_pos_and_qautlist(self, skel):
 
-        pos_info, vel_info = self.gencoords_as_poslist_and_eulerlist(skel)
+        pos_info, vel_info = self.gencoordtuple_as_pos_and_eulerlist(skel)
         pos, angles = pos_info
         dpos, dangles = vel_info
 
         angles = [quaternion_from_euler(*t, axes="rxyz") for t in angles]
-        dangles = [quaternion_from_euler(*t, axes="rxyz") for t in angles]
+        dangles = [quaternion_from_euler(*t, axes="rxyz") for t in dangles]
 
         return (pos, angles), (dpos, dangles)
 
 
-    def gencoordtuple_as_pos_and_qautlist(self, skeleton):
+    def gencoordtuple_as_pos_and_axisanglelist(self, skel):
 
-        pos_info, vel_info = self.gencoords_as_poslist_and_eulerlist(skel)
+        pos_info, vel_info = self.gencoordtuple_as_pos_and_eulerlist(skel)
         pos, angles = pos_info
         dpos, dangles = vel_info
 
         angles = [axisangle_from_euler(*t, axes="rxyz") for t in angles]
-        dangles = [axisangle_from_euler(*t, axes="rxyz") for t in angles]
+        dangles = [axisangle_from_euler(*t, axes="rxyz") for t in dangles]
 
         return (pos, angles), (dpos, dangles)
 
@@ -331,10 +349,79 @@ class DartDeepMimic(dart_env.DartEnv):
             raise RuntimeError("Unrecognized or unimpletmented action code: "
                                + str(actionmode))
 
-    def reward(self, old_skelq, new_skelq):
-        self.sync_skel_to_frame(self.ref_skel, self.frame)
+    def reward(self, skel, frame):
 
+        pos, vel = self.gencoordtuple_as_pos_and_qautlist(skel)
+        pos, angles = pos
+        dpos, dangles = vel
+
+        self.sync_skel_to_frame(self.ref_skel, frame - 1)
+        refpos_old, _ = self.gencoordtuple_as_pos_and_qautlist(self.ref_skel)
+        refpos_old, refangles_old = refpos_old
+
+        self.sync_skel_to_frame(self.ref_skel, frame)
+        refpos, _ = self.gencoordtuple_as_pos_and_qautlist(self.ref_skel)
+        refpos, refangles = refpos
+        refcom = self.ref_skel.com()
+
+        #####################
+        # POSITIONAL REWARD #
+        #####################
+
+        posdiff = [quaternion_difference(ra, a)
+                   for a, ra in zip(angles, refangles)]
+        posdiffmag = sum([np.linalg.norm(d) for d in posdiff])
+
+        ###################
+        # VELOCITY REWARD #
+        ###################
+
+        # TODO No quaternion difference used in the paper, but that seems wrong...
+
+        # TODO Replace refmotion dt
+        data_velocity = [quaternion_difference(new, old)
+                         / REFMOTION_DT for new, old in zip(refangles,
+                                                            refangles_old)]
+
+        vdiff = [quaternion_difference(s, data) for s, data in zip(dangles,
+                                                                   data_velocity)]
+        veldiffmag = sum([np.linalg.norm(v) for v in vdiff])
+
+        #######################
+        # END EFFECTOR REWARD #
+        #######################
+
+        # TODO THe units are off, the paper specifically specifies units of meters
+
+        print("RETURNING FOUR")
+        return 4
         raise NotImplementedError()
+
+
+        #########################
+        # CENTER OF MASS REWARD #
+        #########################
+
+        comdiffmag = np.linalg.norm(self.control_skel.com - refcom)
+
+        ################
+        # TOTAL REWARD #
+        ################
+
+        outerweights = [self.pos_weight, self.vel_weight,
+                        self.ee_weight, self.com_weight]
+
+        innerweights = [self.pos_inner_weight, self.vel_inner_weight,
+                        self.ee_inner_weight, self.com_inner_weight]
+
+        diffmags = [posdiffmag, veldiffmag, eediffmag, comdiffmag]
+
+        # TODO Inefficient to keep zipping these up and creating arrays all the
+        # time?
+
+        return sum([ow * exp(iw * diff) for ow, iw, diff in zip(outerweights,
+                                                                innerweights,
+                                                                diffmags)])
 
     def advance(self, a):
         raise NotImplementedError()
@@ -459,7 +546,7 @@ class DartDeepMimic(dart_env.DartEnv):
         self.do_simulation(torques, self.frame_skip)
 
         newstate = self._get_obs()
-        reward = self.reward(old_euler, current_euler)
+        reward = self.reward(self.control_skel, self.frame)
         done = False
         extrainfo = {}
 
@@ -841,15 +928,40 @@ if __name__ == "__main__":
     parser.add_argument('--window-height', type=int, default=45,
                         help="Window height")
 
+    parser.add_argument('--pos-weight', type=float, default=.65,
+                        help="Weighting for the pos difference in the reward")
+    parser.add_argument('--pos-inner-weight', type=float, default=-2,
+                        help="Coefficient for pos difference exponentiation in reward")
+
+    parser.add_argument('--vel-weight', type=float, default=.1,
+                        help="Weighting for the pos difference in the reward")
+    parser.add_argument('--vel-inner-weight', type=float, default=-.1,
+                        help="Coefficient for vel difference exponentiation in reward")
+
+    parser.add_argument('--ee-weight', type=float, default=.15,
+                        help="Weighting for the pos difference in the reward")
+    parser.add_argument('--ee-inner-weight', type=float, default=-40,
+                        help="Coefficient for pos difference exponentiation in reward")
+
+    parser.add_argument('--com-weight', type=float, default=.1,
+                        help="Weighting for the com difference in the reward")
+    parser.add_argument('--com-inner-weight', type=float, default=-10,
+                        help="Coefficient for com difference exponentiation in reward")
+
     args = parser.parse_args()
 
     env = DartDeepMimic(args.control_skel_path, args.asf_path,
                         args.ref_motion_path,
-                        args.state_mode, args.action_mode, args.visualize,
+                        args.state_mode, args.action_mode,
+                        args.pos_weight, args.pos_inner_weight,
+                        args.vel_weight, args.vel_inner_weight,
+                        args.ee_weight, args.ee_inner_weight,
+                        args.com_weight, args.com_inner_weight,
+                        args.visualize,
                         args.frame_skip, args.dt,
                         args.window_width, args.window_height)
 
-    for i in range(200):
+    for i in range(30):
         env.sync_skel_to_frame(env.control_skel, i)
         a = env.action_space.sample()
         env.step(a)
