@@ -14,12 +14,13 @@ from transformations import quaternion_from_euler, euler_from_quaternion
 from transformations import compose_matrix, euler_from_matrix
 from transformations import quaternion_multiply, quaternion_conjugate, quaternion_inverse
 from math import exp, pi
+import random
 
 # Customizable parameters
 ROOT_THETA_KEY = "root_theta"
 ROOT_POS_KEY = "root_pos"
 # TODO For the love of god, sync this up
-REFMOTION_DT = .1
+REFMOTION_DT = 1 / 120
 
 # ROOT_KEY isn't customizeable. It should correspond
 # to the name of the root node in the amc (which is usually "root")
@@ -64,9 +65,6 @@ def get_metadict(amc_frame, skel_dofs, asf):
         - the second element is the joint's angle order (a string such as "xz"
           or "zyx")
     """
-    # TODO Find a way of extracting information other than
-    # relying on the underlying amc file
-
     # TODO README EMERGENCY!!!
     # If the output of this function is ever changed so that the number of
     # actuated dofs is no longer given by (size of output dict - 1), then
@@ -93,13 +91,14 @@ class DartDeepMimic(dart_env.DartEnv):
                  vel_weight=.1, vel_inner_weight=-.1,
                  ee_weight=.15, ee_inner_weight=-40,
                  com_weight=.1, com_inner_weight=-10,
-                 visualize=True, frame_skip=16, dt=.005,
+                 visualize=True, frame_skip=1,
                  max_action_magnitude=10,
                  screen_width=80,
                  screen_height=45):
 
         self.statemode = statemode
         self.actionmode = actionmode
+        self.frame_skip = frame_skip
         self.pos_init_noise = pos_init_noise
         self.vel_init_noise = vel_init_noise
 
@@ -118,6 +117,7 @@ class DartDeepMimic(dart_env.DartEnv):
         # Extract dof info so that states can be converted easily #
         ###########################################################
 
+        dt = REFMOTION_DT / self.frame_skip
         world = pydart.World(dt, control_skeleton_path)
         asf = ASF_Skeleton(asf_path)
 
@@ -132,11 +132,13 @@ class DartDeepMimic(dart_env.DartEnv):
         # it's set to its correct value later on
         self.control_skel = self.ref_skel
 
-        self.__end_effector_indices = [i for i, node in enumerate(self.control_skel.bodynodes)
+        self.__end_effector_indices = [i for i, node
+                                       in enumerate(self.control_skel.bodynodes)
                                      if len(node.child_bodynodes) == 0]
 
-        self.__end_effector_offsets = [asf.name2joint[self.control_skel.bodynodes[i].name[:-5]].offset
-                                     for i in self.__end_effector_indices]
+        self.__end_effector_offsets = [asf.name2joint[
+            self.control_skel.bodynodes[i].name[:-5]].offset
+                                       for i in self.__end_effector_indices]
 
         ################################################
         # Do some calculations related to action space #
@@ -145,11 +147,14 @@ class DartDeepMimic(dart_env.DartEnv):
         # Calculate the size of the neural network output vector
         self.action_dim = ActionMode.lengths[actionmode] \
                           * (len(self.metadict) - 1)
-        self.action_limits = [max_action_magnitude * np.ones(self.action_dim),
-                              -max_action_magnitude * np.ones(self.action_dim)]
+        self.action_limits = [max_action_magnitude
+                              * np.ones(self.action_dim),
+                              -max_action_magnitude
+                              * np.ones(self.action_dim)]
 
 
-        dart_env.DartEnv.__init__(self, [control_skeleton_path], frame_skip,
+        dart_env.DartEnv.__init__(self, [control_skeleton_path],
+                                  frame_skip,
                                   len(self._get_obs()),
                                   self.action_limits, dt, "parameter",
                                   "continuous", visualize, not visualize)
@@ -203,7 +208,6 @@ class DartDeepMimic(dart_env.DartEnv):
         Given a skeleton and mocap frame index, use self.metadict to sync all
         the dofs
         """
-        # TODO Sync velocities as well as positions
         frame = self.framelist[frame_index % len(self.framelist)]
         old_frame = self.framelist[(frame_index - 1 if frame_index > 0 else 0)
                                     % len(self.framelist)]
@@ -378,7 +382,6 @@ class DartDeepMimic(dart_env.DartEnv):
         pos, angles = pos
         dpos, dangles = vel
 
-        # TODO Can't blind sync because of end effects
         self.sync_skel_to_frame(self.ref_skel, frame - 1
                                 if frame > 0 else 0)
         refpos_old, _ = self.gencoordtuple_as_pos_and_qautlist(self.ref_skel)
@@ -403,7 +406,6 @@ class DartDeepMimic(dart_env.DartEnv):
 
         # TODO No quaternion difference used in the paper, but that seems wrong...
 
-        # TODO Replace refmotion dt
         data_velocity = [quaternion_difference(new, old)
                          / REFMOTION_DT for new, old in zip(refangles,
                                                             refangles_old)]
@@ -440,9 +442,6 @@ class DartDeepMimic(dart_env.DartEnv):
                         self.ee_inner_weight, self.com_inner_weight]
 
         diffmags = [posdiffmag, veldiffmag, eediffmag, comdiffmag]
-
-        # TODO Inefficient to keep zipping these up and creating arrays all the
-        # time?
 
         return sum([ow * exp(iw * diff) for ow, iw, diff in zip(outerweights,
                                                                 innerweights,
@@ -568,12 +567,16 @@ class DartDeepMimic(dart_env.DartEnv):
         # Also what is the difference between world step
         self.control_skel.set_forces(torques)
         self.dart_world.step()
+
+        # TODO EMERGENCY DONT DOUBLE COUNT FRAME SKIP
         self.do_simulation(torques, self.frame_skip)
 
         newstate = self._get_obs()
         reward = self.reward(self.control_skel, self.framenum)
         done = self.framenum == len(self.framelist) - 1
         extrainfo = {}
+
+        self.framenum += 1
 
         return newstate, reward, done, extrainfo
         # self.dart_world.set_text = []
@@ -882,7 +885,7 @@ class DartDeepMimic(dart_env.DartEnv):
     def reset(self, framenum=None, noise=True):
 
         if framenum is None:
-            self.framenum = random.randint(len(self.framelist))
+            framenum = random.randint(0, len(self.framelist))
         self.framenum = framenum
 
         self.sync_skel_to_frame(self.control_skel, self.framenum, noise)
@@ -926,8 +929,9 @@ if __name__ == "__main__":
                         help="Code for the action representation")
     parser.add_argument('--visualize', default=True,
                         help="True if you want a window to render to")
-    parser.add_argument('--frame-skip', type=int, default=16,
-                        help="IDK what this does")
+    parser.add_argument('--frame-skip', type=int, default=1,
+                        help="Number of simulation steps per frame of mocap" +
+                        " data")
     parser.add_argument('--dt', type=float, default=.002,
                         help="Dart simulation resolution")
     parser.add_argument('--window-width', type=int, default=80,
@@ -975,7 +979,7 @@ if __name__ == "__main__":
                         args.frame_skip, args.dt,
                         args.window_width, args.window_height)
 
-    env.reset(0, True)
+    env.reset(None, True)
     for i in range(300):
         a = env.action_space.sample()
         env.step(a)
