@@ -3,4 +3,5 @@
 *** TODO Actually step frame index (and sync it with sim time)
 *** DONE Expand the ground
     CLOSED: [2018-08-16 Thu 14:44]
-*** TODO Profile environment to make it faster
+*** DONE Profile environment to make it faster
+    CLOSED: [2018-08-17 Fri 13:37]

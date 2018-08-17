@@ -1,12 +1,9 @@
 __author__ = 'anish'
 
 import numpy as np
+from numpy.linalg import norm
 from gym import utils
 from gym.envs.dart import dart_env
-import copy
-
-import baselines.common.tf_util as U
-from baselines.ppo1.mlp_policy import MlpPolicy
 
 import pydart2 as pydart
 import argparse
@@ -16,11 +13,22 @@ from joint import expand_angle, compress_angle
 from transformations import quaternion_from_euler, euler_from_quaternion
 from transformations import compose_matrix, euler_from_matrix
 from transformations import quaternion_multiply, quaternion_conjugate, quaternion_inverse
-import math
-from math import exp
+from math import exp, pi
+
+# Customizable parameters
+ROOT_THETA_KEY = "root_theta"
+ROOT_POS_KEY = "root_pos"
+# TODO For the love of god, sync this up
+REFMOTION_DT = .1
+
+# ROOT_KEY isn't customizeable. It should correspond
+# to the name of the root node in the amc (which is usually "root")
+ROOT_KEY = "root"
 
 class StateMode:
-
+    """
+    Just a convenience enum
+    """
     GEN_EULER = 0
     GEN_QUAT = 1
     GEN_AXIS = 2
@@ -29,33 +37,28 @@ class StateMode:
     MIX_QUAT = 4
     MIX_AXIS = 5
 
-
 class ActionMode:
-
+    """
+    Another convenience enum
+    """
     GEN_EULER = 0
     GEN_QUAT = 1
     GEN_AXIS = 2
 
+    # lengths[code] describes the space needed for an angle of that
+    # type. For instance euler is 3 numbers, a quaternion is 4
     lengths = [3, 4, 4]
-
-ROOT_THETA_KEY = "root_theta"
-ROOT_POS_KEY = "root_pos"
-REFMOTION_DT = .1
-# Unlike the two vars above, ROOT_KEY isn't customizeable. It should correspond
-# with whatever the root node is named in the amc (which should always be
-# "root" anyways)
-ROOT_KEY = "root"
 
 def quaternion_difference(a, b):
     return quaternion_multiply(b, quaternion_inverse(a))
 
 def get_metadict(amc_frame, skel_dofs, asf):
     """
-    @type amc_frame: A dictionary mapping dof names -> mocap data
+    @type amc_frame: A list of (joint-name, joint-data) tuples
     @type skel_dofs: The array of skeleton dofs, as given by skel.dofs
     @type asf: An instance of the ASFSkeleton class
 
-    @return: A dictionary which maps dof names WHICH APPEAR IN MOCAP DATA
+    @return: A dictionary which maps dof names APPEARING IN MOCAP DATA
     to tuples where:
         - the first element is the list of indices the dof occupies in skel_dofs
         - the second element is the joint's angle order (a string such as "xz"
@@ -63,7 +66,6 @@ def get_metadict(amc_frame, skel_dofs, asf):
     """
     # TODO Find a way of extracting information other than
     # relying on the underlying amc file
-    # dof_data is dof_name -> (range of indices, order )
 
     # TODO README EMERGENCY!!!
     # If the output of this function is ever changed so that the number of
@@ -99,7 +101,6 @@ class DartDeepMimic(dart_env.DartEnv):
         self.actionmode = actionmode
 
         self.frame = 0
-        self.old_frame = 0
 
         self.pos_weight = pos_weight
         self.pos_inner_weight = pos_inner_weight
@@ -121,9 +122,8 @@ class DartDeepMimic(dart_env.DartEnv):
         self.amc = AMC(reference_motion_path)
         self.metadict = get_metadict(self.amc.frames[0],
                                       self.ref_skel.dofs, asf)
-        # print(self.amc.frames[0])
         self.convert_frames()
-        # print(self.amc.frames[0])
+
         # Setting control skel to ref skel is just a workaround:
         # it's set to its correct value later on
         self.control_skel = self.ref_skel
@@ -145,8 +145,6 @@ class DartDeepMimic(dart_env.DartEnv):
                               -max_action_magnitude * np.ones(self.action_dim)]
 
 
-        # TODO Parse end effectors from the ASF or Skel, idc which #
-
         dart_env.DartEnv.__init__(self, [control_skeleton_path], frame_skip,
                                   len(self._get_obs()),
                                   self.action_limits, dt, "parameter",
@@ -158,41 +156,29 @@ class DartDeepMimic(dart_env.DartEnv):
         # Simulation stuff for DeepMimic #
         ##################################
         self.frame = 0
-        self.old_frame = 0
         self.old_skelq = self.control_skel.q
 
         self.P = .5 * np.ndarray(self.control_skel.num_dofs())
         self.D = .1 * np.ndarray(self.control_skel.num_dofs())
 
-        self._curr_mocap_frame = 0
-        self._past_mocap_frame = self._curr_mocap_frame
-
-    @property
-    def curr_mocap_frame(self):
-        return self._curr_mocap_frame
-
-    @curr_mocap_frame.setter
-    def curr_mocap_frame(self, new):
-
-        new = new % len(self.amc.frames)
-
-        if new == self._curr_mocap_frame + 1:
-            self._past_mocap_frame += 1
-        else:
-            self._past_mocap_frame = new
-
-        self._curr_mocap_frame = new
-
     def convert_frames(self):
+        """
+        AMC data is given in sequential degrees, while dart specifies angles
+        in rotating radians. The conversion is quite expensive, so we precomute
+        here (destructively modifying the self.frames variable)
+        """
 
         def sequential_degrees_to_rotating_radians(rvector):
 
-            rvector = np.multiply(rvector, math.pi / 180)
+            rvector = np.multiply(rvector, pi / 180)
 
             rmatrix = compose_matrix(angles=rvector, angle_order="sxyz")
             return euler_from_matrix(rmatrix[:3, :3], axes="rxyz")
 
         for frame in self.amc.frames:
+
+            # Root is a bit special since it contains translational + angular
+            # information, deal with that here
             root_data = frame[0][1]
             root_pos, root_theta = root_data[:3], root_data[3:]
             root_theta = sequential_degrees_to_rotating_radians(root_data[3:])
@@ -211,8 +197,8 @@ class DartDeepMimic(dart_env.DartEnv):
 
     def sync_skel_to_frame(self, skel, frame_index):
         """
-        Given a skeleton reference, use the metadict (assumed to be correct)
-        to sync all the dofs
+        Given a skeleton and mocap frame index, use self.metadict to sync all
+        the dofs
         """
         frame = self.amc.frames[frame_index % len(self.amc.frames)]
 
@@ -229,10 +215,6 @@ class DartDeepMimic(dart_env.DartEnv):
         for joint_name, joint_angles in frame[1:]:
             dof_indices, order = self.metadict[joint_name]
             start_index, end_index = dof_indices[0], dof_indices[-1]
-
-            # TODO Hold on... how is it so good while totally failing to
-            # account for joint dof order or number? This might be the cause of
-            # the weird foot-moving syndrome...
 
             map_dofs(skel.dofs[start_index : end_index + 1],
                      joint_angles)
@@ -263,17 +245,14 @@ class DartDeepMimic(dart_env.DartEnv):
         velvector = np.concatenate([vel[0], np.concatenate(vel[1])])
         return np.concatenate([posvector, velvector])
 
-
     def genq_to_pos_and_eulerdict(self, generalized_q):
         """
         @type generalized_q: A vector of dof values, as given by skel.q or .dq
 
         @return: A tuple where
-            - index 0 is a 3-array representing the translational component of
-              generalized q
-            - [1] is a dictionary mapping dof names to of 3-arrays representing
-              euler angles; the first index of an element is the x-coordinate,
-              the second is y, 3rd is z
+            - index 0 is the root positional component
+            - [1] is a dictionary mapping dof names to fully specified euler
+              angles in xyz order
         @type: Tuple
         """
 
@@ -295,17 +274,14 @@ class DartDeepMimic(dart_env.DartEnv):
         """
         @type skeleton: A dart skeleton
 
-        You're not meant to try and extract information on specific dofs from
-        this, it's basically returns intermediate ready to be flattened and
-        passed to a neural network
+        @return: A tuple where first component is positional info, second is
+        velocity info
 
-        @return: A tuple containing information on both q and dq
-            - [0] is a list of 2 3-arrays representing the translational parts
-                  - [0] is the pos, [1] is the velocity
-            - [1] is a list of 3-arrays representing the angular parts
-                  - Elements in the first half are angles, the second half is
-                    angular velocities
-        @type: Tuple(list of 2 3-arrays, list of 3-arrays)
+
+        Each component is itself a tuple where the first element is an array
+        containing the translational component, and the second is a list of
+        fully-specified euler angles for each of the dofs (in a consistent but
+        opaque order)
         """
 
         pos, angles_dict = self.genq_to_pos_and_eulerdict(skeleton.q)
@@ -317,6 +293,10 @@ class DartDeepMimic(dart_env.DartEnv):
         return (pos, angles), (dpos, dangles)
 
     def gencoordtuple_as_pos_and_qautlist(self, skel):
+        """
+        Same as gencoordtuple_as_pos_and_eulerlist, but with the angles
+        converted to quaternions
+        """
 
         pos_info, vel_info = self.gencoordtuple_as_pos_and_eulerlist(skel)
         pos, angles = pos_info
@@ -329,7 +309,11 @@ class DartDeepMimic(dart_env.DartEnv):
 
 
     def gencoordtuple_as_pos_and_axisanglelist(self, skel):
-
+        """
+        Same as gencoordtuple_as_pos_and_eulerlist, but with the angles
+        converted to axisangle
+        """
+        raise NotImplementedError()
         pos_info, vel_info = self.gencoordtuple_as_pos_and_eulerlist(skel)
         pos, angles = pos_info
         dpos, dangles = vel_info
@@ -368,12 +352,11 @@ class DartDeepMimic(dart_env.DartEnv):
 
     def reward(self, skel, frame):
 
-        return 4
-
         pos, vel = self.gencoordtuple_as_pos_and_qautlist(skel)
         pos, angles = pos
         dpos, dangles = vel
 
+        # TODO Can't blind sync because of end effects
         self.sync_skel_to_frame(self.ref_skel, frame - 1)
         refpos_old, _ = self.gencoordtuple_as_pos_and_qautlist(self.ref_skel)
         refpos_old, refangles_old = refpos_old
@@ -389,7 +372,7 @@ class DartDeepMimic(dart_env.DartEnv):
 
         posdiff = [quaternion_difference(ra, a)
                    for a, ra in zip(angles, refangles)]
-        posdiffmag = sum([np.linalg.norm(d) for d in posdiff])
+        posdiffmag = sum([norm(d) for d in posdiff])
 
         ###################
         # VELOCITY REWARD #
@@ -404,7 +387,7 @@ class DartDeepMimic(dart_env.DartEnv):
 
         vdiff = [quaternion_difference(s, data) for s, data in zip(dangles,
                                                                    data_velocity)]
-        veldiffmag = sum([np.linalg.norm(v) for v in vdiff])
+        veldiffmag = sum([norm(v) for v in vdiff])
 
         #######################
         # END EFFECTOR REWARD #
@@ -412,7 +395,7 @@ class DartDeepMimic(dart_env.DartEnv):
 
         # TODO THe units are off, the paper specifically specifies units of meters
 
-        eediffmag = sum([np.linalg.norm(self.control_skel.bodynodes[i].to_world(offset)
+        eediffmag = sum([norm(self.control_skel.bodynodes[i].to_world(offset)
                                         - self.ref_skel.bodynodes[i].to_world(offset))
                          for i, offset in zip(self.__end_effector_indices,
                                               self.__end_effector_offsets)])
@@ -421,7 +404,7 @@ class DartDeepMimic(dart_env.DartEnv):
         # CENTER OF MASS REWARD #
         #########################
 
-        comdiffmag = np.linalg.norm(self.control_skel.com() - refcom)
+        comdiffmag = norm(self.control_skel.com() - refcom)
 
         ################
         # TOTAL REWARD #
@@ -602,18 +585,6 @@ class DartDeepMimic(dart_env.DartEnv):
         # global_lfootdup = self.dupSkel.bodynodes[4].to_world(point_lfoot)
         # global_rfootdup = self.dupSkel.bodynodes[7].to_world(point_rfoot)
 
-        # self.dart_world.contact_point = []
-        # self.dart_world.contact_color = 'red'
-        # self.dart_world.contact_point.append(global_rarm)
-        # self.dart_world.contact_point.append(global_larm)
-        # self.dart_world.contact_point.append(global_rfoot)
-        # self.dart_world.contact_point.append(global_lfoot)
-        # self.dart_world.contact_color = 'green'
-        # self.dart_world.contact_point.append(global_rarmdup)
-        # self.dart_world.contact_point.append(global_larmdup)
-        # self.dart_world.contact_point.append(global_rfootdup)
-        # self.dart_world.contact_point.append(global_lfootdup)
-
 
         # #print(self.swingFoot)
         # posafter = self.robot_skeleton.bodynodes[0].com()[0]
@@ -623,21 +594,21 @@ class DartDeepMimic(dart_env.DartEnv):
         # upward = np.array([0, 1, 0])
         # upward_world = self.robot_skeleton.bodynode('head').to_world(
         #     np.array([0, 1, 0])) - self.robot_skeleton.bodynode('head').to_world(np.array([0, 0, 0]))
-        # upward_world /= np.linalg.norm(upward_world)
+        # upward_world /= norm(upward_world)
         # ang_cos_uwd = np.dot(upward, upward_world)
         # ang_cos_uwd = np.arccos(ang_cos_uwd)
 
         # forward = np.array([1, 0, 0])
         # forward_world = self.robot_skeleton.bodynode('head').to_world(
         #     np.array([1, 0, 0])) - self.robot_skeleton.bodynode('head').to_world(np.array([0, 0, 0]))
-        # forward_world /= np.linalg.norm(forward_world)
+        # forward_world /= norm(forward_world)
         # ang_cos_fwd = np.dot(forward, forward_world)
         # ang_cos_fwd = np.arccos(ang_cos_fwd)
 
         # lateral = np.array([0, 0, 1])
         # lateral_world = self.robot_skeleton.bodynode('head').to_world(
         #     np.array([0, 0, 1])) - self.robot_skeleton.bodynode('head').to_world(np.array([0, 0, 0]))
-        # lateral_world /= np.linalg.norm(lateral_world)
+        # lateral_world /= norm(lateral_world)
         # ang_cos_ltl = np.dot(lateral, lateral_world)
         # ang_cos_ltl = np.arccos(ang_cos_ltl)
 
@@ -725,13 +696,6 @@ class DartDeepMimic(dart_env.DartEnv):
         # com_reward = np.exp(-40*np.sum(np.square(self.com[self.count,:] - self.robot_skeleton.bodynodes[0].com())))
 
         # s = self.state_vector()
-
-
-
-
-
-
-
         # joint_diff = self.WalkPositions[self.count,6:] - self.robot_skeleton.q[6:]#hmm[[6,9,12,15,22,26,10,16]] - self.robot_skeleton.q[[6,9,12,15,22,26,10,16]]
         # #joint_diff_unimp = hmm[[7,8,13,14]] - self.robot_skeleton.q[[7,8,13,14]]
         # joint_pen = np.sum(joint_diff.T*Weight_matrix*joint_diff)
@@ -891,8 +855,6 @@ class DartDeepMimic(dart_env.DartEnv):
         # self.dart_world.set_text.append(str(done))
 
         # return ob, reward, done,reward_breakup
-        pass
-
 
     def reset(self):
 
@@ -900,7 +862,6 @@ class DartDeepMimic(dart_env.DartEnv):
         self.sync_skel_to_frame(self.control_skel, self.frame)
 
         return self._get_obs()
-
 
     def reset_to_start(self):
 
@@ -932,7 +893,6 @@ class DartDeepMimic(dart_env.DartEnv):
             self._get_viewer().runSingleStep()
 
 if __name__ == "__main__":
-
 
     parser = argparse.ArgumentParser(description='Make a DartDeepMimic Environ')
     parser.add_argument('--control-skel-path', required=True,
@@ -991,7 +951,6 @@ if __name__ == "__main__":
 
     env.reset_to_start()
     for i in range(300):
-        env.sync_skel_to_frame(env.control_skel, i)
         a = env.action_space.sample()
-        # env.step(a)
+        env.step(a)
         env.render()
