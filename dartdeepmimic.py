@@ -121,6 +121,9 @@ class DartDeepMimic(dart_env.DartEnv):
         self.amc = AMC(reference_motion_path)
         self.metadict = get_metadict(self.amc.frames[0],
                                       self.ref_skel.dofs, asf)
+        # print(self.amc.frames[0])
+        self.convert_frames()
+        # print(self.amc.frames[0])
         # Setting control skel to ref skel is just a workaround:
         # it's set to its correct value later on
         self.control_skel = self.ref_skel
@@ -180,12 +183,7 @@ class DartDeepMimic(dart_env.DartEnv):
 
         self._curr_mocap_frame = new
 
-    def sync_skel_to_frame(self, skel, frame_index):
-        """
-        Given a skeleton reference, use the metadict (assumed to be correct)
-        to sync all the dofs
-        """
-        frame = self.amc.frames[frame_index % len(self.amc.frames)]
+    def convert_frames(self):
 
         def sequential_degrees_to_rotating_radians(rvector):
 
@@ -194,6 +192,30 @@ class DartDeepMimic(dart_env.DartEnv):
             rmatrix = compose_matrix(angles=rvector, angle_order="sxyz")
             return euler_from_matrix(rmatrix[:3, :3], axes="rxyz")
 
+        for frame in self.amc.frames:
+            root_data = frame[0][1]
+            root_pos, root_theta = root_data[:3], root_data[3:]
+            root_theta = sequential_degrees_to_rotating_radians(root_data[3:])
+            frame[0] = (ROOT_KEY, np.concatenate([root_pos, root_theta]))
+
+            index = 0
+            for joint_name, joint_angles in frame[1:]:
+                index += 1
+                dof_indices, order = self.metadict[joint_name]
+                start_index, end_index = dof_indices[0], dof_indices[-1]
+
+                theta = expand_angle(joint_angles, order)
+                rotation_euler = sequential_degrees_to_rotating_radians(theta)
+                new_rotation_euler = compress_angle(rotation_euler, order)
+                frame[index] = (joint_name, new_rotation_euler)
+
+    def sync_skel_to_frame(self, skel, frame_index):
+        """
+        Given a skeleton reference, use the metadict (assumed to be correct)
+        to sync all the dofs
+        """
+        frame = self.amc.frames[frame_index % len(self.amc.frames)]
+
         def map_dofs(dof_list, pos_list):
             for dof, pos in zip(dof_list, pos_list):
                 dof.set_position(float(pos))
@@ -201,30 +223,19 @@ class DartDeepMimic(dart_env.DartEnv):
         # World to root joint is a bit special so we handle it here...
         root_data = frame[0][1]
         map_dofs(skel.dofs[3:6], root_data[:3])
-        map_dofs(skel.dofs[0:3],
-                 sequential_degrees_to_rotating_radians(root_data[3:]))
+        map_dofs(skel.dofs[0:3], root_data[3:])
 
         # And handle the rest of the dofs normally
         for joint_name, joint_angles in frame[1:]:
             dof_indices, order = self.metadict[joint_name]
             start_index, end_index = dof_indices[0], dof_indices[-1]
 
-            # AMC data is in sequential degrees while Dart expects rotating
-            # radians, so we do some conversion here
-
-            # TODO Write a converter which will export the amc angles to be in
-            # the propert format ahead of time rather than perform expensive
-            # computations all the time down here
-
             # TODO Hold on... how is it so good while totally failing to
             # account for joint dof order or number? This might be the cause of
             # the weird foot-moving syndrome...
-            theta = expand_angle(joint_angles, order)
-            rotation_euler = sequential_degrees_to_rotating_radians(theta)
-            new_rotation_euler = compress_angle(rotation_euler, order)
 
             map_dofs(skel.dofs[start_index : end_index + 1],
-                     new_rotation_euler)
+                     joint_angles)
 
     def _get_obs(self):
         """
@@ -356,6 +367,8 @@ class DartDeepMimic(dart_env.DartEnv):
                                + str(actionmode))
 
     def reward(self, skel, frame):
+
+        return 4
 
         pos, vel = self.gencoordtuple_as_pos_and_qautlist(skel)
         pos, angles = pos
@@ -977,7 +990,8 @@ if __name__ == "__main__":
                         args.window_width, args.window_height)
 
     env.reset_to_start()
-    for i in range(3000):
+    for i in range(300):
+        env.sync_skel_to_frame(env.control_skel, i)
         a = env.action_space.sample()
-        env.step(a)
+        # env.step(a)
         env.render()
