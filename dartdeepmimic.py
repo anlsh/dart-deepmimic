@@ -88,6 +88,7 @@ class DartDeepMimic(dart_env.DartEnv):
                  reference_motion_path,
                  statemode = StateMode.GEN_EULER,
                  actionmode = StateMode.GEN_EULER,
+                 pos_init_noise=.2, vel_init_noise=.05,
                  pos_weight=.65, pos_inner_weight=-2,
                  vel_weight=.1, vel_inner_weight=-.1,
                  ee_weight=.15, ee_inner_weight=-40,
@@ -99,8 +100,10 @@ class DartDeepMimic(dart_env.DartEnv):
 
         self.statemode = statemode
         self.actionmode = actionmode
+        self.pos_init_noise = pos_init_noise
+        self.vel_init_noise = vel_init_noise
 
-        self.frame = 0
+        self.framenum = 0
 
         self.pos_weight = pos_weight
         self.pos_inner_weight = pos_inner_weight
@@ -119,9 +122,10 @@ class DartDeepMimic(dart_env.DartEnv):
         asf = ASF_Skeleton(asf_path)
 
         self.ref_skel = world.skeletons[1]
-        self.amc = AMC(reference_motion_path)
-        self.metadict = get_metadict(self.amc.frames[0],
-                                      self.ref_skel.dofs, asf)
+        amc = AMC(reference_motion_path)
+        self.framelist = amc.frames
+        self.metadict = get_metadict(self.framelist[0],
+                                     self.ref_skel.dofs, asf)
         self.convert_frames()
 
         # Setting control skel to ref skel is just a workaround:
@@ -155,7 +159,6 @@ class DartDeepMimic(dart_env.DartEnv):
         ##################################
         # Simulation stuff for DeepMimic #
         ##################################
-        self.frame = 0
         self.old_skelq = self.control_skel.q
 
         self.P = .5 * np.ndarray(self.control_skel.num_dofs())
@@ -175,7 +178,7 @@ class DartDeepMimic(dart_env.DartEnv):
             rmatrix = compose_matrix(angles=rvector, angle_order="sxyz")
             return euler_from_matrix(rmatrix[:3, :3], axes="rxyz")
 
-        for frame in self.amc.frames:
+        for frame in self.framelist:
 
             # Root is a bit special since it contains translational + angular
             # information, deal with that here
@@ -195,29 +198,48 @@ class DartDeepMimic(dart_env.DartEnv):
                 new_rotation_euler = compress_angle(rotation_euler, order)
                 frame[index] = (joint_name, new_rotation_euler)
 
-    def sync_skel_to_frame(self, skel, frame_index):
+    def sync_skel_to_frame(self, skel, frame_index, noise=True):
         """
         Given a skeleton and mocap frame index, use self.metadict to sync all
         the dofs
         """
-        frame = self.amc.frames[frame_index % len(self.amc.frames)]
+        # TODO Sync velocities as well as positions
+        frame = self.framelist[frame_index % len(self.framelist)]
+        old_frame = self.framelist[(frame_index - 1 if frame_index > 0 else 0)
+                                    % len(self.framelist)]
 
-        def map_dofs(dof_list, pos_list):
-            for dof, pos in zip(dof_list, pos_list):
+        def map_dofs(dof_list, pos_list, vel_list, noise):
+            """
+            Noise is a boolean
+            """
+            for dof, pos, vel in zip(dof_list, pos_list, vel_list):
+                pos = pos + np.random.normal(0, self.pos_init_noise) \
+                      if noise else pos
+
+                vel = vel + np.random.normal(0, self.vel_init_noise) \
+                      if noise else vel
                 dof.set_position(float(pos))
+                dof.set_velocity(float(vel))
 
         # World to root joint is a bit special so we handle it here...
         root_data = frame[0][1]
-        map_dofs(skel.dofs[3:6], root_data[:3])
-        map_dofs(skel.dofs[0:3], root_data[3:])
+        old_root_data = frame[0][1]
+        root_vel = (root_data - old_root_data) / REFMOTION_DT
+        map_dofs(skel.dofs[3:6], root_data[:3], root_vel[:3], noise)
+        map_dofs(skel.dofs[0:3], root_data[3:], root_vel[3:], False)
 
+        i = 0
         # And handle the rest of the dofs normally
         for joint_name, joint_angles in frame[1:]:
+            i += 1
             dof_indices, order = self.metadict[joint_name]
             start_index, end_index = dof_indices[0], dof_indices[-1]
 
+            old_joint_angles = old_frame[i][1]
+            joint_velocities = (joint_angles - old_joint_angles) / REFMOTION_DT
+
             map_dofs(skel.dofs[start_index : end_index + 1],
-                     joint_angles)
+                     joint_angles, joint_velocities, noise)
 
     def _get_obs(self):
         """
@@ -357,7 +379,8 @@ class DartDeepMimic(dart_env.DartEnv):
         dpos, dangles = vel
 
         # TODO Can't blind sync because of end effects
-        self.sync_skel_to_frame(self.ref_skel, frame - 1)
+        self.sync_skel_to_frame(self.ref_skel, frame - 1
+                                if frame > 0 else 0)
         refpos_old, _ = self.gencoordtuple_as_pos_and_qautlist(self.ref_skel)
         refpos_old, refangles_old = refpos_old
 
@@ -548,8 +571,8 @@ class DartDeepMimic(dart_env.DartEnv):
         self.do_simulation(torques, self.frame_skip)
 
         newstate = self._get_obs()
-        reward = self.reward(self.control_skel, self.frame)
-        done = False
+        reward = self.reward(self.control_skel, self.framenum)
+        done = self.framenum == len(self.framelist) - 1
         extrainfo = {}
 
         return newstate, reward, done, extrainfo
@@ -856,17 +879,13 @@ class DartDeepMimic(dart_env.DartEnv):
 
         # return ob, reward, done,reward_breakup
 
-    def reset(self):
+    def reset(self, framenum=None, noise=True):
 
-        self.frame = random.randint(len(self.amc.frames))
-        self.sync_skel_to_frame(self.control_skel, self.frame)
+        if framenum is None:
+            self.framenum = random.randint(len(self.framelist))
+        self.framenum = framenum
 
-        return self._get_obs()
-
-    def reset_to_start(self):
-
-        self.frame = 0
-        self.sync_skel_to_frame(self.control_skel, 0)
+        self.sync_skel_to_frame(self.control_skel, self.framenum, noise)
 
         return self._get_obs()
 
@@ -916,6 +935,12 @@ if __name__ == "__main__":
     parser.add_argument('--window-height', type=int, default=45,
                         help="Window height")
 
+
+    parser.add_argument('--pos-init-noise', type=float, default=.2,
+                        help="Standard deviation of the position init noise")
+    parser.add_argument('--vel-init-noise', type=float, default=.05,
+                        help="Standart deviation of the velocity init noise")
+
     parser.add_argument('--pos-weight', type=float, default=.65,
                         help="Weighting for the pos difference in the reward")
     parser.add_argument('--pos-inner-weight', type=float, default=-2,
@@ -941,6 +966,7 @@ if __name__ == "__main__":
     env = DartDeepMimic(args.control_skel_path, args.asf_path,
                         args.ref_motion_path,
                         args.state_mode, args.action_mode,
+                        args.pos_init_noise, args.vel_init_noise,
                         args.pos_weight, args.pos_inner_weight,
                         args.vel_weight, args.vel_inner_weight,
                         args.ee_weight, args.ee_inner_weight,
@@ -949,7 +975,7 @@ if __name__ == "__main__":
                         args.frame_skip, args.dt,
                         args.window_width, args.window_height)
 
-    env.reset_to_start()
+    env.reset(0, True)
     for i in range(300):
         a = env.action_space.sample()
         env.step(a)
