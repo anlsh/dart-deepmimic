@@ -80,7 +80,7 @@ def get_metadict(amc_frame, skel_dofs, asf):
 
     return dof_data
 
-class DartDeepMimic(dart_env.DartEnv):
+class DartDeepMimicEnv(dart_env.DartEnv):
 
     def __init__(self, control_skeleton_path, asf_path,
                  reference_motion_path,
@@ -914,73 +914,73 @@ class DartDeepMimic(dart_env.DartEnv):
         elif mode == 'human':
             self._get_viewer().runSingleStep()
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description='Make a DartDeepMimic Environ')
-    parser.add_argument('--control-skel-path', required=True,
-                        help='Path to the control skeleton')
-    parser.add_argument('--asf-path', required=True,
-                        help='Path to asf which the skeleton was parsed from')
-    parser.add_argument('--ref-motion-path', required=True,
-                        help='Path to the reference motion AMC')
-    parser.add_argument('--state-mode', default=0, type=int,
-                        help="Code for the state representation")
-    parser.add_argument('--action-mode', default=0, type=int,
-                        help="Code for the action representation")
-    parser.add_argument('--visualize', default=True,
-                        help="True if you want a window to render to")
-    parser.add_argument('--frame-skip', type=int, default=1,
-                        help="Number of simulation steps per frame of mocap" +
-                        " data")
-    parser.add_argument('--dt', type=float, default=.002,
-                        help="Dart simulation resolution")
-    parser.add_argument('--window-width', type=int, default=80,
-                        help="Window width")
-    parser.add_argument('--window-height', type=int, default=45,
-                        help="Window height")
+    # parser = argparse.ArgumentParser(description='Make a DartDeepMimic Environ')
+    # parser.add_argument('--control-skel-path', required=True,
+    #                     help='Path to the control skeleton')
+    # parser.add_argument('--asf-path', required=True,
+    #                     help='Path to asf which the skeleton was parsed from')
+    # parser.add_argument('--ref-motion-path', required=True,
+    #                     help='Path to the reference motion AMC')
+    # parser.add_argument('--state-mode', default=0, type=int,
+    #                     help="Code for the state representation")
+    # parser.add_argument('--action-mode', default=0, type=int,
+    #                     help="Code for the action representation")
+    # parser.add_argument('--visualize', default=True,
+    #                     help="True if you want a window to render to")
+    # parser.add_argument('--frame-skip', type=int, default=1,
+    #                     help="Number of simulation steps per frame of mocap" +
+    #                     " data")
+    # parser.add_argument('--dt', type=float, default=.002,
+    #                     help="Dart simulation resolution")
+    # parser.add_argument('--window-width', type=int, default=80,
+    #                     help="Window width")
+    # parser.add_argument('--window-height', type=int, default=45,
+    #                     help="Window height")
 
 
-    parser.add_argument('--pos-init-noise', type=float, default=.2,
-                        help="Standard deviation of the position init noise")
-    parser.add_argument('--vel-init-noise', type=float, default=.05,
-                        help="Standart deviation of the velocity init noise")
+    # parser.add_argument('--pos-init-noise', type=float, default=.2,
+    #                     help="Standard deviation of the position init noise")
+    # parser.add_argument('--vel-init-noise', type=float, default=.05,
+    #                     help="Standart deviation of the velocity init noise")
 
-    parser.add_argument('--pos-weight', type=float, default=.65,
-                        help="Weighting for the pos difference in the reward")
-    parser.add_argument('--pos-inner-weight', type=float, default=-2,
-                        help="Coefficient for pos difference exponentiation in reward")
+    # parser.add_argument('--pos-weight', type=float, default=.65,
+    #                     help="Weighting for the pos difference in the reward")
+    # parser.add_argument('--pos-inner-weight', type=float, default=-2,
+    #                     help="Coefficient for pos difference exponentiation in reward")
 
-    parser.add_argument('--vel-weight', type=float, default=.1,
-                        help="Weighting for the pos difference in the reward")
-    parser.add_argument('--vel-inner-weight', type=float, default=-.1,
-                        help="Coefficient for vel difference exponentiation in reward")
+    # parser.add_argument('--vel-weight', type=float, default=.1,
+    #                     help="Weighting for the pos difference in the reward")
+    # parser.add_argument('--vel-inner-weight', type=float, default=-.1,
+    #                     help="Coefficient for vel difference exponentiation in reward")
 
-    parser.add_argument('--ee-weight', type=float, default=.15,
-                        help="Weighting for the pos difference in the reward")
-    parser.add_argument('--ee-inner-weight', type=float, default=-40,
-                        help="Coefficient for pos difference exponentiation in reward")
+    # parser.add_argument('--ee-weight', type=float, default=.15,
+    #                     help="Weighting for the pos difference in the reward")
+    # parser.add_argument('--ee-inner-weight', type=float, default=-40,
+    #                     help="Coefficient for pos difference exponentiation in reward")
 
-    parser.add_argument('--com-weight', type=float, default=.1,
-                        help="Weighting for the com difference in the reward")
-    parser.add_argument('--com-inner-weight', type=float, default=-10,
-                        help="Coefficient for com difference exponentiation in reward")
+    # parser.add_argument('--com-weight', type=float, default=.1,
+    #                     help="Weighting for the com difference in the reward")
+    # parser.add_argument('--com-inner-weight', type=float, default=-10,
+    #                     help="Coefficient for com difference exponentiation in reward")
 
-    args = parser.parse_args()
+    # args = parser.parse_args()
 
-    env = DartDeepMimic(args.control_skel_path, args.asf_path,
-                        args.ref_motion_path,
-                        args.state_mode, args.action_mode,
-                        args.pos_init_noise, args.vel_init_noise,
-                        args.pos_weight, args.pos_inner_weight,
-                        args.vel_weight, args.vel_inner_weight,
-                        args.ee_weight, args.ee_inner_weight,
-                        args.com_weight, args.com_inner_weight,
-                        args.visualize,
-                        args.frame_skip, args.dt,
-                        args.window_width, args.window_height)
+    # env = DartDeepMimic(args.control_skel_path, args.asf_path,
+    #                     args.ref_motion_path,
+    #                     args.state_mode, args.action_mode,
+    #                     args.pos_init_noise, args.vel_init_noise,
+    #                     args.pos_weight, args.pos_inner_weight,
+    #                     args.vel_weight, args.vel_inner_weight,
+    #                     args.ee_weight, args.ee_inner_weight,
+    #                     args.com_weight, args.com_inner_weight,
+    #                     args.visualize,
+    #                     args.frame_skip, args.dt,
+    #                     args.window_width, args.window_height)
 
-    env.reset(None, True)
-    for i in range(300):
-        a = env.action_space.sample()
-        env.step(a)
-        env.render()
+    # env.reset(0, True)
+    # for i in range(300):
+    #     a = env.action_space.sample()
+    #     env.step(a)
+    #     env.render()
