@@ -1,3 +1,4 @@
+*** TODO Validate angles from network
 *** DONE Simulation doesn't start for space of seconds?
     CLOSED: [2018-08-16 Thu 14:45]
 *** TODO Actually step frame index (and sync it with sim time)
