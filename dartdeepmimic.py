@@ -1,19 +1,19 @@
 __author__ = 'anish'
 
-import numpy as np
-from numpy.linalg import norm
-from gym import utils
-from gym.envs.dart import dart_env
 
-import pydart2 as pydart
-import argparse
 from amc import AMC
 from asf_skeleton import ASF_Skeleton
+from gym import utils
+from gym.envs.dart import dart_env
 from joint import expand_angle, compress_angle
-from transformations import quaternion_from_euler, euler_from_quaternion
-from transformations import compose_matrix, euler_from_matrix
-from transformations import quaternion_multiply, quaternion_conjugate, quaternion_inverse
 from math import exp, pi
+from numpy.linalg import norm
+from transformations import compose_matrix, euler_from_matrix
+from transformations import quaternion_from_euler, euler_from_quaternion
+from transformations import quaternion_multiply, quaternion_conjugate, quaternion_inverse
+import argparse
+import numpy as np
+import pydart2 as pydart
 import random
 
 # Customizable parameters
@@ -113,6 +113,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.ee_inner_weight = ee_inner_weight
         self.com_weight = com_weight
         self.com_inner_weight = com_inner_weight
+
+        self.__control_skeleton_path = control_skeleton_path
 
         ###########################################################
         # Extract dof info so that states can be converted easily #
@@ -570,7 +572,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         self.old_skelq = self.control_skel.q
 
-        # TODO Clamp torques?
         # Also what is the difference between world step
         self.control_skel.set_forces(torques)
         self.dart_world.step()
@@ -890,6 +891,10 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # return ob, reward, done,reward_breakup
 
     def reset(self, framenum=None, noise=True):
+        # TODO Try to fix reset problem instead of reloading entire world
+        # self.dart_world = pydart.World(REFMOTION_DT / self.frame_skip,
+        #                                self.__control_skeleton_path)
+        # self.control_skel = self.dart_world.skeletons[1]
 
         if framenum is None:
             framenum = random.randint(0, len(self.framelist))
@@ -995,8 +1000,11 @@ if __name__ == "__main__":
                            args.window_width, args.window_height)
 
     env.reset(0, True)
-    for i in range(600):
+    for i in range(1200):
         env.render()
-        if i > 300:
-            a = env.action_space.sample()
-            env.step(a)
+        a = env.action_space.sample()
+        env.step(a)
+        if i == 500:
+            print("retet!")
+            env.reset(0, True)
+            env.dart_world.reset()
