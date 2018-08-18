@@ -1,3 +1,5 @@
+*** TODO EMERGENCY: Fix the weird bug where skel spazzes and disappears
+*** TODO Clamp torques
 *** TODO Validate angles from network
 *** DONE Simulation doesn't start for space of seconds?
     CLOSED: [2018-08-16 Thu 14:45]

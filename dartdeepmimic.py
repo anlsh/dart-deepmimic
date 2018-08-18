@@ -101,6 +101,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.frame_skip = frame_skip
         self.pos_init_noise = pos_init_noise
         self.vel_init_noise = vel_init_noise
+        self.max_action_magnitude = max_action_magnitude
 
         self.framenum = 0
 
@@ -147,9 +148,9 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # Calculate the size of the neural network output vector
         self.action_dim = ActionMode.lengths[actionmode] \
                           * (len(self.metadict) - 1)
-        self.action_limits = [max_action_magnitude
+        self.action_limits = [self.max_action_magnitude
                               * np.ones(self.action_dim),
-                              -max_action_magnitude
+                              -self.max_action_magnitude
                               * np.ones(self.action_dim)]
 
 
@@ -512,6 +513,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         skel.num_dofs, etc
 
         Non actuated dofs will of course have torques of 0
+        Also it clamps
         """
         current_error = target_angles - current_angles
         past_error = target_angles - past_angles
@@ -544,6 +546,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # ret = np.concatenate([self.p_gain * error - self.d_gain * rate for error, rate in zip(compressed_current_error, compressed_error_rate)])
 
         ret = self.p_gain * expanded_current_error - self.d_gain * expanded_error_rate
+        ret = np.clip(ret, -self.max_action_magnitude, self.max_action_magnitude)
 
         return ret
 
@@ -938,8 +941,8 @@ if __name__ == "__main__":
     parser.add_argument('--frame-skip', type=int, default=1,
                         help="Number of simulation steps per frame of mocap" +
                         " data")
-    parser.add_argument('--dt', type=float, default=.002,
-                        help="Dart simulation resolution")
+    parser.add_argument('--max-action-magnitude', type=float, default=90,
+                        help="Maximum torque")
     parser.add_argument('--window-width', type=int, default=80,
                         help="Window width")
     parser.add_argument('--window-height', type=int, default=45,
@@ -988,7 +991,7 @@ if __name__ == "__main__":
                            args.ee_weight, args.ee_inner_weight,
                            args.com_weight, args.com_inner_weight,
                            args.visualize,
-                           args.frame_skip, args.dt,
+                           args.frame_skip, args.max_action_magnitude,
                            args.window_width, args.window_height)
 
     env.reset(0, True)
