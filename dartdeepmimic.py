@@ -19,7 +19,6 @@ import random
 # Customizable parameters
 ROOT_THETA_KEY = "root_theta"
 ROOT_POS_KEY = "root_pos"
-# TODO For the love of god, sync this up
 REFMOTION_DT = 1 / 120
 
 # ROOT_KEY isn't customizeable. It should correspond
@@ -86,6 +85,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                  reference_motion_path,
                  statemode = StateMode.GEN_EULER,
                  actionmode = StateMode.GEN_EULER,
+                 p_gain=50, d_gain=10,
                  pos_init_noise=.2, vel_init_noise=.05,
                  pos_weight=.65, pos_inner_weight=-2,
                  vel_weight=.1, vel_inner_weight=-.1,
@@ -166,8 +166,11 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         ##################################
         self.old_skelq = self.control_skel.q
 
-        self.P = .5 * np.ndarray(self.control_skel.num_dofs())
-        self.D = .1 * np.ndarray(self.control_skel.num_dofs())
+        self.p_gain = p_gain
+        self.d_gain = d_gain
+
+        self.__P = self.p_gain * np.ndarray(self.control_skel.num_dofs())
+        self.__D = self.d_gain * np.ndarray(self.control_skel.num_dofs())
 
     def convert_frames(self):
         """
@@ -465,7 +468,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # self.action_skel.set_velocities(np.zeros(29,))
 
         # for i in range(4):
-        #     self.tau[6:] = self.PID()
+        #     self.tau[6:] = self.__PID()
 
         #     dupq = copy.deepcopy(self.WalkPositions[self.count,:])
         #     dupq[0] = 0.90
@@ -518,30 +521,31 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # compression phase
         actuated_dof_names = [key for key in self.metadict
                               if key != ROOT_KEY]
-        projected_current_error = [compress_angle(current_error[i],
+        compressed_current_error = [compress_angle(current_error[i],
                                                   self.metadict[key][1])
                                    for i, key in enumerate(actuated_dof_names)]
 
-        projected_error_rate = [compress_angle(error_rate[i],
+        compressed_error_rate = [compress_angle(error_rate[i],
                                                self.metadict[key][1])
                                 for i, key in enumerate(actuated_dof_names)]
 
-        exp_current_error = np.zeros(self.control_skel.num_dofs())
-        exp_error_rate = np.zeros(self.control_skel.num_dofs())
+        expanded_current_error = np.zeros(self.control_skel.num_dofs())
+        expanded_error_rate = np.zeros(self.control_skel.num_dofs())
 
         for index, key in enumerate(actuated_dof_names):
             dof_indices = self.metadict[key][0]
             f, l = dof_indices[0], dof_indices[-1] + 1
-            exp_current_error[f:l] = projected_current_error[index]
+            expanded_current_error[f:l] = compressed_current_error[index]
 
         for index, key in enumerate(actuated_dof_names):
             dof_indices = self.metadict[key][0]
             f, l = dof_indices[0], dof_indices[-1] + 1
-            exp_error_rate[f:l] = projected_error_rate[index]
+            expanded_error_rate[f:l] = compressed_error_rate[index]
+        # ret = np.concatenate([self.p_gain * error - self.d_gain * rate for error, rate in zip(compressed_current_error, compressed_error_rate)])
 
-        # TODO it would be nice to only specify P and D for the parameters
-        # which are actuated, but such is life I guess
-        return self.P * exp_current_error + self.D * exp_error_rate
+        ret = self.p_gain * expanded_current_error - self.d_gain * expanded_error_rate
+
+        return ret
 
     def step(self, a):
 
@@ -553,7 +557,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                                   if key != ROOT_THETA_KEY])
 
         _, old_euler = self.genq_to_pos_and_eulerdict(self.old_skelq)
-        old_actuated_angles = np.array([current_euler[key]
+        old_actuated_angles = np.array([old_euler[key]
                                         for key in old_euler
                                         if key != ROOT_THETA_KEY])
 
@@ -914,73 +918,82 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         elif mode == 'human':
             self._get_viewer().runSingleStep()
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
 
-    # parser = argparse.ArgumentParser(description='Make a DartDeepMimic Environ')
-    # parser.add_argument('--control-skel-path', required=True,
-    #                     help='Path to the control skeleton')
-    # parser.add_argument('--asf-path', required=True,
-    #                     help='Path to asf which the skeleton was parsed from')
-    # parser.add_argument('--ref-motion-path', required=True,
-    #                     help='Path to the reference motion AMC')
-    # parser.add_argument('--state-mode', default=0, type=int,
-    #                     help="Code for the state representation")
-    # parser.add_argument('--action-mode', default=0, type=int,
-    #                     help="Code for the action representation")
-    # parser.add_argument('--visualize', default=True,
-    #                     help="True if you want a window to render to")
-    # parser.add_argument('--frame-skip', type=int, default=1,
-    #                     help="Number of simulation steps per frame of mocap" +
-    #                     " data")
-    # parser.add_argument('--dt', type=float, default=.002,
-    #                     help="Dart simulation resolution")
-    # parser.add_argument('--window-width', type=int, default=80,
-    #                     help="Window width")
-    # parser.add_argument('--window-height', type=int, default=45,
-    #                     help="Window height")
+    # Don't run this as main, there's really not too much point
+
+    parser = argparse.ArgumentParser(description='Make a DartDeepMimic Environ')
+    parser.add_argument('--control-skel-path', required=True,
+                        help='Path to the control skeleton')
+    parser.add_argument('--asf-path', required=True,
+                        help='Path to asf which the skeleton was parsed from')
+    parser.add_argument('--ref-motion-path', required=True,
+                        help='Path to the reference motion AMC')
+    parser.add_argument('--state-mode', default=0, type=int,
+                        help="Code for the state representation")
+    parser.add_argument('--action-mode', default=0, type=int,
+                        help="Code for the action representation")
+    parser.add_argument('--visualize', default=True,
+                        help="True if you want a window to render to")
+    parser.add_argument('--frame-skip', type=int, default=1,
+                        help="Number of simulation steps per frame of mocap" +
+                        " data")
+    parser.add_argument('--dt', type=float, default=.002,
+                        help="Dart simulation resolution")
+    parser.add_argument('--window-width', type=int, default=80,
+                        help="Window width")
+    parser.add_argument('--window-height', type=int, default=45,
+                        help="Window height")
 
 
-    # parser.add_argument('--pos-init-noise', type=float, default=.2,
-    #                     help="Standard deviation of the position init noise")
-    # parser.add_argument('--vel-init-noise', type=float, default=.05,
-    #                     help="Standart deviation of the velocity init noise")
+    parser.add_argument('--pos-init-noise', type=float, default=.05,
+                        help="Standard deviation of the position init noise")
+    parser.add_argument('--vel-init-noise', type=float, default=.05,
+                        help="Standart deviation of the velocity init noise")
 
-    # parser.add_argument('--pos-weight', type=float, default=.65,
-    #                     help="Weighting for the pos difference in the reward")
-    # parser.add_argument('--pos-inner-weight', type=float, default=-2,
-    #                     help="Coefficient for pos difference exponentiation in reward")
+    parser.add_argument('--pos-weight', type=float, default=.65,
+                        help="Weighting for the pos difference in the reward")
+    parser.add_argument('--pos-inner-weight', type=float, default=-2,
+                        help="Coefficient for pos difference exponentiation in reward")
 
-    # parser.add_argument('--vel-weight', type=float, default=.1,
-    #                     help="Weighting for the pos difference in the reward")
-    # parser.add_argument('--vel-inner-weight', type=float, default=-.1,
-    #                     help="Coefficient for vel difference exponentiation in reward")
+    parser.add_argument('--vel-weight', type=float, default=.1,
+                        help="Weighting for the pos difference in the reward")
+    parser.add_argument('--vel-inner-weight', type=float, default=-.1,
+                        help="Coefficient for vel difference exponentiation in reward")
 
-    # parser.add_argument('--ee-weight', type=float, default=.15,
-    #                     help="Weighting for the pos difference in the reward")
-    # parser.add_argument('--ee-inner-weight', type=float, default=-40,
-    #                     help="Coefficient for pos difference exponentiation in reward")
+    parser.add_argument('--ee-weight', type=float, default=.15,
+                        help="Weighting for the pos difference in the reward")
+    parser.add_argument('--ee-inner-weight', type=float, default=-40,
+                        help="Coefficient for pos difference exponentiation in reward")
 
-    # parser.add_argument('--com-weight', type=float, default=.1,
-    #                     help="Weighting for the com difference in the reward")
-    # parser.add_argument('--com-inner-weight', type=float, default=-10,
-    #                     help="Coefficient for com difference exponentiation in reward")
+    parser.add_argument('--com-weight', type=float, default=.1,
+                        help="Weighting for the com difference in the reward")
+    parser.add_argument('--com-inner-weight', type=float, default=-10,
+                        help="Coefficient for com difference exponentiation in reward")
 
-    # args = parser.parse_args()
+    parser.add_argument('--p-gain', type=float, default=300,
+                        help="P for the PD controller")
+    parser.add_argument('--d-gain', type=float, default=50,
+                        help="D for the PD controller")
 
-    # env = DartDeepMimic(args.control_skel_path, args.asf_path,
-    #                     args.ref_motion_path,
-    #                     args.state_mode, args.action_mode,
-    #                     args.pos_init_noise, args.vel_init_noise,
-    #                     args.pos_weight, args.pos_inner_weight,
-    #                     args.vel_weight, args.vel_inner_weight,
-    #                     args.ee_weight, args.ee_inner_weight,
-    #                     args.com_weight, args.com_inner_weight,
-    #                     args.visualize,
-    #                     args.frame_skip, args.dt,
-    #                     args.window_width, args.window_height)
+    args = parser.parse_args()
 
-    # env.reset(0, True)
-    # for i in range(300):
-    #     a = env.action_space.sample()
-    #     env.step(a)
-    #     env.render()
+    env = DartDeepMimicEnv(args.control_skel_path, args.asf_path,
+                           args.ref_motion_path,
+                           args.state_mode, args.action_mode,
+                           args.p_gain, args.d_gain,
+                           args.pos_init_noise, args.vel_init_noise,
+                           args.pos_weight, args.pos_inner_weight,
+                           args.vel_weight, args.vel_inner_weight,
+                           args.ee_weight, args.ee_inner_weight,
+                           args.com_weight, args.com_inner_weight,
+                           args.visualize,
+                           args.frame_skip, args.dt,
+                           args.window_width, args.window_height)
+
+    env.reset(0, True)
+    for i in range(600):
+        env.render()
+        if i > 300:
+            a = env.action_space.sample()
+            env.step(a)
