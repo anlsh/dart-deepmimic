@@ -1001,8 +1001,6 @@ if __name__ == "__main__":
     for i in range(1200):
         env.render()
         a = env.action_space.sample()
-        env.step(a)
-        if i == 500:
-            print("retet!")
+        state, action, reward, done = env.step(a)
+        if done:
             env.reset(0, True)
-            env.dart_world.reset()
