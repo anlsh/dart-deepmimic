@@ -112,8 +112,9 @@ if __name__ == '__main__':
                            args.vel_weight, args.vel_inner_weight,
                            args.ee_weight, args.ee_inner_weight,
                            args.com_weight, args.com_inner_weight,
+                           args.max_action_magnitude,
                            args.visualize,
-                           args.frame_skip, args.max_action_magnitude,
+                           args.frame_skip,
                            args.window_width, args.window_height)
 
     train(env, args.train_save_interval, args.train_params_prefix,

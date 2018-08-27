@@ -8,3 +8,6 @@
     CLOSED: [2018-08-16 Thu 14:44]
 *** DONE Profile environment to make it faster
     CLOSED: [2018-08-17 Fri 13:37]
+
+*** TODO Set damping, spring coefficients
+***
