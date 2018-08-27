@@ -114,8 +114,7 @@ def dump_bodies(asf_skeleton, skeleton_xml):
             shape_xml = ET.SubElement(body_xml, shape + "_shape")
             ET.SubElement(shape_xml, "transformation").text = \
                                                         vec2string(tform_vector)
-            # add_box(shape_xml, joint.length)
-            add_capsule(shape_xml, joint.length)
+            add_box(shape_xml, joint.length)
 
         ###################
         # INERTIA SECTION #
@@ -138,7 +137,9 @@ def write_joint_xml(skeleton_xml, joint):
 
     jtype = ""
     if len(joint.dofs) == 0:
-        jtype = "fixed"
+        # TODO Why oh why does this kill things
+        joint_xml.set("type", "weld")
+        return
     elif len(joint.dofs) == 1:
         jtype = "revolute"
     elif len(joint.dofs) == 2:
@@ -148,17 +149,6 @@ def write_joint_xml(skeleton_xml, joint):
         ET.SubElement(joint_xml, "axis_order").text = "xyz"
     else:
         raise RuntimeError("Invalid number of axes")
-
-    # Dart doesn't support fixed joints, so my current workaround is to use a
-    # revolute joint with limits (0, 0)
-    if jtype == "fixed":
-        joint_xml.set("type", "revolute")
-        axis_xml = ET.SubElement(joint_xml, "axis")
-        ET.SubElement(axis_xml, "xyz").text = "1 0 0"
-        limit_xml = ET.SubElement(axis_xml, "limit")
-        ET.SubElement(limit_xml, "lower").text = "0"
-        ET.SubElement(limit_xml, "upper").text = "0"
-        return
 
     joint_xml.set("type", jtype)
     for index, axis in enumerate(joint.dofs):

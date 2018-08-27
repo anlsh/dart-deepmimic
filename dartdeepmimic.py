@@ -132,7 +132,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         world = pydart.World(self.calc_dt, control_skeleton_path)
         asf = ASF_Skeleton(asf_path)
 
-        self.ref_skel = world.skeletons[1]
+        self.ref_skel = world.skeletons[-1]
         amc = AMC(reference_motion_path)
         self.framelist = amc.frames
         self.metadict = get_metadict(self.framelist[0],
@@ -165,12 +165,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         #### BEGIN TEST
         # TESTING WORLD LOAD
-        super(DartDeepMimicEnv, self).__init__([self.__control_skeleton_path],
-                                  self.frame_skip,
-                                  len(self._get_obs()),
-                                  self.action_limits, self.calc_dt, "parameter",
-                                  "continuous", self.__visualize,
-                                  not self.__visualize)
         self.load_world()
 
         #### END TEST
@@ -187,13 +181,21 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.__D = self.d_gain * np.ndarray(self.control_skel.num_dofs())
 
     def load_world(self):
-        self.control_skel = self.dart_world.skeletons[1]
+
+        super(DartDeepMimicEnv, self).__init__([self.__control_skeleton_path],
+                                  self.frame_skip,
+                                  len(self._get_obs()),
+                                  self.action_limits, self.calc_dt, "parameter",
+                                  "continuous", self.__visualize,
+                                  not self.__visualize)
+        self.control_skel = self.dart_world.skeletons[-1]
 
         # Have to explicitly enable self collisions
         self.control_skel.set_self_collision_check(True)
 
         # TODO Parse damping from the skel file
         # TODO Add parameters for default damping, spring coefficients
+        # TODO dont want to damp the root joint
         for joint in self.control_skel.joints:
             for index in range(joint.num_dofs()):
                 joint.set_damping_coefficient(index, self.default_damping)
@@ -605,7 +607,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # TODO Implement more early terminateion stuff
         done = self.framenum == len(self.framelist) - 1 \
                or (not np.isfinite(newstate).all())
-        # done = not (np.isfinite(s).all() and (np.abs(s[2:]) < 200).all() and# (abs(L_angle - self.foot_angles[self.count]) < 10) and (abs(R_angle - self.foot_angles[self.count]) < 10) and
+        if not np.isfinite(newstate).all():
+            print("Infinite state")
         extrainfo = {}
 
         self.framenum += 1
@@ -622,16 +625,14 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         return self._get_obs()
 
-    # def viewer_setup(self):
-    #     if not self.disableViewer:
-    #         self._get_viewer().scene.tb.trans[0] = 5.0
-    #         self._get_viewer().scene.tb.trans[2] = -30
-    #         self._get_viewer().scene.tb.trans[1] = 0.0
+    def viewer_setup(self):
+        self._get_viewer().scene.tb.trans[2] = -70
+        self._get_viewer().scene.tb.trans[1] = -40
 
     def render(self, mode='human', close=False):
             # if not self.disableViewer:
         if True:
-            self._get_viewer().scene.tb.trans[0] = -self.dart_world.skeletons[self.track_skeleton_id].com()[0]*1
+            self._get_viewer().scene.tb.trans[0] = -self.dart_world.skeletons[-1].com()[0]*1
         if close:
             if self.viewer is not None:
                 self._get_viewer().close()
@@ -728,7 +729,9 @@ if __name__ == "__main__":
     # env.reset()
     for i in range(1200):
         env.render()
+        input()
         a = env.action_space.sample()
         state, action, reward, done = env.step(a)
         if done:
+            print("Done, the environment went undefined")
             env.reset(0, True)

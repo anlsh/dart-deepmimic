@@ -58,6 +58,11 @@ if __name__ == '__main__':
                         " data")
     parser.add_argument('--max-action-magnitude', type=float, default=90,
                         help="Maximum torque")
+
+    parser.add_argument('--default-damping', type=float, default=2,
+                        help="Default damping coefficient for joints")
+    parser.add_argument('--default-spring', type=float, default=0,
+                        help="Default spring stiffness for joints")
     parser.add_argument('--window-width', type=int, default=80,
                         help="Window width")
     parser.add_argument('--window-height', type=int, default=45,
@@ -113,6 +118,7 @@ if __name__ == '__main__':
                            args.ee_weight, args.ee_inner_weight,
                            args.com_weight, args.com_inner_weight,
                            args.max_action_magnitude,
+                           args.default_damping, args.default_spring,
                            args.visualize,
                            args.frame_skip,
                            args.window_width, args.window_height)
