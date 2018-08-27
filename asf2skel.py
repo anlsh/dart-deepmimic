@@ -60,6 +60,13 @@ def add_box(xml_parent, length):
     box_size = ET.SubElement(geo_box, "size")
     box_size.text = vec2string([length, 2 * CYLINDER_RADIUS, CYLINDER_RADIUS])
 
+def add_capsule(xml_parent, length):
+    geo_xml = ET.SubElement(xml_parent, "geometry")
+    geo_cap = ET.SubElement(geo_xml, "capsule")
+    ET.SubElement(geo_cap, "height").text = num2string(length)
+    ET.SubElement(geo_cap, "radius").text = num2string(2 * CYLINDER_RADIUS)
+    # box_size.text = vec2string([length, 2 * CYLINDER_RADIUS, CYLINDER_RADIUS])
+
 def dump_bodies(asf_skeleton, skeleton_xml):
     """
     Given an XML element (an ETElement), dump the skeleton's joint objects
@@ -107,7 +114,8 @@ def dump_bodies(asf_skeleton, skeleton_xml):
             shape_xml = ET.SubElement(body_xml, shape + "_shape")
             ET.SubElement(shape_xml, "transformation").text = \
                                                         vec2string(tform_vector)
-            add_box(shape_xml, joint.length)
+            # add_box(shape_xml, joint.length)
+            add_capsule(shape_xml, joint.length)
 
         ###################
         # INERTIA SECTION #
