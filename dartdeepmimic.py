@@ -20,7 +20,7 @@ import random
 # Customizable parameters
 ROOT_THETA_KEY = "root_theta"
 ROOT_POS_KEY = "root_pos"
-REFMOTION_DT = 1 / 120
+REFMOTION_DT = 1 / 120 / 10
 
 # ROOT_KEY isn't customizeable. It should correspond
 # to the name of the root node in the amc (which is usually "root")
@@ -595,12 +595,11 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         self.old_skelq = self.control_skel.q
 
-        # Also what is the difference between world step
-        self.control_skel.set_forces(torques)
-        self.dart_world.step()
-
         # TODO EMERGENCY DONT DOUBLE COUNT FRAME SKIP
+        import pdb; pdb.set_trace()
+        self.control_skel.set_forces(torques)
         self.do_simulation(torques, self.frame_skip)
+
 
         newstate = self._get_obs()
         reward = self.reward(self.control_skel, self.framenum)
@@ -668,7 +667,7 @@ if __name__ == "__main__":
                         help="Default damping coefficient for joints")
     parser.add_argument('--default-spring', type=float, default=0,
                         help="Default spring stiffness for joints")
-    parser.add_argument('--frame-skip', type=int, default=1,
+    parser.add_argument('--frame-skip', type=int, default=10,
                         help="Number of simulation steps per frame of mocap" +
                         " data")
     parser.add_argument('--window-width', type=int, default=80,
@@ -729,7 +728,7 @@ if __name__ == "__main__":
     # env.reset()
     for i in range(1200):
         env.render()
-        input()
+        # print(env._get_obs())
         a = env.action_space.sample()
         state, action, reward, done = env.step(a)
         if done:
