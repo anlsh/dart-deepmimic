@@ -20,7 +20,7 @@ import random
 # Customizable parameters
 ROOT_THETA_KEY = "root_theta"
 ROOT_POS_KEY = "root_pos"
-REFMOTION_DT = 1 / 120 / 10
+REFMOTION_DT = 1 / 120
 
 # ROOT_KEY isn't customizeable. It should correspond
 # to the name of the root node in the amc (which is usually "root")
@@ -93,13 +93,13 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                  com_weight, com_inner_weight,
                  max_action_magnitude, default_damping,
                  default_spring,
-                 visualize, frame_skip,
+                 visualize, simsteps_per_dataframe,
                  screen_width,
                  screen_height):
 
         self.statemode = statemode
         self.actionmode = actionmode
-        self.frame_skip = frame_skip
+        self.simsteps_per_dataframe = simsteps_per_dataframe
         self.pos_init_noise = pos_init_noise
         self.vel_init_noise = vel_init_noise
         self.max_action_magnitude = max_action_magnitude
@@ -126,10 +126,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # Extract dof info so that states can be converted easily #
         ###########################################################
 
-        # TODO idk what this does actually
-        self.calc_dt = REFMOTION_DT / self.frame_skip
-
-        world = pydart.World(self.calc_dt, control_skeleton_path)
+        world = pydart.World(REFMOTION_DT / self.simsteps_per_dataframe,
+                             control_skeleton_path)
         asf = ASF_Skeleton(asf_path)
 
         self.ref_skel = world.skeletons[-1]
@@ -139,16 +137,13 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                                      self.ref_skel.dofs, asf)
         self.convert_frames()
 
-        # Setting control skel to ref skel is just a workaround:
-        # it's set to its correct value later on
-        self.control_skel = self.ref_skel
-
         self.__end_effector_indices = [i for i, node
-                                       in enumerate(self.control_skel.bodynodes)
+                                       in enumerate(self.ref_skel.bodynodes)
                                      if len(node.child_bodynodes) == 0]
 
+        # TODO End reliance on underlying asf
         self.__end_effector_offsets = [asf.name2joint[
-            self.control_skel.bodynodes[i].name[:-5]].offset
+            self.ref_skel.bodynodes[i].name[:-5]].offset
                                        for i in self.__end_effector_indices]
 
         ################################################
@@ -163,11 +158,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                               -self.max_action_magnitude
                               * np.ones(self.action_dim)]
 
-        #### BEGIN TEST
-        # TESTING WORLD LOAD
+        self.control_skel = self.ref_skel
         self.load_world()
-
-        #### END TEST
 
         ##################################
         # Simulation stuff for DeepMimic #
@@ -183,11 +175,14 @@ class DartDeepMimicEnv(dart_env.DartEnv):
     def load_world(self):
 
         super(DartDeepMimicEnv, self).__init__([self.__control_skeleton_path],
-                                  self.frame_skip,
-                                  len(self._get_obs()),
-                                  self.action_limits, self.calc_dt, "parameter",
-                                  "continuous", self.__visualize,
-                                  not self.__visualize)
+                                               1,
+                                               len(self._get_obs()),
+                                               self.action_limits,
+                                               REFMOTION_DT / self.simsteps_per_dataframe,
+                                               "parameter",
+                                               "continuous",
+                                               self.__visualize,
+                                               not self.__visualize)
         self.control_skel = self.dart_world.skeletons[-1]
 
         # Have to explicitly enable self collisions
@@ -200,7 +195,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             for index in range(joint.num_dofs()):
                 joint.set_damping_coefficient(index, self.default_damping)
                 joint.set_spring_stiffness(index, self.default_spring)
-
 
     def convert_frames(self):
         """
@@ -521,8 +515,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         #     #print("torques",self.tau[22])
         #     self.dart_world.step()
 
-        #self.do_simulation(self.tau, self.frame_skip)
-
     def ClampTorques(self,torques):
         raise NotImplementedError()
 
@@ -595,11 +587,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         self.old_skelq = self.control_skel.q
 
-        # TODO EMERGENCY DONT DOUBLE COUNT FRAME SKIP
-        import pdb; pdb.set_trace()
-        self.control_skel.set_forces(torques)
-        self.do_simulation(torques, self.frame_skip)
-
+        self.do_simulation(torques, self.simsteps_per_dataframe)
 
         newstate = self._get_obs()
         reward = self.reward(self.control_skel, self.framenum)
@@ -667,14 +655,13 @@ if __name__ == "__main__":
                         help="Default damping coefficient for joints")
     parser.add_argument('--default-spring', type=float, default=0,
                         help="Default spring stiffness for joints")
-    parser.add_argument('--frame-skip', type=int, default=10,
+    parser.add_argument('--simsteps-per-dataframe', type=int, default=10,
                         help="Number of simulation steps per frame of mocap" +
                         " data")
     parser.add_argument('--window-width', type=int, default=80,
                         help="Window width")
     parser.add_argument('--window-height', type=int, default=45,
                         help="Window height")
-
 
     parser.add_argument('--pos-init-noise', type=float, default=.05,
                         help="Standard deviation of the position init noise")
@@ -721,16 +708,16 @@ if __name__ == "__main__":
                            args.max_action_magnitude,
                            args.default_damping, args.default_spring,
                            args.visualize,
-                           args.frame_skip,
+                           args.simsteps_per_dataframe,
                            args.window_width, args.window_height)
 
     env.reset(0, True)
     # env.reset()
-    for i in range(1200):
+    while True:
         env.render()
-        # print(env._get_obs())
         a = env.action_space.sample()
-        state, action, reward, done = env.step(a)
+        # input()
+        state, reward, done, info = env.step(a)
         if done:
-            print("Done, the environment went undefined")
-            env.reset(0, True)
+            print("Done, reset")
+            env.reset()

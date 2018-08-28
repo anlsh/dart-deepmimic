@@ -6,6 +6,33 @@
             <gravity>0 -9.81 0</gravity>
             <collision_detector>dart</collision_detector>
         </physics>
+        <skeleton name="ground skeleton">
+            <mobile>false</mobile>
+            <body name="ground">
+                <transformation>0 -1.1025 0 0 0 0</transformation>
+                <visualization_shape>
+                    <transformation>0 0 0 0 0 0</transformation>
+                    <geometry>
+                        <box>
+                            <size>500.0 1.8 500</size>
+                        </box>
+                    </geometry>
+                    <color>0.8 0.8 0.8</color>
+                </visualization_shape>
+                <collision_shape>
+                    <transformation>0 0 0 0 0 0</transformation>
+                    <geometry>
+                        <box>
+                            <size>500.0 1.8 500</size>
+                        </box>
+                    </geometry>
+                </collision_shape>
+            </body>
+            <joint name="joint_1" type="free">
+                <parent>world</parent>
+                <child>ground</child>
+            </joint>
+        </skeleton>
 <!--START-->
 <skeleton name="VICON">
     <transformation>0 0 0 0 0 0</transformation>
@@ -46,7 +73,8 @@
             <transformation>0.92795 -0.86974 0.42488 2.68718 0.00000 0.57015</transformation>
             <geometry>
                 <box>
-                    <size>2.68184 1.00000 0.50000</size>
+                    <!-- <size>2.68184 1.00000 0.50000</size> -->
+                    <size>1 1.00000 0.50000</size>
                 </box>
             </geometry>
         </collision_shape>
@@ -161,7 +189,8 @@
             <transformation>-0.84149 -0.86974 0.42488 2.68718 0.00000 2.52614</transformation>
             <geometry>
                 <box>
-                    <size>2.56521 1.00000 0.50000</size>
+                    <!-- <size>2.56521 1.00000 0.50000</size> -->
+                    <size>1 1.00000 0.50000</size>
                 </box>
             </geometry>
         </collision_shape>
