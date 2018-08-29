@@ -495,7 +495,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         #######################
 
         # TODO THe units are off, the paper specifically specifies units of meters
-        import pdb; pdb.set_trace()
         eediffmag = sum([norm(self.control_skel.bodynodes[i].to_world(offset)
                                         - self.ref_skel.bodynodes[i].to_world(offset))**2
                          for i, offset in zip(self._end_effector_indices,
@@ -768,20 +767,19 @@ if __name__ == "__main__":
                            args.simsteps_per_dataframe,
                            args.window_width, args.window_height)
 
-    # env.reset(1, True)
-    # while True:
-    #     env.render()
-    #     a = env.action_space.sample()
-    #     state, reward, done, info = env.step(a)
-    #     if done:
-    #         print("Done, reset")
-    #         env.reset()
-    # print(rewards)
-    # print(min(rewards), max(rewards))
-
-    for i in range(env.num_frames):
-        env.reset(i, False)
+    env.reset(0, False)
+    done = False
+    while not done:
         env.render()
-        env.reward(env.control_skel, i)
+        a = env.action_space.sample()
+        state, reward, done, info = env.step(a)
+        # if done:
+        #     print("Done, reset")
+        #     env.reset()
+
+    # for i in range(env.num_frames):
+    #     env.reset(i, False)
+    #     env.render()
+    #     env.reward(env.control_skel, i)
     # env.reset(0, False)
     # env.reward(env.control_skel, 0)
