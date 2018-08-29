@@ -90,6 +90,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                  actionmode,
                  p_gain, d_gain,
                  pos_init_noise, vel_init_noise,
+                 reward_cutoff,
                  pos_weight, pos_inner_weight,
                  vel_weight, vel_inner_weight,
                  ee_weight, ee_inner_weight,
@@ -108,6 +109,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.max_action_magnitude = max_action_magnitude
         self.default_damping = default_damping
         self.default_spring = default_spring
+        self.reward_cutoff = reward_cutoff
 
         self.framenum = 0
 
@@ -519,13 +521,13 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         diffmags = [posdiffmag, veldiffmag, eediffmag, comdiffmag]
 
-        print("Diffmags are " + str(diffmags))
+        # print("Diffmags are " + str(diffmags))
 
         reward = sum([ow * exp(iw * diff) for ow, iw, diff in zip(outerweights,
                                                                 innerweights,
                                                                 diffmags)])
 
-        print(reward)
+        # print(reward)
         return(reward)
 
     def advance(self, a):
@@ -648,11 +650,11 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         newstate = self._get_obs()
         reward = self.reward(self.control_skel, self.framenum)
-        print(reward)
-        # TODO Implement more early terminateion stuff
+        extrainfo = {}
         done = self.framenum == self.num_frames - 1 \
-               or (not np.isfinite(newstate).all())
-        extrainfo = {"infinite": np.isfinite(newstate).all()}
+               or (reward < self.reward_cutoff)
+        if not np.isfinite(newstate).all():
+            raise RuntimeError("Ran into an infinite state, terminating")
 
         self.framenum += 1
 
@@ -714,6 +716,8 @@ if __name__ == "__main__":
     parser.add_argument('--simsteps-per-dataframe', type=int, default=10,
                         help="Number of simulation steps per frame of mocap" +
                         " data")
+    parser.add_argument('--reward-cutoff', type=float, default=.2,
+                        help="Terminate the episode when rewards below this threshold are calculated. Should be in range (0, 1)")
     parser.add_argument('--window-width', type=int, default=80,
                         help="Window width")
     parser.add_argument('--window-height', type=int, default=45,
@@ -750,13 +754,13 @@ if __name__ == "__main__":
                         help="D for the PD controller")
 
     args = parser.parse_args()
-    print(args.vel_init_noise, "The vel init noise")
 
     env = DartDeepMimicEnv(args.control_skel_path, args.asf_path,
                            args.ref_motion_path,
                            args.state_mode, args.action_mode,
                            args.p_gain, args.d_gain,
                            args.pos_init_noise, args.vel_init_noise,
+                           args.reward_cutoff,
                            args.pos_weight, args.pos_inner_weight,
                            args.vel_weight, args.vel_inner_weight,
                            args.ee_weight, args.ee_inner_weight,
@@ -767,15 +771,15 @@ if __name__ == "__main__":
                            args.simsteps_per_dataframe,
                            args.window_width, args.window_height)
 
-    env.reset(0, False)
+    env.reset(0, True)
     done = False
-    while not done:
+    while True:
         env.render()
         a = env.action_space.sample()
         state, reward, done, info = env.step(a)
-        # if done:
-        #     print("Done, reset")
-        #     env.reset()
+        if done:
+            print("Done, reset")
+            env.reset()
 
     # for i in range(env.num_frames):
     #     env.reset(i, False)
