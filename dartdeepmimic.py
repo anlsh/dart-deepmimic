@@ -142,14 +142,14 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.pos_framelist, self.vel_framelist = self.convert_frames(raw_framelist)
         self.num_frames = len(self.pos_framelist)
 
-        self.__end_effector_indices = [i for i, node
+        self._end_effector_indices = [i for i, node
                                        in enumerate(self.ref_skel.bodynodes)
                                      if len(node.child_bodynodes) == 0]
 
         # TODO End reliance on underlying asf
-        self.__end_effector_offsets = [asf.name2joint[
+        self._end_effector_offsets = [asf.name2joint[
             self.ref_skel.bodynodes[i].name[:-5]].offset
-                                       for i in self.__end_effector_indices]
+                                       for i in self._end_effector_indices]
 
         ################################################
         # Do some calculations related to action space #
@@ -288,7 +288,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
     #             new_rotation_euler = compress_angle(rotation_euler, order)
     #             frame[index] = (joint_name, new_rotation_euler)
 
-    def sync_skel_to_frame(self, skel, frame_index, noise=True):
+    def sync_skel_to_frame(self, skel, frame_index, noise):
         """
         Given a skeleton and mocap frame index, use self.metadict to sync all
         the dofs
@@ -457,7 +457,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
     def reward(self, skel, framenum):
 
-        self.sync_skel_to_frame(self.ref_skel, framenum)
+        self.sync_skel_to_frame(self.ref_skel, framenum, False)
         pos, vel = self.gencoordtuple_as_pos_and_qautlist(skel)
         refpos, refvel = self.gencoordtuple_as_pos_and_qautlist(self.ref_skel)
 
@@ -495,12 +495,11 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         #######################
 
         # TODO THe units are off, the paper specifically specifies units of meters
-
+        import pdb; pdb.set_trace()
         eediffmag = sum([norm(self.control_skel.bodynodes[i].to_world(offset)
                                         - self.ref_skel.bodynodes[i].to_world(offset))**2
-                         for i, offset in zip(self.__end_effector_indices,
-                                              self.__end_effector_offsets)])
-        import pdb; pdb.set_trace()
+                         for i, offset in zip(self._end_effector_indices,
+                                              self._end_effector_offsets)])
 
 
         #########################
