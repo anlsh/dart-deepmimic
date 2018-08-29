@@ -126,29 +126,35 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.com_weight = com_weight
         self.com_inner_weight = com_inner_weight
 
+        self._outerweights = [self.pos_weight, self.vel_weight,
+                        self.ee_weight, self.com_weight]
+
+        self._innerweights = [self.pos_inner_weight, self.vel_inner_weight,
+                        self.ee_inner_weight, self.com_inner_weight]
+
         self.__control_skeleton_path = control_skeleton_path
 
         ###########################################################
         # Extract dof info so that states can be converted easily #
         ###########################################################
 
-        world = pydart.World(REFMOTION_DT / self.simsteps_per_dataframe,
-                             control_skeleton_path)
         asf = ASF_Skeleton(asf_path)
 
-        self.ref_skel = world.skeletons[-1]
-        amc = AMC(reference_motion_path)
-        raw_framelist = amc.frames
+        self.ref_skel = pydart.World(REFMOTION_DT / self.simsteps_per_dataframe,
+                             control_skeleton_path).skeletons[-1]
+        raw_framelist = AMC(reference_motion_path).frames
         self.metadict = get_metadict(raw_framelist[0],
                                      self.ref_skel.dofs, asf)
+        self._actuated_dof_names = [key for key in self.metadict
+                              if key != ROOT_KEY]
 
-        self.pos_frames, self.vel_frames = self.construct_frames(raw_framelist)
+        self.ref_euler_pos = None
+        self.ref_euler_vel = None
+        self.ref_quat_pos = None
+        self.num_frames = 0
 
-        self.num_frames = len(self.pos_frames)
-        self.quat_frames = [None] * self.num_frames
-        for i in range(self.num_frames):
-            self.sync_skel_to_frame(self.ref_skel, i, False)
-            self.quat_frames[i] = self.gencoordtuple_as_pos_and_qautlist(self.ref_skel)
+        self.num_frames, frames = self.construct_frames(raw_framelist)
+        self.ref_euler_pos, self.ref_euler_vel, self.ref_quat_pos = frames
 
         self._end_effector_indices = [i for i, node
                                        in enumerate(self.ref_skel.bodynodes)
@@ -230,8 +236,12 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             rmatrix = compose_matrix(angles=rvector, angle_order="sxyz")
             return euler_from_matrix(rmatrix[:3, :3], axes="rxyz")
 
-        pos_frames = [None] * len(raw_framelist)
-        vel_framelist = [None] * len(raw_framelist)
+        num_frames = len(raw_framelist)
+        elements_per_frame = len(raw_framelist[0])
+
+        pos_frames = [None] * num_frames
+        vel_framelist = [None] * num_frames
+        quat_frames = [None] * num_frames
 
         for i in range(len(raw_framelist)):
             old_i = i - 1 if i > 0 else 0
@@ -239,8 +249,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             current_frame = raw_framelist[i]
             old_frame = raw_framelist[old_i]
 
-            pos_frame = [None] * len(raw_framelist[i])
-            vel_frame = [None] * len(raw_framelist[i])
+            pos_frame = [None] * elements_per_frame
+            vel_frame = [None] * elements_per_frame
 
             # Root data is a little bit special, so we handle it here
             curr_root_data = np.array(current_frame[0][1])
@@ -279,9 +289,14 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             pos_frames[i] = pos_frame
             vel_framelist[i] = vel_frame
 
-        return pos_frames, vel_framelist
+            self.sync_skel_to_frame(self.ref_skel, None, 0, 0,
+                                    pos_frame, vel_frame)
+            quat_frames[i] = self.gencoordtuple_as_pos_and_qautlist(self.ref_skel)
 
-    def sync_skel_to_frame(self, skel, frame_index, noise):
+        return num_frames, (pos_frames, vel_framelist, quat_frames)
+
+    def sync_skel_to_frame(self, skel, frame_index, pos_stdv, vel_stdv,
+                           pos_frame = None, vel_frame = None):
         """
         Given a skeleton and mocap frame index, use self.metadict to sync all
         the dofs. Will work on different skeleton objects as long as they're
@@ -290,30 +305,31 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         If noise is true, then positions and velocities will have random normal
         noise added to them
         """
-        pos_frame = self.pos_frames[frame_index]
-        vel_frame = self.vel_frames[frame_index]
+        if frame_index is not None:
+            pos_frame = self.ref_euler_pos[frame_index]
+            vel_frame = self.ref_euler_vel[frame_index]
 
-        def map_dofs(dof_list, pos_list, vel_list, noise):
+        def map_dofs(dof_list, pos_list, vel_list, pstdv, vstdv):
             """
             Given a list of dof objects, set their positions and velocities
-            accordingly. Noise is a boolean
+            accordingly
             """
             for dof, pos, vel in zip(dof_list, pos_list, vel_list):
-                pos = np.random.normal(pos, self.pos_init_noise if noise else 0)
-                vel = np.random.normal(vel, self.vel_init_noise if noise else 0)
+                pos = np.random.normal(pos, pstdv)
+                vel = np.random.normal(vel, vstdv)
 
-                # The float function is required, I've had some strange issues
-                # without it
                 dof.set_position(float(pos))
                 dof.set_velocity(float(vel))
 
         # World to root joint is a bit special so we handle it here...
         root_pos_data = pos_frame[0][1]
         root_vel_data = vel_frame[0][1]
-        map_dofs(skel.dofs[3:6], root_pos_data[:3], root_vel_data[:3], noise)
-        # The root pos/vel is never fuzzed (mostly to prevent clipping into the
+        map_dofs(skel.dofs[3:6], root_pos_data[:3], root_vel_data[:3],
+                 pos_stdv, vel_stdv)
+        # The root pos is never fuzzed (mostly to prevent clipping into the
         # ground)
-        map_dofs(skel.dofs[0:3], root_pos_data[3:], root_vel_data[3:], False)
+        map_dofs(skel.dofs[0:3], root_pos_data[3:], root_vel_data[3:],
+                 0, vel_stdv)
 
         joint_index = 0
         # And handle the rest of the dofs normally
@@ -325,27 +341,36 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             joint_velocities = vel_frame[joint_index][1]
 
             map_dofs(skel.dofs[start_index : end_index + 1],
-                     joint_angles, joint_velocities, noise)
+                     joint_angles, joint_velocities, pos_stdv, vel_stdv)
 
-    def _get_obs(self):
+    def _get_obs(self, skel=None):
         """
         Return a 1-dimensional vector of the skeleton's state, as defined by
-        the state code
+        the state code. When skeleton is not specified, the
+        control_skel is used
         """
+
+        if skel == None:
+            skel = self.control_skel
+        else:
+            # There's not any reason I can think of to actually use any other
+            # skeleton, the print method is just here so I never accidentally
+            # replace it
+            print("You sure you want to be using _get_obs with the non-control skeleton?")
 
         state = None
 
         if self.statemode == StateMode.GEN_EULER:
             state = self.gencoordtuple_as_pos_and_eulerlist(
-                self.control_skel)
+                skel)
         elif self.statemode == StateMode.GEN_QUAT:
             state = self.gencoordtuple_as_pos_and_qautlist(
-                self.control_skel)
+                skel)
         elif self.statemode == StateMode.GEN_AXIS:
             state = self.gencoordtuple_as_pos_and_axisanglelist(
-                self.control_skel)
+                skel)
         else:
-            raise RuntimeError("Unrecognized or unimpletmented state code: "
+            raise RuntimeError("Unimplemented state code: "
                                + str(statemode))
 
         pos, vel = state
@@ -431,7 +456,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         return (pos, angles), (dpos, dangles)
 
-    def _target_full_euler_from_action(self, raw_action):
+    def _expanded_euler_from_action(self, raw_action):
         """
         Given a 1-dimensional vector representing a neural network output,
         construct from it a set of target angles for the ACTUATED degrees of
@@ -457,14 +482,14 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             return [euler_from_axisangle(*t, axes="rxyz")
                     for t in output_angles]
         else:
-            raise RuntimeError("Unrecognized or unimpletmented action code: "
+            raise RuntimeError("Unrecognized or unimplemented action code: "
                                + str(actionmode))
 
     def reward(self, skel, framenum):
 
-        self.sync_skel_to_frame(self.ref_skel, framenum, False)
+        self.sync_skel_to_frame(self.ref_skel, framenum, 0, 0)
         pos, vel = self.gencoordtuple_as_pos_and_qautlist(skel)
-        refpos, refvel = self.quat_frames[framenum]
+        refpos, refvel = self.ref_quat_pos[framenum]
 
         pos, angles = pos
         dpos, dangles = vel
@@ -484,14 +509,10 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # VELOCITY REWARD #
         ###################
 
-        # TODO No quaternion difference used in the paper, but that seems wrong...
-
         velocity_quats = zip(dangles, drefangles)
-        velocity_error = [quaternion_difference(new, old)
-                          for new, old in velocity_quats]
+        velocity_error = [new - old for new, old in velocity_quats]
 
-        veldiffmag = sum([quaternion_rotation_angle(v)**2
-                          for v in velocity_error])
+        veldiffmag = sum([norm(v)**2 for v in velocity_error])
 
         #######################
         # END EFFECTOR REWARD #
@@ -504,7 +525,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                          for i, offset in zip(self._end_effector_indices,
                                               self._end_effector_offsets)])
 
-
         #########################
         # CENTER OF MASS REWARD #
         #########################
@@ -515,92 +535,87 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # TOTAL REWARD #
         ################
 
-        outerweights = [self.pos_weight, self.vel_weight,
-                        self.ee_weight, self.com_weight]
-
-        innerweights = [self.pos_inner_weight, self.vel_inner_weight,
-                        self.ee_inner_weight, self.com_inner_weight]
-
         diffmags = [posdiffmag, veldiffmag, eediffmag, comdiffmag]
 
 
-        reward = sum([ow * exp(iw * diff) for ow, iw, diff in zip(outerweights,
-                                                                innerweights,
+        reward = sum([ow * exp(iw * diff) for ow, iw, diff in zip(self._outerweights,
+                                                                self._innerweights,
                                                                 diffmags)])
 
         return(reward)
 
-    def torques_by_pd(self, target_angles, current_angles,
-                      past_angles):
+    def expanded_euler_to_dofvector(self, expanded_euler):
+
+        if len(expanded_euler) != len(self._actuated_dof_names):
+            raise RuntimeError("Mismatch between number of actuated dofs and angles passed in")
+        return np.concatenate([compress_angle(expanded_euler[i],
+                                              self.metadict[key][1])
+                               for i, key in enumerate(self._actuated_dof_names)])
+
+    def doftorques_by_pd(self, expanded_target_euler, expanded_current_euler,
+                      expanded_old_euler):
         """
-        Given target, current, and past angles (all lists of 3-vectors
-        representing fully-specified euler angles) of the actuated dofs, return
-        torques for the WHOLE SHEBANG.
-
-        This method returns a vector of torques for EVERY DOF in the entire
-        skeleton. (even unactuated ones; however, torques on these are always
-        zero) This means that it takes care of compressing angles to their
-        respective orders, placing them in the right spots in a vector of size
-        skel.num_dofs, etc
-
-        The resultant torques are clamped to within action magnitude
+        # TODO Document
         """
-        current_error = target_angles - current_angles
-        past_error = target_angles - past_angles
+        current_error = expanded_target_euler - expanded_current_euler
+        past_error = expanded_target_euler - expanded_old_euler
 
-        error_rate = (current_error - past_error) / self.dt
+        derror = (current_error - past_error) / self.dt
 
         # compression phase
-        actuated_dof_names = [key for key in self.metadict
-                              if key != ROOT_KEY]
-        compressed_current_error = [compress_angle(current_error[i],
-                                                  self.metadict[key][1])
-                                   for i, key in enumerate(actuated_dof_names)]
+        error_dofvector = self.expanded_euler_to_dofvector(current_error)
 
-        compressed_error_rate = [compress_angle(error_rate[i],
-                                               self.metadict[key][1])
-                                for i, key in enumerate(actuated_dof_names)]
+        derror_dofvector = self.expanded_euler_to_dofvector(derror)
 
-        expanded_current_error = np.zeros(self.control_skel.num_dofs())
-        expanded_error_rate = np.zeros(self.control_skel.num_dofs())
 
-        for index, key in enumerate(actuated_dof_names):
-            dof_indices = self.metadict[key][0]
-            f, l = dof_indices[0], dof_indices[-1] + 1
-            expanded_current_error[f:l] = compressed_current_error[index]
-
-        for index, key in enumerate(actuated_dof_names):
-            dof_indices = self.metadict[key][0]
-            f, l = dof_indices[0], dof_indices[-1] + 1
-            expanded_error_rate[f:l] = compressed_error_rate[index]
-
-        ret = self.p_gain * expanded_current_error + self.d_gain * expanded_error_rate
+        ret = self.p_gain * error_dofvector + self.d_gain * derror_dofvector
         ret = np.clip(ret, -self.max_action_magnitude, self.max_action_magnitude)
 
         return ret
 
-    def step(self, a):
+    def doftorques_to_skeltau(self, doftorques):
+        """
+        # TODO Document
+        """
 
-        actuation_targets = self._target_full_euler_from_action(a)
+        skeltau_blank = np.zeros(self.control_skel.num_dofs())
 
-        _, current_euler = self._genq_to_pos_and_eulerdict(self.control_skel.q)
-        actuated_angles = np.array([current_euler[key]
-                                  for key in current_euler
-                                  if key != ROOT_THETA_KEY])
+        doftorque_index = 0
+        for index, key in enumerate(self._actuated_dof_names):
+            dof_indices = self.metadict[key][0]
+            f, l = dof_indices[0], dof_indices[-1] + 1
+            num_indices = l - f
+            skeltau_blank[f:l] = doftorques[doftorque_index :
+                                            doftorque_index + num_indices]
+            doftorque_index += num_indices
 
-        _, old_euler = self._genq_to_pos_and_eulerdict(self.old_skelq)
-        old_actuated_angles = np.array([old_euler[key]
-                                        for key in old_euler
-                                        if key != ROOT_THETA_KEY])
-        import pdb; pdb.set_trace()
+        return skeltau_blank
 
-        torques = self.torques_by_pd(actuation_targets,
-                                     actuated_angles,
-                                     old_actuated_angles)
+    def step(self, action_vector):
+        """
+        action_vector is of length (anglemodelength) * (num_actuated_joints)
+        """
+
+        expanded_target_euler = self._expanded_euler_from_action(action_vector)
+        # TODO Break up gencoordtuple_as_pos_and_eulerlist so that I can
+        # just grab the positional component without having to calculate
+        # the velocity component for no reason
+
+        expanded_current_euler = self.gencoordtuple_as_pos_and_eulerlist(self.control_skel)[0][1][1:]
+
+        expanded_old_euler = self.gencoordtuple_as_pos_and_eulerlist(self.control_skel)[0][1][1:]
+
+        if not len(expanded_old_euler) == len(expanded_current_euler) == len(expanded_target_euler):
+            raise RuntimeError("Mismatch between number of angles")
+
+        doftorques = self.doftorques_by_pd(expanded_target_euler,
+                                           expanded_current_euler,
+                                           expanded_old_euler)
+        skeltau = self.doftorques_to_skeltau(doftorques)
 
         self.old_skelq = self.control_skel.q
 
-        self.do_simulation(torques, self.simsteps_per_dataframe)
+        self.do_simulation(skeltau, self.simsteps_per_dataframe)
 
         newstate = self._get_obs()
         reward = self.reward(self.control_skel, self.framenum)
@@ -614,13 +629,19 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         return newstate, reward, done, extrainfo
 
-    def reset(self, framenum=None, noise=True):
+    def reset(self, framenum=None, pos_stdv=None, vel_stdv=None):
+
+        if pos_stdv == None:
+            pos_stdv = self.pos_init_noise
+        if vel_stdv == None:
+            vel_stdv = self.vel_init_noise
 
         if framenum is None:
             framenum = random.randint(0, self.num_frames - 1)
         self.framenum = framenum
 
-        self.sync_skel_to_frame(self.control_skel, self.framenum, noise)
+        self.sync_skel_to_frame(self.control_skel, self.framenum,
+                                pos_stdv, vel_stdv)
         self.old_skelq = self.control_skel.q
 
         return self._get_obs()
@@ -727,14 +748,17 @@ if __name__ == "__main__":
                            args.simsteps_per_dataframe,
                            args.window_width, args.window_height)
 
-    # obs = env.reset(0, True)
-    # done = False
-    # while True:
-    #     env.render()
-    #     a = env.action_space.sample()
-    #     state, reward, done, info = env.step(a)
-    #     if done:
-    #         env.reset()
+    obs = env.reset(0, False)
+    done = False
+    i = 0
+    while True:
+        env.render()
+        obs = env.reset(i, False)
+        # a = env.action_space.sample()
+        # state, reward, done, info = env.step(a)
+        i += 1
+        if done:
+            env.reset()
 
     # for i in range(env.num_frames):
     #     env.reset(i, False)
@@ -744,18 +768,18 @@ if __name__ == "__main__":
     # env.reward(env.control_skel, 0)
 
     # PID Test stuff
-    start_frame = 100
-    target_frame = 100
-    env.sync_skel_to_frame(env.control_skel, target_frame, False)
-    target_state = env.gencoordtuple_as_pos_and_eulerlist(env.control_skel)
-    pos, vel = target_state
-    target_angles = pos[1]
+    # start_frame = 100
+    # target_frame = 100
+    # env.sync_skel_to_frame(env.control_skel, target_frame, False)
+    # target_state = env.gencoordtuple_as_pos_and_eulerlist(env.control_skel)
+    # pos, vel = target_state
+    # target_angles = pos[1]
 
-    obs = env.reset(start_frame, True)
-    env.sync_skel_to_frame(env.control_skel, start_frame, False)
-    env.old_skelq = env.control_skel.q
+    # obs = env.reset(start_frame, True)
+    # env.sync_skel_to_frame(env.control_skel, start_frame, False)
+    # env.old_skelq = env.control_skel.q
 
-    while True:
-        env.framenum = target_frame
-        env.step(target_angles[1:])
-        env.render()
+    # while True:
+    #     env.framenum = target_frame
+    #     env.step(target_angles[1:])
+    #     env.render()
