@@ -663,7 +663,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
     def reset(self, framenum=None, noise=True):
 
         if framenum is None:
-            framenum = random.randint(0, self.num_frames)
+            framenum = random.randint(0, self.num_frames - 1)
         self.framenum = framenum
 
         self.sync_skel_to_frame(self.control_skel, self.framenum, noise)
