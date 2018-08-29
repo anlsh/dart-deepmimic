@@ -177,6 +177,9 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.p_gain = p_gain
         self.d_gain = d_gain
 
+        if p < 0 or d < 0:
+            raise RuntimeError("All PID gains should be positive")
+
         self.__P = self.p_gain * np.ndarray(self.control_skel.num_dofs())
         self.__D = self.d_gain * np.ndarray(self.control_skel.num_dofs())
 
