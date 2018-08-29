@@ -41,7 +41,7 @@ def train(env, save_interval, file_prefix, num_timesteps):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Make a DartDeepMimic Environ')
-    parser.add_argument('--train-save-interval', type=int, default=10,
+    parser.add_argument('--train-save-interval', type=int, default=25,
                         help="Interval between saves and stuff")
     parser.add_argument('--train-params-prefix', required=True,
                         help="Fire prefix of parameter saves")

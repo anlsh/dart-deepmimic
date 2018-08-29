@@ -592,6 +592,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         old_actuated_angles = np.array([old_euler[key]
                                         for key in old_euler
                                         if key != ROOT_THETA_KEY])
+        import pdb; pdb.set_trace()
 
         torques = self.torques_by_pd(actuation_targets,
                                      actuated_angles,
@@ -620,6 +621,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.framenum = framenum
 
         self.sync_skel_to_frame(self.control_skel, self.framenum, noise)
+        self.old_skelq = self.control_skel.q
 
         return self._get_obs()
 
@@ -725,14 +727,14 @@ if __name__ == "__main__":
                            args.simsteps_per_dataframe,
                            args.window_width, args.window_height)
 
-    env.reset(0, True)
-    done = False
-    while True:
-        env.render()
-        a = env.action_space.sample()
-        state, reward, done, info = env.step(a)
-        if done:
-            env.reset()
+    # obs = env.reset(0, True)
+    # done = False
+    # while True:
+    #     env.render()
+    #     a = env.action_space.sample()
+    #     state, reward, done, info = env.step(a)
+    #     if done:
+    #         env.reset()
 
     # for i in range(env.num_frames):
     #     env.reset(i, False)
@@ -740,3 +742,20 @@ if __name__ == "__main__":
     #     env.reward(env.control_skel, i)
     # env.reset(0, False)
     # env.reward(env.control_skel, 0)
+
+    # PID Test stuff
+    start_frame = 100
+    target_frame = 100
+    env.sync_skel_to_frame(env.control_skel, target_frame, False)
+    target_state = env.gencoordtuple_as_pos_and_eulerlist(env.control_skel)
+    pos, vel = target_state
+    target_angles = pos[1]
+
+    obs = env.reset(start_frame, True)
+    env.sync_skel_to_frame(env.control_skel, start_frame, False)
+    env.old_skelq = env.control_skel.q
+
+    while True:
+        env.framenum = target_frame
+        env.step(target_angles[1:])
+        env.render()
