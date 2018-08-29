@@ -142,8 +142,13 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.metadict = get_metadict(raw_framelist[0],
                                      self.ref_skel.dofs, asf)
 
-        self.pos_frames, self.vel_frames = self.convert_frames(raw_framelist)
+        self.pos_frames, self.vel_frames = self.construct_frames(raw_framelist)
+
         self.num_frames = len(self.pos_frames)
+        self.quat_frames = [None] * self.num_frames
+        for i in range(self.num_frames):
+            self.sync_skel_to_frame(self.ref_skel, i, False)
+            self.quat_frames[i] = self.gencoordtuple_as_pos_and_qautlist(self.ref_skel)
 
         self._end_effector_indices = [i for i, node
                                        in enumerate(self.ref_skel.bodynodes)
@@ -207,7 +212,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                 joint.set_damping_coefficient(index, self.default_damping)
                 joint.set_spring_stiffness(index, self.default_spring)
 
-    def convert_frames(self, raw_framelist):
+    def construct_frames(self, raw_framelist):
         """
         AMC data is given in sequential degrees, while dart specifies angles
         in rotating radians. The conversion is quite expensive, so we precomute
@@ -268,6 +273,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
                 pos_frame[joint_index] = (joint_name, current_rotation_euler)
                 vel_frame[joint_index] = (joint_name, velocity_rotation_euler)
+
+
 
             pos_frames[i] = pos_frame
             vel_framelist[i] = vel_frame
@@ -457,7 +464,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         self.sync_skel_to_frame(self.ref_skel, framenum, False)
         pos, vel = self.gencoordtuple_as_pos_and_qautlist(skel)
-        refpos, refvel = self.gencoordtuple_as_pos_and_qautlist(self.ref_skel)
+        refpos, refvel = self.quat_frames[framenum]
 
         pos, angles = pos
         dpos, dangles = vel
@@ -617,13 +624,14 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         return self._get_obs()
 
     def viewer_setup(self):
-        self._get_viewer().scene.tb.trans[2] = -70
+        self._get_viewer().scene.tb.trans[2] = -80
         self._get_viewer().scene.tb.trans[1] = -40
+        self._get_viewer().scene.tb.trans[0] = 0
 
     def render(self, mode='human', close=False):
             # if not self.disableViewer:
-        if True:
-            self._get_viewer().scene.tb.trans[0] = -self.dart_world.skeletons[-1].com()[0]*1
+        # if True:
+        #     self._get_viewer().scene.tb.trans[0] = -self.dart_world.skeletons[-1].com()[0]*1
         if close:
             if self.viewer is not None:
                 self._get_viewer().close()
@@ -662,7 +670,7 @@ if __name__ == "__main__":
     parser.add_argument('--simsteps-per-dataframe', type=int, default=10,
                         help="Number of simulation steps per frame of mocap" +
                         " data")
-    parser.add_argument('--reward-cutoff', type=float, default=.2,
+    parser.add_argument('--reward-cutoff', type=float, default=0.1,
                         help="Terminate the episode when rewards below this threshold are calculated. Should be in range (0, 1)")
     parser.add_argument('--window-width', type=int, default=80,
                         help="Window width")
@@ -724,7 +732,6 @@ if __name__ == "__main__":
         a = env.action_space.sample()
         state, reward, done, info = env.step(a)
         if done:
-            print("Done, reset")
             env.reset()
 
     # for i in range(env.num_frames):
