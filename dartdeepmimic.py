@@ -6,7 +6,7 @@ from asf_skeleton import ASF_Skeleton
 from gym import utils
 from gym.envs.dart import dart_env
 from joint import expand_angle, compress_angle
-from math import exp, pi
+from math import exp, pi, atan2
 from numpy.linalg import norm
 from transformations import compose_matrix, euler_from_matrix
 from transformations import quaternion_from_euler, euler_from_quaternion
@@ -52,6 +52,9 @@ class ActionMode:
 
 def quaternion_difference(a, b):
     return quaternion_multiply(b, quaternion_inverse(a))
+
+def quaternion_rotation_angle(a):
+    return atan2(norm(a[1:]), a[0])
 
 def get_metadict(amc_frame, skel_dofs, asf):
     """
@@ -132,10 +135,11 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         self.ref_skel = world.skeletons[-1]
         amc = AMC(reference_motion_path)
-        self.framelist = amc.frames
-        self.metadict = get_metadict(self.framelist[0],
+        raw_framelist = amc.frames
+        self.metadict = get_metadict(raw_framelist[0],
                                      self.ref_skel.dofs, asf)
-        self.convert_frames()
+
+        self.pos_framelist, self.vel_framelist = self.convert_frames(raw_framelist)
 
         self.__end_effector_indices = [i for i, node
                                        in enumerate(self.ref_skel.bodynodes)
@@ -196,7 +200,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                 joint.set_damping_coefficient(index, self.default_damping)
                 joint.set_spring_stiffness(index, self.default_spring)
 
-    def convert_frames(self):
+    def convert_frames(self, raw_framelist):
         """
         AMC data is given in sequential degrees, while dart specifies angles
         in rotating radians. The conversion is quite expensive, so we precomute
@@ -210,25 +214,78 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             rmatrix = compose_matrix(angles=rvector, angle_order="sxyz")
             return euler_from_matrix(rmatrix[:3, :3], axes="rxyz")
 
-        for frame in self.framelist:
+        pos_framelist = [None] * len(raw_framelist)
+        vel_framelist = [None] * len(raw_framelist)
 
-            # Root is a bit special since it contains translational + angular
-            # information, deal with that here
-            root_data = frame[0][1]
-            root_pos, root_theta = root_data[:3], root_data[3:]
-            root_theta = sequential_degrees_to_rotating_radians(root_data[3:])
-            frame[0] = (ROOT_KEY, np.concatenate([root_pos, root_theta]))
+        for i in range(len(raw_framelist)):
+            old_i = i - 1 if i > 0 else 0
 
-            index = 0
-            for joint_name, joint_angles in frame[1:]:
-                index += 1
+            current_frame = raw_framelist[i]
+            old_frame = raw_framelist[old_i]
+
+            pos_frame = [None] * len(raw_framelist[i])
+            vel_frame = [None] * len(raw_framelist[i])
+
+            curr_root_data = np.array(current_frame[0][1])
+            curr_root_pos, curr_root_theta = curr_root_data[:3], curr_root_data[3:]
+            old_root_data = np.array(old_frame[0][1])
+            old_root_pos, old_root_theta = old_root_data[:3], old_root_data[3:]
+            pos_frame[0] = (ROOT_KEY,
+                            np.concatenate([curr_root_pos,
+                                            sequential_degrees_to_rotating_radians(curr_root_theta)]))
+            vel_frame[0] = (ROOT_KEY,
+                            np.concatenate([np.subtract(curr_root_pos, old_root_pos),
+                                            sequential_degrees_to_rotating_radians(np.subtract(curr_root_theta, old_root_theta))])  / REFMOTION_DT)
+
+            joint_index = 0
+            for joint_name, curr_joint_angles in current_frame[1:]:
+                joint_index += 1
                 dof_indices, order = self.metadict[joint_name]
                 start_index, end_index = dof_indices[0], dof_indices[-1]
 
-                theta = expand_angle(joint_angles, order)
-                rotation_euler = sequential_degrees_to_rotating_radians(theta)
-                new_rotation_euler = compress_angle(rotation_euler, order)
-                frame[index] = (joint_name, new_rotation_euler)
+                curr_theta = expand_angle(curr_joint_angles, order)
+                old_theta = expand_angle(old_frame[joint_index][1], order)
+
+                current_rotation_euler = compress_angle(sequential_degrees_to_rotating_radians(curr_theta), order)
+                velocity_rotation_euler = compress_angle(sequential_degrees_to_rotating_radians(np.subtract(curr_theta, old_theta))) / REFMOTION_DT
+
+                pos_frame[joint_index] = (joint_name, current_rotation_euler)
+                vel_frame[joint_index] = (joint_name, velocity_rotation_euler)
+
+            pos_framelist[i] = pos_frame
+            vel_framelist[i] = vel_frame
+
+        return pos_framelist, vel_framelist
+
+    # def old_convert_frames(self, raw_framelist):
+
+
+    #     def sequential_degrees_to_rotating_radians(rvector):
+
+    #         rvector = np.multiply(rvector, pi / 180)
+
+    #         rmatrix = compose_matrix(angles=rvector, angle_order="sxyz")
+    #         return euler_from_matrix(rmatrix[:3, :3], axes="rxyz")
+
+    #     for frame in raw_framelist:
+
+    #         # Root is a bit special since it contains translational + angular
+    #         # information, deal with that here
+    #         root_data = frame[0][1]
+    #         root_pos, root_theta = root_data[:3], root_data[3:]
+    #         root_theta = sequential_degrees_to_rotating_radians(root_data[3:])
+    #         frame[0] = (ROOT_KEY, np.concatenate([root_pos, root_theta]))
+
+    #         index = 0
+    #         for joint_name, joint_angles in frame[1:]:
+    #             index += 1
+    #             dof_indices, order = self.metadict[joint_name]
+    #             start_index, end_index = dof_indices[0], dof_indices[-1]
+
+    #             theta = expand_angle(joint_angles, order)
+    #             rotation_euler = sequential_degrees_to_rotating_radians(theta)
+    #             new_rotation_euler = compress_angle(rotation_euler, order)
+    #             frame[index] = (joint_name, new_rotation_euler)
 
     def sync_skel_to_frame(self, skel, frame_index, noise=True):
         """
@@ -265,6 +322,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
             old_joint_angles = old_frame[i][1]
             joint_velocities = (joint_angles - old_joint_angles) / REFMOTION_DT
+            if frame_index != 0:
+                import pdb; pdb.set_trace()
 
             map_dofs(skel.dofs[start_index : end_index + 1],
                      joint_angles, joint_velocities, noise)
@@ -422,7 +481,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         posdiff = [quaternion_difference(ra, a)
                    for a, ra in zip(angles, refangles)]
-        posdiffmag = sum([norm(d) for d in posdiff])
+        posdiffmag = sum([quaternion_rotation_angle(d)**2 for d in posdiff])
 
         ###################
         # VELOCITY REWARD #
@@ -430,13 +489,14 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         # TODO No quaternion difference used in the paper, but that seems wrong...
 
+        data_quats = zip(refangles, refangles_old)
         data_velocity = [quaternion_difference(new, old)
-                         / REFMOTION_DT for new, old in zip(refangles,
-                                                            refangles_old)]
+                         for new, old in data_quats]
 
-        vdiff = [quaternion_difference(s, data) for s, data in zip(dangles,
-                                                                   data_velocity)]
-        veldiffmag = sum([norm(v) for v in vdiff])
+        vdiff = [s - data for s, data in zip(dangles,
+                                             data_velocity)]
+        veldiffmag = sum([quaternion_rotation_angle(v)**2 / REFMOTION_DT
+                          for v in vdiff])
 
         #######################
         # END EFFECTOR REWARD #
@@ -445,7 +505,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # TODO THe units are off, the paper specifically specifies units of meters
 
         eediffmag = sum([norm(self.control_skel.bodynodes[i].to_world(offset)
-                                        - self.ref_skel.bodynodes[i].to_world(offset))
+                                        - self.ref_skel.bodynodes[i].to_world(offset)**2)
                          for i, offset in zip(self.__end_effector_indices,
                                               self.__end_effector_offsets)])
 
@@ -453,7 +513,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # CENTER OF MASS REWARD #
         #########################
 
-        comdiffmag = norm(self.control_skel.com() - refcom)
+        comdiffmag = norm(self.control_skel.com() - refcom)**2
 
         ################
         # TOTAL REWARD #
@@ -467,9 +527,14 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         diffmags = [posdiffmag, veldiffmag, eediffmag, comdiffmag]
 
-        return sum([ow * exp(iw * diff) for ow, iw, diff in zip(outerweights,
+        print("Diffmags are " + str(diffmags))
+
+        reward = sum([ow * exp(iw * diff) for ow, iw, diff in zip(outerweights,
                                                                 innerweights,
                                                                 diffmags)])
+
+        print(reward)
+        return(reward)
 
     def advance(self, a):
         raise NotImplementedError()
@@ -591,12 +656,11 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         newstate = self._get_obs()
         reward = self.reward(self.control_skel, self.framenum)
+        print(reward)
         # TODO Implement more early terminateion stuff
         done = self.framenum == len(self.framelist) - 1 \
                or (not np.isfinite(newstate).all())
-        if not np.isfinite(newstate).all():
-            print("Infinite state")
-        extrainfo = {}
+        extrainfo = {"infinite": np.isfinite(newstate).all()}
 
         self.framenum += 1
 
@@ -648,7 +712,7 @@ if __name__ == "__main__":
     parser.add_argument('--action-mode', default=0, type=int,
                         help="Code for the action representation")
     parser.add_argument('--visualize', default=False,
-                        help="True if you want a window to render to")
+                        help="DOESN'T DO ANYTHING RIGHT NOW: True if you want a window to render to")
     parser.add_argument('--max-action-magnitude', type=float, default=90,
                         help="Maximum torque")
     parser.add_argument('--default-damping', type=float, default=2,
@@ -711,13 +775,19 @@ if __name__ == "__main__":
                            args.simsteps_per_dataframe,
                            args.window_width, args.window_height)
 
-    env.reset(0, True)
-    # env.reset()
-    while True:
-        env.render()
-        a = env.action_space.sample()
-        # input()
-        state, reward, done, info = env.step(a)
-        if done:
-            print("Done, reset")
-            env.reset()
+    # env.reset(1, True)
+    # while True:
+    #     env.render()
+    #     a = env.action_space.sample()
+    #     state, reward, done, info = env.step(a)
+    #     if done:
+    #         print("Done, reset")
+    #         env.reset()
+    # print(rewards)
+    # print(min(rewards), max(rewards))
+
+    for i in range(len(env.framelist)):
+        env.reset(i, False)
+        env.reward(env.control_skel, i)
+    # env.reset(0, False)
+    # env.reward(env.control_skel, 0)
