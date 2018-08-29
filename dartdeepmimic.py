@@ -140,6 +140,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                                      self.ref_skel.dofs, asf)
 
         self.pos_framelist, self.vel_framelist = self.convert_frames(raw_framelist)
+        self.num_frames = len(self.pos_framelist)
 
         self.__end_effector_indices = [i for i, node
                                        in enumerate(self.ref_skel.bodynodes)
@@ -292,9 +293,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         Given a skeleton and mocap frame index, use self.metadict to sync all
         the dofs
         """
-        frame = self.framelist[frame_index % len(self.framelist)]
-        old_frame = self.framelist[(frame_index - 1 if frame_index > 0 else 0)
-                                    % len(self.framelist)]
+        pos_frame = self.pos_framelist[frame_index]
+        vel_frame = self.vel_framelist[frame_index]
 
         def map_dofs(dof_list, pos_list, vel_list, noise):
             """
@@ -307,23 +307,19 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                 dof.set_velocity(float(vel))
 
         # World to root joint is a bit special so we handle it here...
-        root_data = frame[0][1]
-        old_root_data = frame[0][1]
-        root_vel = (root_data - old_root_data) / REFMOTION_DT
-        map_dofs(skel.dofs[3:6], root_data[:3], root_vel[:3], noise)
-        map_dofs(skel.dofs[0:3], root_data[3:], root_vel[3:], False)
+        root_pos_data = pos_frame[0][1]
+        root_vel_data = vel_frame[0][1]
+        map_dofs(skel.dofs[3:6], root_pos_data[:3], root_vel_data[:3], noise)
+        map_dofs(skel.dofs[0:3], root_pos_data[3:], root_vel_data[3:], False)
 
-        i = 0
+        joint_index = 0
         # And handle the rest of the dofs normally
-        for joint_name, joint_angles in frame[1:]:
-            i += 1
+        for joint_name, joint_angles in pos_frame[1:]:
+            joint_index += 1
             dof_indices, order = self.metadict[joint_name]
             start_index, end_index = dof_indices[0], dof_indices[-1]
 
-            old_joint_angles = old_frame[i][1]
-            joint_velocities = (joint_angles - old_joint_angles) / REFMOTION_DT
-            if frame_index != 0:
-                import pdb; pdb.set_trace()
+            joint_velocities = vel_frame[joint_index][1]
 
             map_dofs(skel.dofs[start_index : end_index + 1],
                      joint_angles, joint_velocities, noise)
@@ -459,20 +455,18 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             raise RuntimeError("Unrecognized or unimpletmented action code: "
                                + str(actionmode))
 
-    def reward(self, skel, frame):
+    def reward(self, skel, framenum):
 
+        self.sync_skel_to_frame(self.ref_skel, framenum)
         pos, vel = self.gencoordtuple_as_pos_and_qautlist(skel)
+        refpos, refvel = self.gencoordtuple_as_pos_and_qautlist(self.ref_skel)
+
         pos, angles = pos
         dpos, dangles = vel
 
-        self.sync_skel_to_frame(self.ref_skel, frame - 1
-                                if frame > 0 else 0)
-        refpos_old, _ = self.gencoordtuple_as_pos_and_qautlist(self.ref_skel)
-        refpos_old, refangles_old = refpos_old
-
-        self.sync_skel_to_frame(self.ref_skel, frame)
-        refpos, _ = self.gencoordtuple_as_pos_and_qautlist(self.ref_skel)
         refpos, refangles = refpos
+        drefpos, drefangles = refvel
+
         refcom = self.ref_skel.com()
 
         #####################
@@ -489,14 +483,12 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         # TODO No quaternion difference used in the paper, but that seems wrong...
 
-        data_quats = zip(refangles, refangles_old)
-        data_velocity = [quaternion_difference(new, old)
-                         for new, old in data_quats]
+        velocity_quats = zip(dangles, drefangles)
+        velocity_error = [quaternion_difference(new, old)
+                          for new, old in velocity_quats]
 
-        vdiff = [s - data for s, data in zip(dangles,
-                                             data_velocity)]
-        veldiffmag = sum([quaternion_rotation_angle(v)**2 / REFMOTION_DT
-                          for v in vdiff])
+        veldiffmag = sum([quaternion_rotation_angle(v)**2
+                          for v in velocity_error])
 
         #######################
         # END EFFECTOR REWARD #
@@ -505,15 +497,17 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # TODO THe units are off, the paper specifically specifies units of meters
 
         eediffmag = sum([norm(self.control_skel.bodynodes[i].to_world(offset)
-                                        - self.ref_skel.bodynodes[i].to_world(offset)**2)
+                                        - self.ref_skel.bodynodes[i].to_world(offset))**2
                          for i, offset in zip(self.__end_effector_indices,
                                               self.__end_effector_offsets)])
+        import pdb; pdb.set_trace()
+
 
         #########################
         # CENTER OF MASS REWARD #
         #########################
 
-        comdiffmag = norm(self.control_skel.com() - refcom)**2
+        comdiffmag = norm(self.control_skel.com() - self.ref_skel.com())**2
 
         ################
         # TOTAL REWARD #
@@ -658,7 +652,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         reward = self.reward(self.control_skel, self.framenum)
         print(reward)
         # TODO Implement more early terminateion stuff
-        done = self.framenum == len(self.framelist) - 1 \
+        done = self.framenum == self.num_frames - 1 \
                or (not np.isfinite(newstate).all())
         extrainfo = {"infinite": np.isfinite(newstate).all()}
 
@@ -669,7 +663,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
     def reset(self, framenum=None, noise=True):
 
         if framenum is None:
-            framenum = random.randint(0, len(self.framelist))
+            framenum = random.randint(0, self.num_frames)
         self.framenum = framenum
 
         self.sync_skel_to_frame(self.control_skel, self.framenum, noise)
@@ -786,8 +780,9 @@ if __name__ == "__main__":
     # print(rewards)
     # print(min(rewards), max(rewards))
 
-    for i in range(len(env.framelist)):
+    for i in range(env.num_frames):
         env.reset(i, False)
+        env.render()
         env.reward(env.control_skel, i)
     # env.reset(0, False)
     # env.reward(env.control_skel, 0)
