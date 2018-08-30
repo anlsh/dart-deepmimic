@@ -517,52 +517,6 @@
             <offset>-0.00000 -0.39848 -0.00000</offset>
         </inertia>
     </body>
-    <body name="lfingers_body">
-        <transformation>14.17826 7.49388 -0.34613 -1.57080 -0.00000 1.57080</transformation>
-        <visualization_shape>
-            <transformation>-0.00000 -0.32127 -0.00000 -3.14159 0.00000 1.57080</transformation>
-            <geometry>
-                <box>
-                    <size>0.64254 1.00000 0.50000</size>
-                </box>
-            </geometry>
-        </visualization_shape>
-        <collision_shape>
-            <transformation>-0.00000 -0.32127 -0.00000 -3.14159 0.00000 1.57080</transformation>
-            <geometry>
-                <box>
-                    <size>0.64254 1.00000 0.50000</size>
-                </box>
-            </geometry>
-        </collision_shape>
-        <inertia>
-            <mass>1</mass>
-            <offset>-0.00000 -0.32127 -0.00000</offset>
-        </inertia>
-    </body>
-    <body name="lthumb_body">
-        <transformation>13.38129 7.49388 -0.34613 -1.57080 0.00000 0.78540</transformation>
-        <visualization_shape>
-            <transformation>0.00000 -0.46128 -0.00000 -3.14159 0.00000 1.57080</transformation>
-            <geometry>
-                <box>
-                    <size>0.92256 1.00000 0.50000</size>
-                </box>
-            </geometry>
-        </visualization_shape>
-        <collision_shape>
-            <transformation>0.00000 -0.46128 -0.00000 -3.14159 0.00000 1.57080</transformation>
-            <geometry>
-                <box>
-                    <size>0.92256 1.00000 0.50000</size>
-                </box>
-            </geometry>
-        </collision_shape>
-        <inertia>
-            <mass>1</mass>
-            <offset>0.00000 -0.46128 -0.00000</offset>
-        </inertia>
-    </body>
     <body name="rclavicle_body">
         <transformation>0.10097 6.63754 -0.40009 0.00000 0.00000 0.00000</transformation>
         <visualization_shape>
@@ -676,52 +630,6 @@
         <inertia>
             <mass>1</mass>
             <offset>0.00000 -0.31022 -0.00000</offset>
-        </inertia>
-    </body>
-    <body name="rfingers_body">
-        <transformation>-14.02997 7.65788 -0.05320 -1.57080 0.00000 -1.57080</transformation>
-        <visualization_shape>
-            <transformation>0.00000 -0.25011 -0.00000 -3.14159 0.00000 1.57080</transformation>
-            <geometry>
-                <box>
-                    <size>0.50022 1.00000 0.50000</size>
-                </box>
-            </geometry>
-        </visualization_shape>
-        <collision_shape>
-            <transformation>0.00000 -0.25011 -0.00000 -3.14159 0.00000 1.57080</transformation>
-            <geometry>
-                <box>
-                    <size>0.50022 1.00000 0.50000</size>
-                </box>
-            </geometry>
-        </collision_shape>
-        <inertia>
-            <mass>1</mass>
-            <offset>0.00000 -0.25011 -0.00000</offset>
-        </inertia>
-    </body>
-    <body name="rthumb_body">
-        <transformation>-13.40952 7.65788 -0.05320 -1.57080 -0.00000 -0.78540</transformation>
-        <visualization_shape>
-            <transformation>-0.00000 -0.35911 -0.00000 -3.14159 0.00000 1.57080</transformation>
-            <geometry>
-                <box>
-                    <size>0.71822 1.00000 0.50000</size>
-                </box>
-            </geometry>
-        </visualization_shape>
-        <collision_shape>
-            <transformation>-0.00000 -0.35911 -0.00000 -3.14159 0.00000 1.57080</transformation>
-            <geometry>
-                <box>
-                    <size>0.71822 1.00000 0.50000</size>
-                </box>
-            </geometry>
-        </collision_shape>
-        <inertia>
-            <mass>1</mass>
-            <offset>-0.00000 -0.35911 -0.00000</offset>
         </inertia>
     </body>
     <joint name="root" type="free">
@@ -1375,55 +1283,6 @@
             </dynamics>
         </axis2>
     </joint>
-    <joint name="lfingers" type="revolute">
-        <parent>lhand_body</parent>
-        <child>lfingers_body</child>
-        <transformation>0 0 0 0 0 0</transformation>
-        <axis>
-            <xyz>1 0 0</xyz>
-            <limit>
-                <lower>0.00000</lower>
-                <upper>1.57080</upper>
-            </limit>
-            <dynamics>
-                <damping>1</damping>
-                <friction>0</friction>
-                <spring_rest_position>0</spring_rest_position>
-                <spring_stiffness>0</spring_stiffness>
-            </dynamics>
-        </axis>
-    </joint>
-    <joint name="lthumb" type="universal">
-        <parent>lwrist_body</parent>
-        <child>lthumb_body</child>
-        <transformation>0 0 0 0 0 0</transformation>
-        <axis>
-            <xyz>1 0 0</xyz>
-            <limit>
-                <lower>-0.78540</lower>
-                <upper>0.78540</upper>
-            </limit>
-            <dynamics>
-                <damping>1</damping>
-                <friction>0</friction>
-                <spring_rest_position>0</spring_rest_position>
-                <spring_stiffness>0</spring_stiffness>
-            </dynamics>
-        </axis>
-        <axis2>
-            <xyz>0 0 1</xyz>
-            <limit>
-                <lower>-0.78540</lower>
-                <upper>0.78540</upper>
-            </limit>
-            <dynamics>
-                <damping>1</damping>
-                <friction>0</friction>
-                <spring_rest_position>0</spring_rest_position>
-                <spring_stiffness>0</spring_stiffness>
-            </dynamics>
-        </axis2>
-    </joint>
     <joint name="rclavicle" type="universal">
         <parent>thorax_body</parent>
         <child>rclavicle_body</child>
@@ -1545,55 +1404,6 @@
             <limit>
                 <lower>-1.57080</lower>
                 <upper>1.57080</upper>
-            </limit>
-            <dynamics>
-                <damping>1</damping>
-                <friction>0</friction>
-                <spring_rest_position>0</spring_rest_position>
-                <spring_stiffness>0</spring_stiffness>
-            </dynamics>
-        </axis>
-        <axis2>
-            <xyz>0 0 1</xyz>
-            <limit>
-                <lower>-0.78540</lower>
-                <upper>0.78540</upper>
-            </limit>
-            <dynamics>
-                <damping>1</damping>
-                <friction>0</friction>
-                <spring_rest_position>0</spring_rest_position>
-                <spring_stiffness>0</spring_stiffness>
-            </dynamics>
-        </axis2>
-    </joint>
-    <joint name="rfingers" type="revolute">
-        <parent>rhand_body</parent>
-        <child>rfingers_body</child>
-        <transformation>0 0 0 0 0 0</transformation>
-        <axis>
-            <xyz>1 0 0</xyz>
-            <limit>
-                <lower>0.00000</lower>
-                <upper>1.57080</upper>
-            </limit>
-            <dynamics>
-                <damping>1</damping>
-                <friction>0</friction>
-                <spring_rest_position>0</spring_rest_position>
-                <spring_stiffness>0</spring_stiffness>
-            </dynamics>
-        </axis>
-    </joint>
-    <joint name="rthumb" type="universal">
-        <parent>rwrist_body</parent>
-        <child>rthumb_body</child>
-        <transformation>0 0 0 0 0 0</transformation>
-        <axis>
-            <xyz>1 0 0</xyz>
-            <limit>
-                <lower>-0.78540</lower>
-                <upper>0.78540</upper>
             </limit>
             <dynamics>
                 <damping>1</damping>
