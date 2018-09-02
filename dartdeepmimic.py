@@ -25,6 +25,7 @@ REFMOTION_DT = 1 / 120
 # ROOT_KEY isn't customizeable. It should correspond
 # to the name of the root node in the amc (which is usually "root")
 ROOT_KEY = "root"
+ROOT_THETA_ORDER = "xyz"
 
 class StateMode:
     """
@@ -387,7 +388,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         root_translation = generalized_q[3:6]
         expanded_angles = {}
         expanded_angles[ROOT_THETA_KEY] = expand_angle(generalized_q[0:3],
-                                                       "xyz")
+                                                       ROOT_THETA_ORDER)
         for dof_name in self.metadict:
             if dof_name == ROOT_KEY:
                 continue
@@ -480,6 +481,14 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             raise RuntimeError("Unrecognized or unimplemented action code: "
                                + str(actionmode))
 
+    def _expanded_euler_to_dofvector(self, expanded_euler):
+
+        if len(expanded_euler) != len(self._actuated_dof_names):
+            raise RuntimeError("Mismatch between number of actuated dofs and angles passed in")
+        return np.concatenate([compress_angle(expanded_euler[i],
+                                              self.metadict[key][1])
+                               for i, key in enumerate(self._actuated_dof_names)])
+
     def reward(self, skel, framenum):
 
         self.sync_skel_to_frame(self.ref_skel, framenum, 0, 0)
@@ -539,13 +548,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         return(reward)
 
-    def expanded_euler_to_dofvector(self, expanded_euler):
-
-        if len(expanded_euler) != len(self._actuated_dof_names):
-            raise RuntimeError("Mismatch between number of actuated dofs and angles passed in")
-        return np.concatenate([compress_angle(expanded_euler[i],
-                                              self.metadict[key][1])
-                               for i, key in enumerate(self._actuated_dof_names)])
 
     def doftorques_by_pd(self, expanded_target_euler, expanded_current_euler,
                       expanded_old_euler):
@@ -558,10 +560,9 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         derror = (current_error - past_error) / REFMOTION_DT
 
         # compression phase
-        error_dofvector = self.expanded_euler_to_dofvector(current_error)
+        error_dofvector = self._expanded_euler_to_dofvector(current_error)
 
-        derror_dofvector = self.expanded_euler_to_dofvector(derror)
-
+        derror_dofvector = self._expanded_euler_to_dofvector(derror)
 
         ret = self.p_gain * error_dofvector + self.d_gain * derror_dofvector
         ret = np.clip(ret, -self.max_action_magnitude, self.max_action_magnitude)
@@ -598,7 +599,12 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         expanded_current_euler = self.gencoordtuple_as_pos_and_eulerlist(self.control_skel)[0][1][1:]
 
+        # HOLD YOUR FUCKING HORSES
+        # TODO THIS IS A REDICULOUSLY HUGE BUG
+        # IT"S TEH" EXACT SAME AS ABOVE HOLY SHIT
         expanded_old_euler = self.gencoordtuple_as_pos_and_eulerlist(self.control_skel)[0][1][1:]
+
+        print(expanded_current_euler == expanded_old_euler)
 
         if not len(expanded_old_euler) == len(expanded_current_euler) == len(expanded_target_euler):
             raise RuntimeError("Mismatch between number of angles")
@@ -606,9 +612,9 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         doftorques = self.doftorques_by_pd(expanded_target_euler,
                                            expanded_current_euler,
                                            expanded_old_euler)
-        skeltau = self.doftorques_to_skeltau(doftorques)
 
-        self.do_simulation(skeltau, self.simsteps_per_dataframe)
+        self.do_simulation(self.doftorques_to_skeltau(doftorques),
+                           self.simsteps_per_dataframe)
 
         newstate = self._get_obs()
         reward = self.reward(self.control_skel, self.framenum)
@@ -760,7 +766,7 @@ if __name__ == "__main__":
     # env.reward(env.control_skel, 0)
 
     # PID Test stuff
-    start_frame = 1
+    start_frame = 0
     target_frame = 1
     env.sync_skel_to_frame(env.control_skel, target_frame, 0, 0)
     target_state = env.gencoordtuple_as_pos_and_eulerlist(env.control_skel)
