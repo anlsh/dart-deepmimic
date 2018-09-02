@@ -132,29 +132,29 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self._innerweights = [self.pos_inner_weight, self.vel_inner_weight,
                         self.ee_inner_weight, self.com_inner_weight]
 
-        self.__control_skeleton_path = control_skeleton_path
+        self._control_skeleton_path = control_skeleton_path
 
         ###########################################################
         # Extract dof info so that states can be converted easily #
         ###########################################################
 
-        asf = ASF_Skeleton(asf_path)
-
         self.ref_skel = pydart.World(REFMOTION_DT / self.simsteps_per_dataframe,
                              control_skeleton_path).skeletons[-1]
+
+        asf = ASF_Skeleton(asf_path)
         raw_framelist = AMC(reference_motion_path).frames
         self.metadict = get_metadict(raw_framelist[0],
                                      self.ref_skel.dofs, asf)
         self._actuated_dof_names = [key for key in self.metadict
                               if key != ROOT_KEY]
 
-        self.ref_euler_pos = None
-        self.ref_euler_vel = None
-        self.ref_quat_pos = None
+        self.ref_euler_posframes = None
+        self.ref_euler_velframes = None
+        self.ref_quat_posframes = None
         self.num_frames = 0
 
         self.num_frames, frames = self.construct_frames(raw_framelist)
-        self.ref_euler_pos, self.ref_euler_vel, self.ref_quat_pos = frames
+        self.ref_euler_posframes, self.ref_euler_velframes, self.ref_quat_posframes = frames
 
         self._end_effector_indices = [i for i, node
                                        in enumerate(self.ref_skel.bodynodes)
@@ -171,11 +171,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         # Calculate the size of the neural network output vector
         self.action_dim = ActionMode.lengths[actionmode] \
-                          * (len(self.metadict) - 1)
-        self.action_limits = [self.max_action_magnitude
-                              * np.ones(self.action_dim),
-                              -self.max_action_magnitude
-                              * np.ones(self.action_dim)]
+                          * (len(self._actuated_dof_names))
 
         self.control_skel = self.ref_skel
         self.load_world()
@@ -183,7 +179,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         ##################################
         # Simulation stuff for DeepMimic #
         ##################################
-        self.old_skelq = self.control_skel.q
 
         self.p_gain = p_gain
         self.d_gain = d_gain
@@ -191,15 +186,15 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         if self.p_gain < 0 or self.d_gain < 0:
             raise RuntimeError("All PID gains should be positive")
 
-        self.__P = self.p_gain * np.ndarray(self.control_skel.num_dofs())
-        self.__D = self.d_gain * np.ndarray(self.control_skel.num_dofs())
-
     def load_world(self):
 
-        super(DartDeepMimicEnv, self).__init__([self.__control_skeleton_path],
+        action_limits = 10 * pi * np.ones(self.action_dim)
+        action_limits = [-action_limits, action_limits]
+
+        super(DartDeepMimicEnv, self).__init__([self._control_skeleton_path],
                                                1,
                                                len(self._get_obs()),
-                                               self.action_limits,
+                                               action_limits,
                                                REFMOTION_DT / self.simsteps_per_dataframe,
                                                "parameter",
                                                "continuous",
@@ -207,13 +202,14 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                                                not self.__visualize)
         self.control_skel = self.dart_world.skeletons[-1]
 
+        # TODO Enable self collisions
         # Have to explicitly enable self collisions
-        self.control_skel.set_self_collision_check(True)
+        # self.control_skel.set_self_collision_check(True)
 
         # TODO Parse damping from the skel file
-        # TODO Add parameters for default damping, spring coefficients
-        # TODO dont want to damp the root joint
         for joint in self.control_skel.joints:
+            if joint.name == ROOT_KEY:
+                continue
             for index in range(joint.num_dofs()):
                 joint.set_damping_coefficient(index, self.default_damping)
                 joint.set_spring_stiffness(index, self.default_spring)
@@ -260,6 +256,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             pos_frame[0] = (ROOT_KEY,
                             np.concatenate([curr_root_pos,
                                             sd2rr(curr_root_theta)]))
+            # TODO EMERGENCY Validate that this subtraction of angles works...
             vel_frame[0] = (ROOT_KEY,
                             np.concatenate([np.subtract(curr_root_pos,
                                                         old_root_pos),
@@ -284,8 +281,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                 pos_frame[joint_index] = (joint_name, current_rotation_euler)
                 vel_frame[joint_index] = (joint_name, velocity_rotation_euler)
 
-
-
             pos_frames[i] = pos_frame
             vel_framelist[i] = vel_frame
 
@@ -306,8 +301,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         noise added to them
         """
         if frame_index is not None:
-            pos_frame = self.ref_euler_pos[frame_index]
-            vel_frame = self.ref_euler_vel[frame_index]
+            pos_frame = self.ref_euler_posframes[frame_index]
+            vel_frame = self.ref_euler_velframes[frame_index]
 
         def map_dofs(dof_list, pos_list, vel_list, pstdv, vstdv):
             """
@@ -489,7 +484,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         self.sync_skel_to_frame(self.ref_skel, framenum, 0, 0)
         pos, vel = self.gencoordtuple_as_pos_and_qautlist(skel)
-        refpos, refvel = self.ref_quat_pos[framenum]
+        refpos, refvel = self.ref_quat_posframes[framenum]
 
         pos, angles = pos
         dpos, dangles = vel
@@ -560,7 +555,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         current_error = expanded_target_euler - expanded_current_euler
         past_error = expanded_target_euler - expanded_old_euler
 
-        derror = (current_error - past_error) / self.dt
+        derror = (current_error - past_error) / REFMOTION_DT
 
         # compression phase
         error_dofvector = self.expanded_euler_to_dofvector(current_error)
@@ -613,8 +608,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                                            expanded_old_euler)
         skeltau = self.doftorques_to_skeltau(doftorques)
 
-        self.old_skelq = self.control_skel.q
-
         self.do_simulation(skeltau, self.simsteps_per_dataframe)
 
         newstate = self._get_obs()
@@ -642,7 +635,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         self.sync_skel_to_frame(self.control_skel, self.framenum,
                                 pos_stdv, vel_stdv)
-        self.old_skelq = self.control_skel.q
 
         return self._get_obs()
 
@@ -748,17 +740,17 @@ if __name__ == "__main__":
                            args.simsteps_per_dataframe,
                            args.window_width, args.window_height)
 
-    obs = env.reset(0, False)
-    done = False
-    i = 0
-    while True:
-        env.render()
-        obs = env.reset(i, False)
-        # a = env.action_space.sample()
-        # state, reward, done, info = env.step(a)
-        i += 1
-        if done:
-            env.reset()
+    # obs = env.reset(0, False)
+    # done = False
+    # i = 0
+    # while True:
+    #     env.render()
+    #     obs = env.reset(i, False)
+    #     # a = env.action_space.sample()
+    #     # state, reward, done, info = env.step(a)
+    #     i += 1
+    #     if done:
+    #         env.reset()
 
     # for i in range(env.num_frames):
     #     env.reset(i, False)
@@ -768,18 +760,16 @@ if __name__ == "__main__":
     # env.reward(env.control_skel, 0)
 
     # PID Test stuff
-    # start_frame = 100
-    # target_frame = 100
-    # env.sync_skel_to_frame(env.control_skel, target_frame, False)
-    # target_state = env.gencoordtuple_as_pos_and_eulerlist(env.control_skel)
-    # pos, vel = target_state
-    # target_angles = pos[1]
+    start_frame = 1
+    target_frame = 1
+    env.sync_skel_to_frame(env.control_skel, target_frame, 0, 0)
+    target_state = env.gencoordtuple_as_pos_and_eulerlist(env.control_skel)
+    pos, vel = target_state
+    target_angles = pos[1][1:]
 
-    # obs = env.reset(start_frame, True)
-    # env.sync_skel_to_frame(env.control_skel, start_frame, False)
-    # env.old_skelq = env.control_skel.q
+    obs = env.reset(start_frame, 0, 0)
 
-    # while True:
-    #     env.framenum = target_frame
-    #     env.step(target_angles[1:])
-    #     env.render()
+    while True:
+        env.framenum = target_frame
+        env.step(np.concatenate(target_angles))
+        env.render()
