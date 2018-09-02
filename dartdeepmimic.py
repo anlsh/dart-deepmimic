@@ -177,6 +177,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.control_skel = self.ref_skel
         self.load_world()
 
+        self.__expanded_old_euler = None
+
         ##################################
         # Simulation stuff for DeepMimic #
         ##################################
@@ -599,19 +601,17 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         expanded_current_euler = self.gencoordtuple_as_pos_and_eulerlist(self.control_skel)[0][1][1:]
 
-        # HOLD YOUR FUCKING HORSES
-        # TODO THIS IS A REDICULOUSLY HUGE BUG
-        # IT"S TEH" EXACT SAME AS ABOVE HOLY SHIT
-        expanded_old_euler = self.gencoordtuple_as_pos_and_eulerlist(self.control_skel)[0][1][1:]
+        if self.__expanded_old_euler is None:
+            self.__expanded_old_euler = expanded_current_euler
 
-        print(expanded_current_euler == expanded_old_euler)
-
-        if not len(expanded_old_euler) == len(expanded_current_euler) == len(expanded_target_euler):
+        if not len(self.__expanded_old_euler) == len(expanded_current_euler) == len(expanded_target_euler):
             raise RuntimeError("Mismatch between number of angles")
 
         doftorques = self.doftorques_by_pd(expanded_target_euler,
                                            expanded_current_euler,
-                                           expanded_old_euler)
+                                           self.__expanded_old_euler)
+
+        self.__expanded_old_euler = expanded_current_euler
 
         self.do_simulation(self.doftorques_to_skeltau(doftorques),
                            self.simsteps_per_dataframe)
@@ -639,6 +639,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             framenum = random.randint(0, self.num_frames - 1)
         self.framenum = framenum
 
+        self.__expanded_old_euler = None
         self.sync_skel_to_frame(self.control_skel, self.framenum,
                                 pos_stdv, vel_stdv)
 
@@ -767,7 +768,7 @@ if __name__ == "__main__":
 
     # PID Test stuff
     start_frame = 0
-    target_frame = 1
+    target_frame = 0
     env.sync_skel_to_frame(env.control_skel, target_frame, 0, 0)
     target_state = env.gencoordtuple_as_pos_and_eulerlist(env.control_skel)
     pos, vel = target_state
