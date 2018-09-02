@@ -1,9 +1,5 @@
-__author__ = 'anish'
-
-
 from amc import AMC
 from asf_skeleton import ASF_Skeleton
-from gym import utils
 from gym.envs.dart import dart_env
 from joint import expand_angle, compress_angle
 from math import exp, pi, atan2
@@ -27,6 +23,7 @@ REFMOTION_DT = 1 / 120
 ROOT_KEY = "root"
 ROOT_THETA_ORDER = "xyz"
 
+
 class StateMode:
     """
     Just a convenience enum
@@ -38,6 +35,7 @@ class StateMode:
     MIX_EULER = 3
     MIX_QUAT = 4
     MIX_AXIS = 5
+
 
 class ActionMode:
     """
@@ -51,12 +49,15 @@ class ActionMode:
     # type. For instance euler is 3 numbers, a quaternion is 4
     lengths = [3, 4, 4]
 
+
 def quaternion_difference(a, b):
     return quaternion_multiply(b, quaternion_inverse(a))
+
 
 def quaternion_rotation_angle(a):
     # Returns the rotation of a quaternion about its axis in radians
     return atan2(norm(a[1:]), a[0])
+
 
 def get_metadict(amc_frame, skel_dofs, asf):
     """
@@ -128,10 +129,12 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.com_inner_weight = com_inner_weight
 
         self._outerweights = [self.pos_weight, self.vel_weight,
-                        self.ee_weight, self.com_weight]
+                              self.ee_weight, self.com_weight]
 
-        self._innerweights = [self.pos_inner_weight, self.vel_inner_weight,
-                        self.ee_inner_weight, self.com_inner_weight]
+        self._innerweights = [self.pos_inner_weight,
+                              self.vel_inner_weight,
+                              self.ee_inner_weight,
+                              self.com_inner_weight]
 
         self._control_skeleton_path = control_skeleton_path
 
@@ -140,7 +143,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         ###########################################################
 
         self.ref_skel = pydart.World(REFMOTION_DT / self.simsteps_per_dataframe,
-                             control_skeleton_path).skeletons[-1]
+                                     control_skeleton_path).skeletons[-1]
 
         asf = ASF_Skeleton(asf_path)
         raw_framelist = AMC(reference_motion_path).frames
@@ -271,8 +274,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             joint_index = 0
             for joint_name, curr_joint_angles in current_frame[1:]:
                 joint_index += 1
-                dof_indices, order = self.metadict[joint_name]
-                start_index, end_index = dof_indices[0], dof_indices[-1]
+                _, order = self.metadict[joint_name]
 
                 curr_theta = expand_angle(curr_joint_angles, order)
                 old_theta = expand_angle(old_frame[joint_index][1], order)
@@ -294,7 +296,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         return num_frames, (pos_frames, vel_framelist, quat_frames)
 
     def sync_skel_to_frame(self, skel, frame_index, pos_stdv, vel_stdv,
-                           pos_frame = None, vel_frame = None):
+                           pos_frame=None, vel_frame=None):
         """
         Given a skeleton and mocap frame index, use self.metadict to sync all
         the dofs. Will work on different skeleton objects as long as they're
@@ -348,15 +350,13 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         control_skel is used
         """
 
-        if skel == None:
+        if skel is None:
             skel = self.control_skel
         else:
             # There's not any reason I can think of to actually use any other
             # skeleton, the print method is just here so I never accidentally
             # replace it
             print("You sure you want to be using _get_obs with the non-control skeleton?")
-
-        state = None
 
         if self.statemode == StateMode.GEN_EULER:
             state = self.gencoordtuple_as_pos_and_eulerlist(
@@ -369,7 +369,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                 skel)
         else:
             raise RuntimeError("Unimplemented state code: "
-                               + str(statemode))
+                               + str(self.statemode))
 
         pos, vel = state
         posvector = np.concatenate([pos[0], np.concatenate(pos[1])])
@@ -388,9 +388,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         """
 
         root_translation = generalized_q[3:6]
-        expanded_angles = {}
-        expanded_angles[ROOT_THETA_KEY] = expand_angle(generalized_q[0:3],
-                                                       ROOT_THETA_ORDER)
+        expanded_angles = {ROOT_THETA_KEY: expand_angle(generalized_q[0:3],
+                                                        ROOT_THETA_ORDER)}
         for dof_name in self.metadict:
             if dof_name == ROOT_KEY:
                 continue
@@ -438,21 +437,12 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         return (pos, angles), (dpos, dangles)
 
-
     def gencoordtuple_as_pos_and_axisanglelist(self, skel):
         """
         Same as gencoordtuple_as_pos_and_eulerlist, but with the angles
         converted to axisangle
         """
         raise NotImplementedError()
-        pos_info, vel_info = self.gencoordtuple_as_pos_and_eulerlist(skel)
-        pos, angles = pos_info
-        dpos, dangles = vel_info
-
-        angles = [axisangle_from_euler(*t, axes="rxyz") for t in angles]
-        dangles = [axisangle_from_euler(*t, axes="rxyz") for t in dangles]
-
-        return (pos, angles), (dpos, dangles)
 
     def _expanded_euler_from_action(self, raw_action):
         """
@@ -481,7 +471,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                     for t in output_angles]
         else:
             raise RuntimeError("Unrecognized or unimplemented action code: "
-                               + str(actionmode))
+                               + str(self.actionmode))
 
     def _expanded_euler_to_dofvector(self, expanded_euler):
 
@@ -543,16 +533,15 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         diffmags = [posdiffmag, veldiffmag, eediffmag, comdiffmag]
 
+        reward = sum([ow * exp(iw * diff)
+                      for ow, iw, diff in zip(self._outerweights,
+                                              self._innerweights,
+                                              diffmags)])
 
-        reward = sum([ow * exp(iw * diff) for ow, iw, diff in zip(self._outerweights,
-                                                                self._innerweights,
-                                                                diffmags)])
-
-        return(reward)
-
+        return reward
 
     def doftorques_by_pd(self, expanded_target_euler, expanded_current_euler,
-                      expanded_old_euler):
+                         expanded_old_euler):
         """
         # TODO Document
         """
@@ -630,9 +619,9 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
     def reset(self, framenum=None, pos_stdv=None, vel_stdv=None):
 
-        if pos_stdv == None:
+        if pos_stdv is None:
             pos_stdv = self.pos_init_noise
-        if vel_stdv == None:
+        if vel_stdv is None:
             vel_stdv = self.vel_init_noise
 
         if framenum is None:
@@ -693,7 +682,8 @@ if __name__ == "__main__":
                         help="Number of simulation steps per frame of mocap" +
                         " data")
     parser.add_argument('--reward-cutoff', type=float, default=0.1,
-                        help="Terminate the episode when rewards below this threshold are calculated. Should be in range (0, 1)")
+                        help="Terminate the episode when rewards below this " +
+                             "threshold are calculated. Should be in range (0, 1)")
     parser.add_argument('--window-width', type=int, default=80,
                         help="Window width")
     parser.add_argument('--window-height', type=int, default=45,
