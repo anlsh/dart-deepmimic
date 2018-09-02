@@ -539,9 +539,10 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         if len(expanded_euler) != len(self._actuated_dof_names):
             raise RuntimeError("Mismatch between number of actuated dofs and angles passed in")
-        return np.concatenate([compress_angle(expanded_euler[i],
-                                              self.metadict[key][1])
-                               for i, key in enumerate(self._actuated_dof_names)])
+        ret = np.concatenate([compress_angle(expanded_euler[i],
+                                             self.metadict[key][1])
+                              for i, key in enumerate(self._actuated_dof_names)])
+        return ret
 
     def step(self, action_vector):
         """
@@ -715,6 +716,7 @@ if __name__ == "__main__":
     target_angles = pos[1][1:]
 
     obs = env.sync_skel_to_frame(env.control_skel, start_frame, 0, 0)
+    print(env.control_skel.q)
 
     while True:
         env.framenum = target_frame
