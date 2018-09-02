@@ -445,43 +445,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         """
         raise NotImplementedError()
 
-    def _expanded_euler_from_action(self, raw_action):
-        """
-        Given a 1-dimensional vector representing a neural network output,
-        construct from it a set of target angles for the ACTUATED degrees of
-        freedom
-        (the ones in metadict, minus the root)
-
-        Because of how action_dim is defined up in __init__, raw_action
-        should always have the correct dimensions
-        """
-
-        # Reshape into a list of 3-vectors
-        output_angles = np.reshape(raw_action,
-                                   (-1, ActionMode.lengths[self.actionmode]))
-
-        # TODO Normalize and validate values to make sure they're actually
-        # valid euler angles / quaternions / whatever
-        if self.actionmode == ActionMode.GEN_EULER:
-            return output_angles
-        elif self.actionmode == ActionMode.GEN_QUAT:
-            return [euler_from_quaternion(*t, axes="rxyz")
-                    for t in output_angles]
-        elif self.actionmode == ActionMode.GEN_AXIS:
-            return [euler_from_axisangle(*t, axes="rxyz")
-                    for t in output_angles]
-        else:
-            raise RuntimeError("Unrecognized or unimplemented action code: "
-                               + str(self.actionmode))
-
-    def _expanded_euler_to_dofvector(self, expanded_euler):
-
-        if len(expanded_euler) != len(self._actuated_dof_names):
-            raise RuntimeError("Mismatch between number of actuated dofs and angles passed in")
-        return np.concatenate([compress_angle(expanded_euler[i],
-                                              self.metadict[key][1])
-                               for i, key in enumerate(self._actuated_dof_names)])
-
     def reward(self, skel, framenum):
 
         self.sync_skel_to_frame(self.ref_skel, framenum, 0, 0)
@@ -541,43 +504,42 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         return reward
 
-    def doftorques_by_pd(self, expanded_target_euler, expanded_current_euler,
-                         expanded_old_euler):
+    def _expanded_euler_from_action(self, raw_action):
         """
-        # TODO Document
-        """
-        current_error = expanded_target_euler - expanded_current_euler
-        past_error = expanded_target_euler - expanded_old_euler
+        Given a 1-dimensional vector representing a neural network output,
+        construct from it a set of target angles for the ACTUATED degrees of
+        freedom
+        (the ones in metadict, minus the root)
 
-        derror = (current_error - past_error) / REFMOTION_DT
-
-        # compression phase
-        error_dofvector = self._expanded_euler_to_dofvector(current_error)
-
-        derror_dofvector = self._expanded_euler_to_dofvector(derror)
-
-        ret = self.p_gain * error_dofvector + self.d_gain * derror_dofvector
-        ret = np.clip(ret, -self.max_action_magnitude, self.max_action_magnitude)
-
-        return ret
-
-    def doftorques_to_skeltau(self, doftorques):
-        """
-        # TODO Document
+        Because of how action_dim is defined up in __init__, raw_action
+        should always have the correct dimensions
         """
 
-        skeltau_blank = np.zeros(self.control_skel.num_dofs())
+        # Reshape into a list of 3-vectors
+        output_angles = np.reshape(raw_action,
+                                   (-1, ActionMode.lengths[self.actionmode]))
 
-        doftorque_index = 0
-        for index, key in enumerate(self._actuated_dof_names):
-            dof_indices = self.metadict[key][0]
-            f, l = dof_indices[0], dof_indices[-1] + 1
-            num_indices = l - f
-            skeltau_blank[f:l] = doftorques[doftorque_index :
-                                            doftorque_index + num_indices]
-            doftorque_index += num_indices
+        # TODO Normalize and validate values to make sure they're actually
+        # valid euler angles / quaternions / whatever
+        if self.actionmode == ActionMode.GEN_EULER:
+            return output_angles
+        elif self.actionmode == ActionMode.GEN_QUAT:
+            return [euler_from_quaternion(*t, axes="rxyz")
+                    for t in output_angles]
+        elif self.actionmode == ActionMode.GEN_AXIS:
+            return [euler_from_axisangle(*t, axes="rxyz")
+                    for t in output_angles]
+        else:
+            raise RuntimeError("Unrecognized or unimplemented action code: "
+                               + str(self.actionmode))
 
-        return skeltau_blank
+    def _expanded_euler_to_dofvector(self, expanded_euler):
+
+        if len(expanded_euler) != len(self._actuated_dof_names):
+            raise RuntimeError("Mismatch between number of actuated dofs and angles passed in")
+        return np.concatenate([compress_angle(expanded_euler[i],
+                                              self.metadict[key][1])
+                               for i, key in enumerate(self._actuated_dof_names)])
 
     def step(self, action_vector):
         """
@@ -585,24 +547,13 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         """
 
         expanded_target_euler = self._expanded_euler_from_action(action_vector)
-        # TODO Function calcs velocity component for no reason
-        expanded_current_euler = self.gencoordtuple_as_pos_and_eulerlist(self.control_skel)[0][1][1:]
+        dof_targets = self._expanded_euler_to_dofvector(expanded_target_euler)
 
-        if self.__expanded_old_euler is None:
-            self.__expanded_old_euler = expanded_current_euler
+        tau = self.p_gain * (dof_targets - self.control_skel.q[6:]) \
+              - self.d_gain * (self.control_skel.dq[6:])
+        tau = np.clip(tau, -self.max_action_magnitude, self.max_action_magnitude)
 
-        if not len(self.__expanded_old_euler) == len(expanded_current_euler) == len(expanded_target_euler):
-            raise RuntimeError("Mismatch between number of angles")
-
-        doftorques = self.doftorques_by_pd(expanded_target_euler,
-                                           expanded_current_euler,
-                                           self.__expanded_old_euler)
-
-        print(doftorques)
-
-        self.__expanded_old_euler = expanded_current_euler
-
-        self.do_simulation(self.doftorques_to_skeltau(doftorques),
+        self.do_simulation(np.concatenate([np.zeros(6), tau]),
                            self.simsteps_per_dataframe)
 
         newstate = self._get_obs()
