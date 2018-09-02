@@ -15,8 +15,7 @@ import pydart2 as pydart
 import random
 
 # Customizable parameters
-ROOT_THETA_KEY = "root_theta"
-ROOT_POS_KEY = "root_pos"
+ROOT_THETA_KEY = "root"
 REFMOTION_DT = 1 / 120
 
 # ROOT_KEY isn't customizeable. It should correspond
@@ -86,6 +85,7 @@ def get_metadict(amc_frame, skel_dofs, asf):
 
     return dof_data
 
+
 class DartDeepMimicEnv(dart_env.DartEnv):
 
     def __init__(self, control_skeleton_path, asf_path,
@@ -99,7 +99,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                  vel_weight, vel_inner_weight,
                  ee_weight, ee_inner_weight,
                  com_weight, com_inner_weight,
-                 max_action_magnitude, default_damping,
+                 max_torque, default_damping,
                  default_spring,
                  visualize, simsteps_per_dataframe,
                  screen_width,
@@ -110,7 +110,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.simsteps_per_dataframe = simsteps_per_dataframe
         self.pos_init_noise = pos_init_noise
         self.vel_init_noise = vel_init_noise
-        self.max_action_magnitude = max_action_magnitude
+        self.max_torque = max_torque
         self.default_damping = default_damping
         self.default_spring = default_spring
         self.reward_cutoff = reward_cutoff
@@ -150,8 +150,11 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         raw_framelist = AMC(reference_motion_path).frames
         self.metadict = get_metadict(raw_framelist[0],
                                      self.ref_skel.dofs, asf)
-        self._actuated_dof_names = [key for key in self.metadict
-                              if key != ROOT_KEY]
+
+        # The sorting is absolutely critical
+        self._dof_names = [key for key in self.metadict]
+        self._dof_names.sort(key=lambda x:self.metadict[x][0][0])
+        self._actuated_dof_names = self._dof_names[1:]
 
         self.ref_euler_posframes = None
         self.ref_euler_velframes = None
@@ -181,8 +184,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.control_skel = self.ref_skel
         self.load_world()
 
-        self.__expanded_old_euler = None
-
         ##################################
         # Simulation stuff for DeepMimic #
         ##################################
@@ -195,6 +196,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
     def load_world(self):
 
+        # TODO Actually do action limits somehow...
         action_limits = 10 * pi * np.ones(self.action_dim)
         action_limits = [-action_limits, action_limits]
 
@@ -213,7 +215,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # Have to explicitly enable self collisions
         # self.control_skel.set_self_collision_check(True)
 
-        # TODO Parse damping from the skel file
         for joint in self.control_skel.joints:
             if joint.name == ROOT_KEY:
                 continue
@@ -344,6 +345,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             map_dofs(skel.dofs[start_index : end_index + 1],
                      joint_angles, joint_velocities, pos_stdv, vel_stdv)
 
+
     def _get_obs(self, skel=None):
         """
         Return a 1-dimensional vector of the skeleton's state, as defined by
@@ -377,29 +379,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         velvector = np.concatenate([vel[0], np.concatenate(vel[1])])
         return np.concatenate([posvector, velvector])
 
-    def _genq_to_pos_and_eulerdict(self, generalized_q):
-        """
-        @type generalized_q: A vector of dof values, as given by skel.q or .dq
-
-        @return: A tuple where
-            - index 0 is the root positional component
-            - [1] is a dictionary mapping dof names to fully specified euler
-              angles in xyz order
-        @type: Tuple
-        """
-
-        root_translation = generalized_q[3:6]
-        expanded_angles = {ROOT_THETA_KEY: expand_angle(generalized_q[0:3],
-                                                        ROOT_THETA_ORDER)}
-        for dof_name in self.metadict:
-            if dof_name == ROOT_KEY:
-                continue
-            indices, order = self.metadict[dof_name]
-            fi = indices[0]
-            li = indices[-1]
-            expanded_angles[dof_name] = expand_angle(generalized_q[fi:li],
-                                                     order)
-        return root_translation, expanded_angles
 
     def gencoordtuple_as_pos_and_eulerlist(self, skeleton):
         """
@@ -414,14 +393,37 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         fully-specified euler angles for each of the dofs (in a consistent but
         opaque order)
         """
+        def _genq_to_pos_and_eulerdict(generalized_q):
+            """
+            @type generalized_q: A vector of dof values, as given by skel.q or .dq
 
-        pos, angles_dict = self._genq_to_pos_and_eulerdict(skeleton.q)
-        dpos, dangles_dict = self._genq_to_pos_and_eulerdict(skeleton.dq)
+            @return: A tuple where
+                - index 0 is the root positional component
+                - [1] is a dictionary mapping dof names to fully specified euler
+                angles in xyz order
+            @type: Tuple
+            """
 
-        angles = np.array(list(angles_dict.values()))
-        dangles = np.array(list(dangles_dict.values()))
+            root_translation = generalized_q[3:6]
+            expanded_angles = {ROOT_THETA_KEY: expand_angle(generalized_q[0:3],
+                                                            ROOT_THETA_ORDER)}
+            for dof_name in self._actuated_dof_names:
+                indices, order = self.metadict[dof_name]
+                fi = indices[0]
+                li = indices[-1]
+                expanded_angles[dof_name] = expand_angle(generalized_q[fi:li],
+                                                        order)
+            return root_translation, expanded_angles
+
+
+        pos, angles_dict = _genq_to_pos_and_eulerdict(skeleton.q)
+        dpos, dangles_dict = _genq_to_pos_and_eulerdict(skeleton.dq)
+
+        angles = np.array([angles_dict[key] for key in self._dof_names])
+        dangles = np.array([dangles_dict[key] for key in self._dof_names])
 
         return (pos, angles), (dpos, dangles)
+
 
     def gencoordtuple_as_pos_and_qautlist(self, skel):
         """
@@ -551,7 +553,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         tau = self.p_gain * (dof_targets - self.control_skel.q[6:]) \
               - self.d_gain * (self.control_skel.dq[6:])
-        tau = np.clip(tau, -self.max_action_magnitude, self.max_action_magnitude)
+        tau = np.clip(tau, -self.max_torque, self.max_torque)
 
         self.do_simulation(np.concatenate([np.zeros(6), tau]),
                            self.simsteps_per_dataframe)
@@ -579,7 +581,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             framenum = random.randint(0, self.num_frames - 1)
         self.framenum = framenum
 
-        self.__expanded_old_euler = None
         self.sync_skel_to_frame(self.control_skel, self.framenum,
                                 pos_stdv, vel_stdv)
 
@@ -591,9 +592,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self._get_viewer().scene.tb.trans[0] = 0
 
     def render(self, mode='human', close=False):
-            # if not self.disableViewer:
-        # if True:
-        #     self._get_viewer().scene.tb.trans[0] = -self.dart_world.skeletons[-1].com()[0]*1
         if close:
             if self.viewer is not None:
                 self._get_viewer().close()
@@ -605,6 +603,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             return data
         elif mode == 'human':
             self._get_viewer().runSingleStep()
+
 
 if __name__ == "__main__":
 
@@ -623,9 +622,9 @@ if __name__ == "__main__":
                         help="Code for the action representation")
     parser.add_argument('--visualize', default=False,
                         help="DOESN'T DO ANYTHING RIGHT NOW: True if you want a window to render to")
-    parser.add_argument('--max-action-magnitude', type=float, default=90,
+    parser.add_argument('--max-torque', type=float, default=90,
                         help="Maximum torque")
-    parser.add_argument('--default-damping', type=float, default=2,
+    parser.add_argument('--default-damping', type=float, default=80,
                         help="Default damping coefficient for joints")
     parser.add_argument('--default-spring', type=float, default=0,
                         help="Default spring stiffness for joints")
@@ -682,7 +681,7 @@ if __name__ == "__main__":
                            args.vel_weight, args.vel_inner_weight,
                            args.ee_weight, args.ee_inner_weight,
                            args.com_weight, args.com_inner_weight,
-                           args.max_action_magnitude,
+                           args.max_torque,
                            args.default_damping, args.default_spring,
                            args.visualize,
                            args.simsteps_per_dataframe,
@@ -708,14 +707,14 @@ if __name__ == "__main__":
     # env.reward(env.control_skel, 0)
 
     # PID Test stuff
-    start_frame = 1
-    target_frame = 1
+    start_frame = 0
+    target_frame = 0
     env.sync_skel_to_frame(env.control_skel, target_frame, 0, 0)
     target_state = env.gencoordtuple_as_pos_and_eulerlist(env.control_skel)
     pos, vel = target_state
     target_angles = pos[1][1:]
 
-    obs = env.reset(start_frame, 0, 0)
+    obs = env.sync_skel_to_frame(env.control_skel, start_frame, 0, 0)
 
     while True:
         env.framenum = target_frame
