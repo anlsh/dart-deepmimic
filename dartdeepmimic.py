@@ -1,3 +1,4 @@
+import pdb
 from amc import AMC
 from asf_skeleton import ASF_Skeleton
 from gym.envs.dart import dart_env
@@ -584,10 +585,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         """
 
         expanded_target_euler = self._expanded_euler_from_action(action_vector)
-        # TODO Break up gencoordtuple_as_pos_and_eulerlist so that I can
-        # just grab the positional component without having to calculate
-        # the velocity component for no reason
-
+        # TODO Function calcs velocity component for no reason
         expanded_current_euler = self.gencoordtuple_as_pos_and_eulerlist(self.control_skel)[0][1][1:]
 
         if self.__expanded_old_euler is None:
@@ -599,6 +597,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         doftorques = self.doftorques_by_pd(expanded_target_euler,
                                            expanded_current_euler,
                                            self.__expanded_old_euler)
+
+        print(doftorques)
 
         self.__expanded_old_euler = expanded_current_euler
 
@@ -757,8 +757,8 @@ if __name__ == "__main__":
     # env.reward(env.control_skel, 0)
 
     # PID Test stuff
-    start_frame = 0
-    target_frame = 0
+    start_frame = 1
+    target_frame = 1
     env.sync_skel_to_frame(env.control_skel, target_frame, 0, 0)
     target_state = env.gencoordtuple_as_pos_and_eulerlist(env.control_skel)
     pos, vel = target_state
