@@ -65,17 +65,18 @@ if __name__ == '__main__':
                         help="Code for the action representation")
     parser.add_argument('--visualize', default=False,
                         help="DOESN'T DO ANYTHING RIGHT NOW: True if you want a window to render to")
-    parser.add_argument('--max-action-magnitude', type=float, default=90,
+    parser.add_argument('--max-torque', type=float, default=90,
                         help="Maximum torque")
-    parser.add_argument('--default-damping', type=float, default=2,
+    parser.add_argument('--default-damping', type=float, default=80,
                         help="Default damping coefficient for joints")
     parser.add_argument('--default-spring', type=float, default=0,
                         help="Default spring stiffness for joints")
     parser.add_argument('--simsteps-per-dataframe', type=int, default=10,
                         help="Number of simulation steps per frame of mocap" +
                         " data")
-    parser.add_argument('--reward-cutoff', type=float, default=.2,
-                        help="Terminate the episode when rewards below this threshold are calculated. Should be in range (0, 1)")
+    parser.add_argument('--reward-cutoff', type=float, default=0.1,
+                        help="Terminate the episode when rewards below this " +
+                             "threshold are calculated. Should be in range (0, 1)")
     parser.add_argument('--window-width', type=int, default=80,
                         help="Window width")
     parser.add_argument('--window-height', type=int, default=45,
@@ -123,7 +124,7 @@ if __name__ == '__main__':
                            args.vel_weight, args.vel_inner_weight,
                            args.ee_weight, args.ee_inner_weight,
                            args.com_weight, args.com_inner_weight,
-                           args.max_action_magnitude,
+                           args.max_torque,
                            args.default_damping, args.default_spring,
                            args.visualize,
                            args.simsteps_per_dataframe,

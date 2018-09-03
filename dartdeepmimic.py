@@ -213,7 +213,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         # TODO Enable self collisions
         # Have to explicitly enable self collisions
-        self.control_skel.set_self_collision_check(True)
+        # self.control_skel.set_self_collision_check(True)
 
         for joint in self.control_skel.joints:
             if joint.name == ROOT_KEY:
@@ -711,7 +711,7 @@ if __name__ == "__main__":
 
     # PID Test stuff
     start_frame = 0
-    target_frame = 200
+    target_frame = 0
     env.sync_skel_to_frame(env.control_skel, target_frame, 0, 0)
 
     # [print(dof_name, env.metadict[dof_name]) for dof_name in env._actuated_dof_names]
@@ -723,8 +723,9 @@ if __name__ == "__main__":
     # print("Provided Target Angles\n", target_angles)
 
     obs = env.sync_skel_to_frame(env.control_skel, start_frame, 0, 0)
+    print(env.control_skel.dq)
 
     while True:
         env.framenum = target_frame
-        env.step(np.concatenate(target_angles))
+        s, r, done, info = env.step(np.concatenate(target_angles))
         env.render()
