@@ -1,0 +1,3 @@
+# TRAINING ON ROME
+
+python train_dartdeepmimic.py --control-skel-path $(pwd)/assets/skel/human_pid_test.skel --asf-path $(pwd)/assets/asf/07.asf --ref-motion-path $(pwd)/assets/mocap/07_02.amc --state-mode 0 --visualize false --max-torque 1000 --default-damping 80 --p-gain 1000 --d-gain 1000 --output-params-prefix /tmp/params --num-cpus 4 --initial-params-path /tmp/params/params-fixed2500 |& tee -a RUN.log
