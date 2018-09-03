@@ -539,14 +539,11 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         if len(expanded_euler) != len(self._actuated_dof_names):
             raise RuntimeError("Mismatch between number of actuated dofs and angles passed in")
         # expanded_euler calculated correctly
-        print("Calculated Angle Targets\n", expanded_euler)
+        # print("Calculated Angle Targets\n", expanded_euler)
 
         ret = np.concatenate([compress_angle(expanded_euler[i],
                                              self.metadict[key][1])
                               for i, key in enumerate(self._actuated_dof_names)])
-        print("Calculated Q targets\n")
-        print(ret)
-        exit()
         return ret
 
     def step(self, action_vector):
@@ -714,16 +711,16 @@ if __name__ == "__main__":
 
     # PID Test stuff
     start_frame = 0
-    target_frame = 0
+    target_frame = 200
     env.sync_skel_to_frame(env.control_skel, target_frame, 0, 0)
 
-    [print(dof_name, env.metadict[dof_name]) for dof_name in env._actuated_dof_names]
+    # [print(dof_name, env.metadict[dof_name]) for dof_name in env._actuated_dof_names]
 
     print("Provided Target Q: \n", env.control_skel.q[6:])
-    pos, vel = target_state
     target_state = env.gencoordtuple_as_pos_and_eulerlist(env.control_skel)
+    pos, vel = target_state
     target_angles = pos[1][1:]
-    print("Provided Target Angles\n", target_angles)
+    # print("Provided Target Angles\n", target_angles)
 
     obs = env.sync_skel_to_frame(env.control_skel, start_frame, 0, 0)
 
