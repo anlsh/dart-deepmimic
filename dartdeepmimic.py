@@ -13,6 +13,7 @@ import argparse
 import numpy as np
 import pydart2 as pydart
 import random
+import warnings
 
 # Customizable parameters
 ROOT_THETA_KEY = "root"
@@ -22,6 +23,7 @@ REFMOTION_DT = 1 / 120
 # to the name of the root node in the amc (which is usually "root")
 ROOT_KEY = "root"
 ROOT_THETA_ORDER = "xyz"
+GRAVITY_VECTOR = np.array([0, -9.8, 0])
 
 
 class StateMode:
@@ -104,7 +106,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                  default_spring,
                  visualize, simsteps_per_dataframe,
                  screen_width,
-                 screen_height):
+                 screen_height,
+                 gravity):
 
         self.statemode = statemode
         self.actionmode = actionmode
@@ -116,6 +119,9 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.default_damping = default_damping
         self.default_spring = default_spring
         self.reward_cutoff = reward_cutoff
+        self.gravity = gravity
+        if not self.gravity:
+            warnings.warn("Gravity is disabled, be sure you meant to do this!", RuntimeWarning)
 
         self.framenum = 0
 
@@ -210,6 +216,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                                                "continuous",
                                                self.__visualize,
                                                not self.__visualize)
+        self.dart_world.set_gravity(int(self.gravity) * GRAVITY_VECTOR)
         self.control_skel = self.dart_world.skeletons[-1]
 
         # TODO Enable self collisions
@@ -360,7 +367,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             # There's not any reason I can think of to actually use any other
             # skeleton, the print method is just here so I never accidentally
             # replace it
-            print("You sure you want to be using _get_obs with the non-control skeleton?")
+            warnings.warn("_get_obs used w/ non-control skeleton, you sure you know what you're doing?", RuntimeWarning)
 
         if self.statemode == StateMode.GEN_EULER:
             state = self.gencoordtuple_as_pos_and_eulerlist(
@@ -673,6 +680,11 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
         self.add_argument('--d-gain', type=float, default=50,
                           help="D for the PD controller")
 
+        gravity_group = self.add_mutually_exclusive_group()
+        gravity_group.add_argument('--gravity', dest='gravity', action='store_true')
+        gravity_group.add_argument('--no-gravity', dest='gravity', action='store_false')
+        self.set_defaults(gravity=True, help="Whether to enable gravity in the world")
+
         self.args = None
 
     def parse_args(self):
@@ -706,7 +718,8 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
                                 visualize=self.args.visualize,
                                 simsteps_per_dataframe=self.args.simsteps_per_dataframe,
                                 screen_width=self.args.window_width,
-                                screen_height=self.args.window_height)
+                                screen_height=self.args.window_height,
+                                gravity=args.gravity)
 
 
 if __name__ == "__main__":
@@ -716,6 +729,7 @@ if __name__ == "__main__":
     parser = DartDeepMimicArgParse()
 
     args = parser.parse_args()
+    print("Gravity being", args.gravity)
 
     env = parser.get_env()
 
