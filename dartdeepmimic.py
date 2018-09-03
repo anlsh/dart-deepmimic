@@ -99,7 +99,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                  vel_weight, vel_inner_weight,
                  ee_weight, ee_inner_weight,
                  com_weight, com_inner_weight,
-                 max_torque, default_damping,
+                 max_torque,
+                 max_angle, default_damping,
                  default_spring,
                  visualize, simsteps_per_dataframe,
                  screen_width,
@@ -111,6 +112,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.pos_init_noise = pos_init_noise
         self.vel_init_noise = vel_init_noise
         self.max_torque = max_torque
+        self.max_angle = max_angle
         self.default_damping = default_damping
         self.default_spring = default_spring
         self.reward_cutoff = reward_cutoff
@@ -196,8 +198,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
     def load_world(self):
 
-        # TODO Actually do action limits somehow...
-        action_limits = 10 * pi * np.ones(self.action_dim)
+        action_limits = self.max_angle * pi * np.ones(self.action_dim)
         action_limits = [-action_limits, action_limits]
 
         super(DartDeepMimicEnv, self).__init__([self._control_skeleton_path],
@@ -625,6 +626,8 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
                           help="DOESN'T DO ANYTHING RIGHT NOW: True if you want a window to render to")
         self.add_argument('--max-torque', type=float, default=90,
                           help="Maximum torque")
+        self.add_argument('--max-angle', type=float, default=1000,
+                          help="Max magnitude of angle (in terms of pi) that PID can output")
         self.add_argument('--default-damping', type=float, default=80,
                           help="Default damping coefficient for joints")
         self.add_argument('--default-spring', type=float, default=0,
@@ -697,6 +700,7 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
                                 com_weight=self.args.com_weight,
                                 com_inner_weight=self.args.com_inner_weight,
                                 max_torque=self.args.max_torque,
+                                max_angle=self.args.max_angle,
                                 default_damping=self.args.default_damping,
                                 default_spring=self.args.default_spring,
                                 visualize=self.args.visualize,
