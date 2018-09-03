@@ -564,7 +564,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         newstate = self._get_obs()
         reward = self.reward(self.control_skel, self.framenum)
-        extrainfo = {}
+        extrainfo = {"dof_targets": dof_targets}
         done = self.framenum == self.num_frames - 1 \
                or (reward < self.reward_cutoff)
         if not np.isfinite(newstate).all():
@@ -706,7 +706,7 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
                                 visualize=self.args.visualize,
                                 simsteps_per_dataframe=self.args.simsteps_per_dataframe,
                                 screen_width=self.args.window_width,
-                                sceen_height=self.args.window_height)
+                                screen_height=self.args.window_height)
 
 
 if __name__ == "__main__":
@@ -752,9 +752,10 @@ if __name__ == "__main__":
     # print("Provided Target Angles\n", target_angles)
 
     obs = env.sync_skel_to_frame(env.control_skel, start_frame, 0, 0)
-    print(env.control_skel.dq)
 
     while True:
         env.framenum = target_frame
         s, r, done, info = env.step(np.concatenate(target_angles))
+        print(info["dof_targets"])
+        exit()
         env.render()
