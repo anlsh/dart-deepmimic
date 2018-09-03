@@ -15,6 +15,8 @@ def expand_angle(in_angle, order="xyz", initial_element=0):
     angle([1,2], "xz") -> (1, 0, 2)
     angle([1,2,3], "yzx") -> (3, 1, 2)
     """
+    if len(in_angle) != len(order):
+        raise RuntimeError("Mismatch between number of elements passed in and order")
     blank = [initial_element] * 3
     index_map = {"x": 0, "y": 1, "z": 2}
     for axis, val in zip(order, in_angle):
