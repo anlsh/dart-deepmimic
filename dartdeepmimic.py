@@ -213,7 +213,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         # TODO Enable self collisions
         # Have to explicitly enable self collisions
-        # self.control_skel.set_self_collision_check(True)
+        self.control_skel.set_self_collision_check(True)
 
         for joint in self.control_skel.joints:
             if joint.name == ROOT_KEY:
