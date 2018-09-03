@@ -745,7 +745,7 @@ if __name__ == "__main__":
 
     # [print(dof_name, env.metadict[dof_name]) for dof_name in env._actuated_dof_names]
 
-    print("Provided Target Q: \n", env.control_skel.q[6:])
+    # print("Provided Target Q: \n", env.control_skel.q[6:])
     target_state = env.gencoordtuple_as_pos_and_eulerlist(env.control_skel)
     pos, vel = target_state
     target_angles = pos[1][1:]
@@ -756,6 +756,4 @@ if __name__ == "__main__":
     while True:
         env.framenum = target_frame
         s, r, done, info = env.step(np.concatenate(target_angles))
-        print(info["dof_targets"])
-        exit()
         env.render()
