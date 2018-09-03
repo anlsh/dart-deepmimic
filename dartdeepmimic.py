@@ -727,10 +727,7 @@ if __name__ == "__main__":
     # Don't run this as main, there's really not too much point
 
     parser = DartDeepMimicArgParse()
-
     args = parser.parse_args()
-    print("Gravity being", args.gravity)
-
     env = parser.get_env()
 
     # obs = env.reset(0, False)
@@ -766,6 +763,7 @@ if __name__ == "__main__":
     # print("Provided Target Angles\n", target_angles)
 
     obs = env.sync_skel_to_frame(env.control_skel, start_frame, 0, 0)
+    print(env.control_skel.dq)
 
     while True:
         env.framenum = target_frame

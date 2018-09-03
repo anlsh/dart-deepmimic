@@ -1,0 +1,1459 @@
+<?xml version="1.0" ?>
+<skel version="1.0">
+    <world name="world 1">
+        <physics>
+            <time_step>0.002</time_step>
+            <gravity>0 -9.81 0</gravity>
+            <collision_detector>dart</collision_detector>
+        </physics>
+        <skeleton name="ground skeleton">
+            <mobile>false</mobile>
+            <body name="ground">
+                <transformation>0 -1.1025 0 0 0 0</transformation>
+                <visualization_shape>
+                    <transformation>0 0 0 0 0 0</transformation>
+                    <geometry>
+                        <box>
+                            <size>500.0 1.8 500</size>
+                        </box>
+                    </geometry>
+                    <color>0.8 0.8 0.8</color>
+                </visualization_shape>
+                <collision_shape>
+                    <transformation>0 0 0 0 0 0</transformation>
+                    <geometry>
+                        <box>
+                            <size>500.0 1.8 500</size>
+                        </box>
+                    </geometry>
+                </collision_shape>
+            </body>
+            <joint name="joint_1" type="free">
+                <parent>world</parent>
+                <child>ground</child>
+            </joint>
+        </skeleton>
+<!--START-->
+<skeleton name="VICON">
+    <transformation>0 0 0 0 0 0</transformation>
+    <body name="root_body">
+        <transformation>0.00000 0.00000 0.00000 0.00000 0.00000 0.00000</transformation>
+        <visualization_shape>
+            <transformation>0.00000 0.00000 0.00000 0.00000 0.00000 0.00000</transformation>
+            <geometry>
+                <box>
+                    <size>1.00000 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </visualization_shape>
+        <collision_shape>
+            <transformation>0.00000 0.00000 0.00000 0.00000 0.00000 0.00000</transformation>
+            <geometry>
+                <box>
+                    <size>1.00000 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </collision_shape>
+        <inertia>
+            <mass>1</mass>
+            <offset>0.00000 0.00000 0.00000</offset>
+        </inertia>
+    </body>
+    <body name="lhipjoint_body">
+        <transformation>0.00000 0.00000 0.00000 0.00000 0.00000 0.00000</transformation>
+        <visualization_shape>
+            <transformation>0.92795 -0.86974 0.42488 2.68718 0.00000 0.57015</transformation>
+            <geometry>
+                <box>
+                    <size>2.68184 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </visualization_shape>
+        <collision_shape>
+            <transformation>0.92795 -0.86974 0.42488 2.68718 0.00000 0.57015</transformation>
+            <geometry>
+                <box>
+                    <!-- <size>2.68184 1.00000 0.50000</size> -->
+                    <size>1 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </collision_shape>
+        <inertia>
+            <mass>1</mass>
+            <offset>0.92795 -0.86974 0.42488</offset>
+        </inertia>
+    </body>
+    <body name="lfemur_body">
+        <transformation>1.85590 -1.73949 0.84976 0.00000 0.00000 0.34907</transformation>
+        <visualization_shape>
+            <transformation>-0.00000 -3.46231 0.00000 3.14159 0.00000 1.57080</transformation>
+            <geometry>
+                <box>
+                    <size>6.92462 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </visualization_shape>
+        <collision_shape>
+            <transformation>-0.00000 -3.46231 0.00000 3.14159 0.00000 1.57080</transformation>
+            <geometry>
+                <box>
+                    <size>6.92462 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </collision_shape>
+        <inertia>
+            <mass>1</mass>
+            <offset>-0.00000 -3.46231 0.00000</offset>
+        </inertia>
+    </body>
+    <body name="ltibia_body">
+        <transformation>4.22426 -8.24650 0.84976 0.00000 0.00000 0.34907</transformation>
+        <visualization_shape>
+            <transformation>-0.00000 -3.70254 0.00000 3.14159 0.00000 1.57080</transformation>
+            <geometry>
+                <box>
+                    <size>7.40507 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </visualization_shape>
+        <collision_shape>
+            <transformation>-0.00000 -3.70254 0.00000 3.14159 0.00000 1.57080</transformation>
+            <geometry>
+                <box>
+                    <size>7.40507 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </collision_shape>
+        <inertia>
+            <mass>1</mass>
+            <offset>-0.00000 -3.70254 0.00000</offset>
+        </inertia>
+    </body>
+    <body name="lfoot_body">
+        <transformation>6.75694 -15.20500 0.84976 -1.57080 -0.34907 0.00000</transformation>
+        <visualization_shape>
+            <transformation>0.00000 -0.97253 -0.23295 -2.90649 0.00000 1.57080</transformation>
+            <geometry>
+                <box>
+                    <size>2.00008 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </visualization_shape>
+        <collision_shape>
+            <transformation>0.00000 -0.97253 -0.23295 -2.90649 0.00000 1.57080</transformation>
+            <geometry>
+                <box>
+                    <size>2.00008 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </collision_shape>
+        <inertia>
+            <mass>1</mass>
+            <offset>0.00000 -0.97253 -0.23295</offset>
+        </inertia>
+    </body>
+    <body name="ltoes_body">
+        <transformation>6.91629 -15.64280 2.79482 -1.57080 -0.34907 0.00000</transformation>
+        <visualization_shape>
+            <transformation>0.00000 -0.50331 -0.00000 -3.14159 0.00000 1.57080</transformation>
+            <geometry>
+                <box>
+                    <size>1.00661 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </visualization_shape>
+        <collision_shape>
+            <transformation>0.00000 -0.50331 -0.00000 -3.14159 0.00000 1.57080</transformation>
+            <geometry>
+                <box>
+                    <size>1.00661 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </collision_shape>
+        <inertia>
+            <mass>1</mass>
+            <offset>0.00000 -0.50331 -0.00000</offset>
+        </inertia>
+    </body>
+    <body name="rhipjoint_body">
+        <transformation>0.00000 0.00000 0.00000 0.00000 0.00000 0.00000</transformation>
+        <visualization_shape>
+            <transformation>-0.84149 -0.86974 0.42488 2.68718 0.00000 2.52614</transformation>
+            <geometry>
+                <box>
+                    <size>2.56521 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </visualization_shape>
+        <collision_shape>
+            <transformation>-0.84149 -0.86974 0.42488 2.68718 0.00000 2.52614</transformation>
+            <geometry>
+                <box>
+                    <!-- <size>2.56521 1.00000 0.50000</size> -->
+                    <size>1 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </collision_shape>
+        <inertia>
+            <mass>1</mass>
+            <offset>-0.84149 -0.86974 0.42488</offset>
+        </inertia>
+    </body>
+    <body name="rfemur_body">
+        <transformation>-1.68297 -1.73949 0.84976 0.00000 0.00000 -0.34907</transformation>
+        <visualization_shape>
+            <transformation>0.00000 -3.57742 0.00000 3.14159 0.00000 1.57080</transformation>
+            <geometry>
+                <box>
+                    <size>7.15483 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </visualization_shape>
+        <collision_shape>
+            <transformation>0.00000 -3.57742 0.00000 3.14159 0.00000 1.57080</transformation>
+            <geometry>
+                <box>
+                    <size>7.15483 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </collision_shape>
+        <inertia>
+            <mass>1</mass>
+            <offset>0.00000 -3.57742 0.00000</offset>
+        </inertia>
+    </body>
+    <body name="rtibia_body">
+        <transformation>-4.13007 -8.46283 0.84976 0.00000 0.00000 -0.34907</transformation>
+        <visualization_shape>
+            <transformation>0.00000 -3.56475 0.00000 3.14159 0.00000 1.57080</transformation>
+            <geometry>
+                <box>
+                    <size>7.12949 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </visualization_shape>
+        <collision_shape>
+            <transformation>0.00000 -3.56475 0.00000 3.14159 0.00000 1.57080</transformation>
+            <geometry>
+                <box>
+                    <size>7.12949 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </collision_shape>
+        <inertia>
+            <mass>1</mass>
+            <offset>0.00000 -3.56475 0.00000</offset>
+        </inertia>
+    </body>
+    <body name="rfoot_body">
+        <transformation>-6.56849 -15.16236 0.84976 -1.57080 0.34907 -0.00000</transformation>
+        <visualization_shape>
+            <transformation>-0.00000 -1.01086 -0.30486 -2.84868 0.00000 1.57080</transformation>
+            <geometry>
+                <box>
+                    <size>2.11166 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </visualization_shape>
+        <collision_shape>
+            <transformation>-0.00000 -1.01086 -0.30486 -2.84868 0.00000 1.57080</transformation>
+            <geometry>
+                <box>
+                    <size>2.11166 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </collision_shape>
+        <inertia>
+            <mass>1</mass>
+            <offset>-0.00000 -1.01086 -0.30486</offset>
+        </inertia>
+    </body>
+    <body name="rtoes_body">
+        <transformation>-6.77703 -15.73531 2.87148 -1.57080 0.34907 -0.00000</transformation>
+        <visualization_shape>
+            <transformation>0.00000 -0.52797 -0.00000 -3.14159 0.00000 1.57080</transformation>
+            <geometry>
+                <box>
+                    <size>1.05594 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </visualization_shape>
+        <collision_shape>
+            <transformation>0.00000 -0.52797 -0.00000 -3.14159 0.00000 1.57080</transformation>
+            <geometry>
+                <box>
+                    <size>1.05594 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </collision_shape>
+        <inertia>
+            <mass>1</mass>
+            <offset>0.00000 -0.52797 -0.00000</offset>
+        </inertia>
+    </body>
+    <body name="lowerback_body">
+        <transformation>0.00000 0.00000 0.00000 0.00000 0.00000 0.00000</transformation>
+        <visualization_shape>
+            <transformation>-0.00780 1.11985 -0.01856 -0.01657 0.00000 1.57776</transformation>
+            <geometry>
+                <box>
+                    <size>2.24007 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </visualization_shape>
+        <collision_shape>
+            <transformation>-0.00780 1.11985 -0.01856 -0.01657 0.00000 1.57776</transformation>
+            <geometry>
+                <box>
+                    <size>2.24007 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </collision_shape>
+        <inertia>
+            <mass>1</mass>
+            <offset>-0.00780 1.11985 -0.01856</offset>
+        </inertia>
+    </body>
+    <body name="upperback_body">
+        <transformation>-0.01560 2.23971 -0.03712 0.00000 0.00000 0.00000</transformation>
+        <visualization_shape>
+            <transformation>0.02745 1.09613 -0.09543 -0.08684 0.00000 1.54547</transformation>
+            <geometry>
+                <box>
+                    <size>2.20123 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </visualization_shape>
+        <collision_shape>
+            <transformation>0.02745 1.09613 -0.09543 -0.08684 0.00000 1.54547</transformation>
+            <geometry>
+                <box>
+                    <size>2.20123 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </collision_shape>
+        <inertia>
+            <mass>1</mass>
+            <offset>0.02745 1.09613 -0.09543</offset>
+        </inertia>
+    </body>
+    <body name="thorax_body">
+        <transformation>0.03930 4.43196 -0.22798 0.00000 0.00000 0.00000</transformation>
+        <visualization_shape>
+            <transformation>0.03083 1.10279 -0.08605 -0.07787 0.00000 1.54259</transformation>
+            <geometry>
+                <box>
+                    <size>2.21314 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </visualization_shape>
+        <collision_shape>
+            <transformation>0.03083 1.10279 -0.08605 -0.07787 0.00000 1.54259</transformation>
+            <geometry>
+                <box>
+                    <size>2.21314 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </collision_shape>
+        <inertia>
+            <mass>1</mass>
+            <offset>0.03083 1.10279 -0.08605</offset>
+        </inertia>
+    </body>
+    <body name="lowerneck_body">
+        <transformation>0.10097 6.63754 -0.40009 0.00000 0.00000 0.00000</transformation>
+        <visualization_shape>
+            <transformation>-0.06201 0.71584 0.13793 0.19035 0.00000 1.66217</transformation>
+            <geometry>
+                <box>
+                    <size>1.46328 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </visualization_shape>
+        <collision_shape>
+            <transformation>-0.06201 0.71584 0.13793 0.19035 0.00000 1.66217</transformation>
+            <geometry>
+                <box>
+                    <size>1.46328 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </collision_shape>
+        <inertia>
+            <mass>1</mass>
+            <offset>-0.06201 0.71584 0.13793</offset>
+        </inertia>
+    </body>
+    <body name="upperneck_body">
+        <transformation>-0.02306 8.06922 -0.12423 0.00000 0.00000 0.00000</transformation>
+        <visualization_shape>
+            <transformation>0.08927 0.73087 -0.16289 -0.21929 0.00000 1.43986</transformation>
+            <geometry>
+                <box>
+                    <size>1.50820 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </visualization_shape>
+        <collision_shape>
+            <transformation>0.08927 0.73087 -0.16289 -0.21929 0.00000 1.43986</transformation>
+            <geometry>
+                <box>
+                    <size>1.50820 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </collision_shape>
+        <inertia>
+            <mass>1</mass>
+            <offset>0.08927 0.73087 -0.16289</offset>
+        </inertia>
+    </body>
+    <body name="head_body">
+        <transformation>0.15549 9.53095 -0.45001 0.00000 0.00000 0.00000</transformation>
+        <visualization_shape>
+            <transformation>0.03609 0.75795 -0.07269 -0.09561 0.00000 1.52256</transformation>
+            <geometry>
+                <box>
+                    <size>1.52456 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </visualization_shape>
+        <collision_shape>
+            <transformation>0.03609 0.75795 -0.07269 -0.09561 0.00000 1.52256</transformation>
+            <geometry>
+                <box>
+                    <size>1.52456 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </collision_shape>
+        <inertia>
+            <mass>1</mass>
+            <offset>0.03609 0.75795 -0.07269</offset>
+        </inertia>
+    </body>
+    <body name="lclavicle_body">
+        <transformation>0.10097 6.63754 -0.40009 0.00000 0.00000 0.00000</transformation>
+        <visualization_shape>
+            <transformation>1.63825 0.42817 0.02698 0.06292 0.00000 0.25419</transformation>
+            <geometry>
+                <box>
+                    <size>3.38699 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </visualization_shape>
+        <collision_shape>
+            <transformation>1.63825 0.42817 0.02698 0.06292 0.00000 0.25419</transformation>
+            <geometry>
+                <box>
+                    <size>3.38699 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </collision_shape>
+        <inertia>
+            <mass>1</mass>
+            <offset>1.63825 0.42817 0.02698</offset>
+        </inertia>
+    </body>
+    <body name="lhumerus_body">
+        <transformation>3.37747 7.49388 -0.34613 2.61799 -0.00000 1.57080</transformation>
+        <visualization_shape>
+            <transformation>0.00000 -2.48378 0.00000 3.14159 0.00000 1.57080</transformation>
+            <geometry>
+                <box>
+                    <size>4.96755 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </visualization_shape>
+        <collision_shape>
+            <transformation>0.00000 -2.48378 0.00000 3.14159 0.00000 1.57080</transformation>
+            <geometry>
+                <box>
+                    <size>4.96755 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </collision_shape>
+        <inertia>
+            <mass>1</mass>
+            <offset>0.00000 -2.48378 0.00000</offset>
+        </inertia>
+    </body>
+    <body name="lradius_body">
+        <transformation>8.34502 7.49388 -0.34613 2.61799 -0.00000 1.57080</transformation>
+        <visualization_shape>
+            <transformation>0.00000 -1.67875 0.00000 3.14159 0.00000 1.57080</transformation>
+            <geometry>
+                <box>
+                    <size>3.35751 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </visualization_shape>
+        <collision_shape>
+            <transformation>0.00000 -1.67875 0.00000 3.14159 0.00000 1.57080</transformation>
+            <geometry>
+                <box>
+                    <size>3.35751 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </collision_shape>
+        <inertia>
+            <mass>1</mass>
+            <offset>0.00000 -1.67875 0.00000</offset>
+        </inertia>
+    </body>
+    <body name="lwrist_body">
+        <transformation>11.70253 7.49388 -0.34613 -1.57080 -0.00000 1.57080</transformation>
+        <visualization_shape>
+            <transformation>-0.00000 -0.83938 -0.00000 -3.14159 0.00000 1.57080</transformation>
+            <geometry>
+                <box>
+                    <size>1.67876 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </visualization_shape>
+        <collision_shape>
+            <transformation>-0.00000 -0.83938 -0.00000 -3.14159 0.00000 1.57080</transformation>
+            <geometry>
+                <box>
+                    <size>1.67876 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </collision_shape>
+        <inertia>
+            <mass>1</mass>
+            <offset>-0.00000 -0.83938 -0.00000</offset>
+        </inertia>
+    </body>
+    <body name="lhand_body">
+        <transformation>13.38129 7.49388 -0.34613 -1.57080 -0.00000 1.57080</transformation>
+        <visualization_shape>
+            <transformation>-0.00000 -0.39848 -0.00000 -3.14159 0.00000 1.57080</transformation>
+            <geometry>
+                <box>
+                    <size>0.79697 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </visualization_shape>
+        <collision_shape>
+            <transformation>-0.00000 -0.39848 -0.00000 -3.14159 0.00000 1.57080</transformation>
+            <geometry>
+                <box>
+                    <size>0.79697 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </collision_shape>
+        <inertia>
+            <mass>1</mass>
+            <offset>-0.00000 -0.39848 -0.00000</offset>
+        </inertia>
+    </body>
+    <body name="rclavicle_body">
+        <transformation>0.10097 6.63754 -0.40009 0.00000 0.00000 0.00000</transformation>
+        <visualization_shape>
+            <transformation>-1.62217 0.51017 0.17344 0.32771 0.00000 2.88409</transformation>
+            <geometry>
+                <box>
+                    <size>3.41865 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </visualization_shape>
+        <collision_shape>
+            <transformation>-1.62217 0.51017 0.17344 0.32771 0.00000 2.88409</transformation>
+            <geometry>
+                <box>
+                    <size>3.41865 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </collision_shape>
+        <inertia>
+            <mass>1</mass>
+            <offset>-1.62217 0.51017 0.17344</offset>
+        </inertia>
+    </body>
+    <body name="rhumerus_body">
+        <transformation>-3.14337 7.65788 -0.05320 2.61799 0.00000 -1.57080</transformation>
+        <visualization_shape>
+            <transformation>-0.00000 -2.60929 0.00000 3.14159 0.00000 1.57080</transformation>
+            <geometry>
+                <box>
+                    <size>5.21859 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </visualization_shape>
+        <collision_shape>
+            <transformation>-0.00000 -2.60929 0.00000 3.14159 0.00000 1.57080</transformation>
+            <geometry>
+                <box>
+                    <size>5.21859 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </collision_shape>
+        <inertia>
+            <mass>1</mass>
+            <offset>-0.00000 -2.60929 0.00000</offset>
+        </inertia>
+    </body>
+    <body name="rradius_body">
+        <transformation>-8.36196 7.65788 -0.05320 2.61799 0.00000 -1.57080</transformation>
+        <visualization_shape>
+            <transformation>-0.00000 -1.68252 0.00000 3.14159 0.00000 1.57080</transformation>
+            <geometry>
+                <box>
+                    <size>3.36504 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </visualization_shape>
+        <collision_shape>
+            <transformation>-0.00000 -1.68252 0.00000 3.14159 0.00000 1.57080</transformation>
+            <geometry>
+                <box>
+                    <size>3.36504 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </collision_shape>
+        <inertia>
+            <mass>1</mass>
+            <offset>-0.00000 -1.68252 0.00000</offset>
+        </inertia>
+    </body>
+    <body name="rwrist_body">
+        <transformation>-11.72700 7.65788 -0.05320 -1.57080 0.00000 -1.57080</transformation>
+        <visualization_shape>
+            <transformation>0.00000 -0.84126 -0.00000 -3.14159 0.00000 1.57080</transformation>
+            <geometry>
+                <box>
+                    <size>1.68252 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </visualization_shape>
+        <collision_shape>
+            <transformation>0.00000 -0.84126 -0.00000 -3.14159 0.00000 1.57080</transformation>
+            <geometry>
+                <box>
+                    <size>1.68252 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </collision_shape>
+        <inertia>
+            <mass>1</mass>
+            <offset>0.00000 -0.84126 -0.00000</offset>
+        </inertia>
+    </body>
+    <body name="rhand_body">
+        <transformation>-13.40952 7.65788 -0.05320 -1.57080 0.00000 -1.57080</transformation>
+        <visualization_shape>
+            <transformation>0.00000 -0.31022 -0.00000 -3.14159 0.00000 1.57080</transformation>
+            <geometry>
+                <box>
+                    <size>0.62044 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </visualization_shape>
+        <collision_shape>
+            <transformation>0.00000 -0.31022 -0.00000 -3.14159 0.00000 1.57080</transformation>
+            <geometry>
+                <box>
+                    <size>0.62044 1.00000 0.50000</size>
+                </box>
+            </geometry>
+        </collision_shape>
+        <inertia>
+            <mass>1</mass>
+            <offset>0.00000 -0.31022 -0.00000</offset>
+        </inertia>
+    </body>
+    <joint name="root" type="free">
+        <parent>world</parent>
+        <child>root_body</child>
+    </joint>
+    <joint name="lhipjoint" type="weld">
+        <parent>root_body</parent>
+        <child>lhipjoint_body</child>
+        <transformation>0 0 0 0 0 0</transformation>
+    </joint>
+    <joint name="lfemur" type="euler">
+        <parent>lhipjoint_body</parent>
+        <child>lfemur_body</child>
+        <transformation>0 0 0 0 0 0</transformation>
+        <axis_order>xyz</axis_order>
+        <axis>
+            <xyz>1 0 0</xyz>
+            <limit>
+                <lower>-2.79253</lower>
+                <upper>0.34907</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis>
+        <axis2>
+            <xyz>0 1 0</xyz>
+            <limit>
+                <lower>-1.22173</lower>
+                <upper>1.22173</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis2>
+        <axis3>
+            <xyz>0 0 1</xyz>
+            <limit>
+                <lower>-1.04720</lower>
+                <upper>1.22173</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis3>
+    </joint>
+    <joint name="ltibia" type="revolute">
+        <parent>lfemur_body</parent>
+        <child>ltibia_body</child>
+        <transformation>0 0 0 0 0 0</transformation>
+        <axis>
+            <xyz>1 0 0</xyz>
+            <limit>
+                <lower>-0.17453</lower>
+                <upper>2.96706</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis>
+    </joint>
+    <joint name="lfoot" type="universal">
+        <parent>ltibia_body</parent>
+        <child>lfoot_body</child>
+        <transformation>0 0 0 0 0 0</transformation>
+        <axis>
+            <xyz>1 0 0</xyz>
+            <limit>
+                <lower>-0.78540</lower>
+                <upper>1.57080</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis>
+        <axis2>
+            <xyz>0 0 1</xyz>
+            <limit>
+                <lower>-1.22173</lower>
+                <upper>0.34907</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis2>
+    </joint>
+    <joint name="ltoes" type="revolute">
+        <parent>lfoot_body</parent>
+        <child>ltoes_body</child>
+        <transformation>0 0 0 0 0 0</transformation>
+        <axis>
+            <xyz>1 0 0</xyz>
+            <limit>
+                <lower>-1.57080</lower>
+                <upper>0.34907</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis>
+    </joint>
+    <joint name="rhipjoint" type="weld">
+        <parent>root_body</parent>
+        <child>rhipjoint_body</child>
+        <transformation>0 0 0 0 0 0</transformation>
+    </joint>
+    <joint name="rfemur" type="euler">
+        <parent>rhipjoint_body</parent>
+        <child>rfemur_body</child>
+        <transformation>0 0 0 0 0 0</transformation>
+        <axis_order>xyz</axis_order>
+        <axis>
+            <xyz>1 0 0</xyz>
+            <limit>
+                <lower>-2.79253</lower>
+                <upper>0.34907</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis>
+        <axis2>
+            <xyz>0 1 0</xyz>
+            <limit>
+                <lower>-1.22173</lower>
+                <upper>1.22173</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis2>
+        <axis3>
+            <xyz>0 0 1</xyz>
+            <limit>
+                <lower>-1.22173</lower>
+                <upper>1.04720</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis3>
+    </joint>
+    <joint name="rtibia" type="revolute">
+        <parent>rfemur_body</parent>
+        <child>rtibia_body</child>
+        <transformation>0 0 0 0 0 0</transformation>
+        <axis>
+            <xyz>1 0 0</xyz>
+            <limit>
+                <lower>-0.17453</lower>
+                <upper>2.96706</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis>
+    </joint>
+    <joint name="rfoot" type="universal">
+        <parent>rtibia_body</parent>
+        <child>rfoot_body</child>
+        <transformation>0 0 0 0 0 0</transformation>
+        <axis>
+            <xyz>1 0 0</xyz>
+            <limit>
+                <lower>-0.78540</lower>
+                <upper>1.57080</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis>
+        <axis2>
+            <xyz>0 0 1</xyz>
+            <limit>
+                <lower>-0.34907</lower>
+                <upper>1.22173</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis2>
+    </joint>
+    <joint name="rtoes" type="revolute">
+        <parent>rfoot_body</parent>
+        <child>rtoes_body</child>
+        <transformation>0 0 0 0 0 0</transformation>
+        <axis>
+            <xyz>1 0 0</xyz>
+            <limit>
+                <lower>-1.57080</lower>
+                <upper>0.34907</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis>
+    </joint>
+    <joint name="lowerback" type="euler">
+        <parent>root_body</parent>
+        <child>lowerback_body</child>
+        <transformation>0 0 0 0 0 0</transformation>
+        <axis_order>xyz</axis_order>
+        <axis>
+            <xyz>1 0 0</xyz>
+            <limit>
+                <lower>-0.34907</lower>
+                <upper>0.78540</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis>
+        <axis2>
+            <xyz>0 1 0</xyz>
+            <limit>
+                <lower>-0.52360</lower>
+                <upper>0.52360</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis2>
+        <axis3>
+            <xyz>0 0 1</xyz>
+            <limit>
+                <lower>-0.52360</lower>
+                <upper>0.52360</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis3>
+    </joint>
+    <joint name="upperback" type="euler">
+        <parent>lowerback_body</parent>
+        <child>upperback_body</child>
+        <transformation>0 0 0 0 0 0</transformation>
+        <axis_order>xyz</axis_order>
+        <axis>
+            <xyz>1 0 0</xyz>
+            <limit>
+                <lower>-0.34907</lower>
+                <upper>0.78540</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis>
+        <axis2>
+            <xyz>0 1 0</xyz>
+            <limit>
+                <lower>-0.52360</lower>
+                <upper>0.52360</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis2>
+        <axis3>
+            <xyz>0 0 1</xyz>
+            <limit>
+                <lower>-0.52360</lower>
+                <upper>0.52360</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis3>
+    </joint>
+    <joint name="thorax" type="euler">
+        <parent>upperback_body</parent>
+        <child>thorax_body</child>
+        <transformation>0 0 0 0 0 0</transformation>
+        <axis_order>xyz</axis_order>
+        <axis>
+            <xyz>1 0 0</xyz>
+            <limit>
+                <lower>-0.34907</lower>
+                <upper>0.78540</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis>
+        <axis2>
+            <xyz>0 1 0</xyz>
+            <limit>
+                <lower>-0.52360</lower>
+                <upper>0.52360</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis2>
+        <axis3>
+            <xyz>0 0 1</xyz>
+            <limit>
+                <lower>-0.52360</lower>
+                <upper>0.52360</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis3>
+    </joint>
+    <joint name="lowerneck" type="euler">
+        <parent>thorax_body</parent>
+        <child>lowerneck_body</child>
+        <transformation>0 0 0 0 0 0</transformation>
+        <axis_order>xyz</axis_order>
+        <axis>
+            <xyz>1 0 0</xyz>
+            <limit>
+                <lower>-0.34907</lower>
+                <upper>0.78540</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis>
+        <axis2>
+            <xyz>0 1 0</xyz>
+            <limit>
+                <lower>-0.52360</lower>
+                <upper>0.52360</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis2>
+        <axis3>
+            <xyz>0 0 1</xyz>
+            <limit>
+                <lower>-0.52360</lower>
+                <upper>0.52360</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis3>
+    </joint>
+    <joint name="upperneck" type="euler">
+        <parent>lowerneck_body</parent>
+        <child>upperneck_body</child>
+        <transformation>0 0 0 0 0 0</transformation>
+        <axis_order>xyz</axis_order>
+        <axis>
+            <xyz>1 0 0</xyz>
+            <limit>
+                <lower>-0.34907</lower>
+                <upper>0.78540</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis>
+        <axis2>
+            <xyz>0 1 0</xyz>
+            <limit>
+                <lower>-0.52360</lower>
+                <upper>0.52360</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis2>
+        <axis3>
+            <xyz>0 0 1</xyz>
+            <limit>
+                <lower>-0.52360</lower>
+                <upper>0.52360</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis3>
+    </joint>
+    <joint name="head" type="euler">
+        <parent>upperneck_body</parent>
+        <child>head_body</child>
+        <transformation>0 0 0 0 0 0</transformation>
+        <axis_order>xyz</axis_order>
+        <axis>
+            <xyz>1 0 0</xyz>
+            <limit>
+                <lower>-0.34907</lower>
+                <upper>0.78540</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis>
+        <axis2>
+            <xyz>0 1 0</xyz>
+            <limit>
+                <lower>-0.52360</lower>
+                <upper>0.52360</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis2>
+        <axis3>
+            <xyz>0 0 1</xyz>
+            <limit>
+                <lower>-0.52360</lower>
+                <upper>0.52360</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis3>
+    </joint>
+    <joint name="lclavicle" type="universal">
+        <parent>thorax_body</parent>
+        <child>lclavicle_body</child>
+        <transformation>0 0 0 0 0 0</transformation>
+        <axis>
+            <xyz>0 1 0</xyz>
+            <limit>
+                <lower>-0.34907</lower>
+                <upper>0.17453</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis>
+        <axis2>
+            <xyz>0 0 1</xyz>
+            <limit>
+                <lower>0.00000</lower>
+                <upper>0.34907</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis2>
+    </joint>
+    <joint name="lhumerus" type="euler">
+        <parent>lclavicle_body</parent>
+        <child>lhumerus_body</child>
+        <transformation>0 0 0 0 0 0</transformation>
+        <axis_order>xyz</axis_order>
+        <axis>
+            <xyz>1 0 0</xyz>
+            <limit>
+                <lower>-1.04720</lower>
+                <upper>1.57080</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis>
+        <axis2>
+            <xyz>0 1 0</xyz>
+            <limit>
+                <lower>-1.57080</lower>
+                <upper>1.57080</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis2>
+        <axis3>
+            <xyz>0 0 1</xyz>
+            <limit>
+                <lower>-1.57080</lower>
+                <upper>1.57080</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis3>
+    </joint>
+    <joint name="lradius" type="revolute">
+        <parent>lhumerus_body</parent>
+        <child>lradius_body</child>
+        <transformation>0 0 0 0 0 0</transformation>
+        <axis>
+            <xyz>1 0 0</xyz>
+            <limit>
+                <lower>-0.17453</lower>
+                <upper>2.96706</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis>
+    </joint>
+    <joint name="lwrist" type="revolute">
+        <parent>lradius_body</parent>
+        <child>lwrist_body</child>
+        <transformation>0 0 0 0 0 0</transformation>
+        <axis>
+            <xyz>0 1 0</xyz>
+            <limit>
+                <lower>-3.14159</lower>
+                <upper>0.00000</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis>
+    </joint>
+    <joint name="lhand" type="universal">
+        <parent>lwrist_body</parent>
+        <child>lhand_body</child>
+        <transformation>0 0 0 0 0 0</transformation>
+        <axis>
+            <xyz>1 0 0</xyz>
+            <limit>
+                <lower>-1.57080</lower>
+                <upper>1.57080</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis>
+        <axis2>
+            <xyz>0 0 1</xyz>
+            <limit>
+                <lower>-0.78540</lower>
+                <upper>0.78540</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis2>
+    </joint>
+    <joint name="rclavicle" type="universal">
+        <parent>thorax_body</parent>
+        <child>rclavicle_body</child>
+        <transformation>0 0 0 0 0 0</transformation>
+        <axis>
+            <xyz>0 1 0</xyz>
+            <limit>
+                <lower>-0.17453</lower>
+                <upper>0.34907</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis>
+        <axis2>
+            <xyz>0 0 1</xyz>
+            <limit>
+                <lower>-0.34907</lower>
+                <upper>0.00000</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis2>
+    </joint>
+    <joint name="rhumerus" type="euler">
+        <parent>rclavicle_body</parent>
+        <child>rhumerus_body</child>
+        <transformation>0 0 0 0 0 0</transformation>
+        <axis_order>xyz</axis_order>
+        <axis>
+            <xyz>1 0 0</xyz>
+            <limit>
+                <lower>-1.57080</lower>
+                <upper>1.04720</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis>
+        <axis2>
+            <xyz>0 1 0</xyz>
+            <limit>
+                <lower>-1.57080</lower>
+                <upper>1.57080</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis2>
+        <axis3>
+            <xyz>0 0 1</xyz>
+            <limit>
+                <lower>-1.57080</lower>
+                <upper>1.57080</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis3>
+    </joint>
+    <joint name="rradius" type="revolute">
+        <parent>rhumerus_body</parent>
+        <child>rradius_body</child>
+        <transformation>0 0 0 0 0 0</transformation>
+        <axis>
+            <xyz>1 0 0</xyz>
+            <limit>
+                <lower>-0.17453</lower>
+                <upper>2.96706</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis>
+    </joint>
+    <joint name="rwrist" type="revolute">
+        <parent>rradius_body</parent>
+        <child>rwrist_body</child>
+        <transformation>0 0 0 0 0 0</transformation>
+        <axis>
+            <xyz>0 1 0</xyz>
+            <limit>
+                <lower>-3.14159</lower>
+                <upper>0.00000</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis>
+    </joint>
+    <joint name="rhand" type="universal">
+        <parent>rwrist_body</parent>
+        <child>rhand_body</child>
+        <transformation>0 0 0 0 0 0</transformation>
+        <axis>
+            <xyz>1 0 0</xyz>
+            <limit>
+                <lower>-1.57080</lower>
+                <upper>1.57080</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis>
+        <axis2>
+            <xyz>0 0 1</xyz>
+            <limit>
+                <lower>-0.78540</lower>
+                <upper>0.78540</upper>
+            </limit>
+            <dynamics>
+                <damping>1</damping>
+                <friction>0</friction>
+                <spring_rest_position>0</spring_rest_position>
+                <spring_stiffness>0</spring_stiffness>
+            </dynamics>
+        </axis2>
+    </joint>
+</skeleton>
+<!--END-->
+    </world>
+</skel>
