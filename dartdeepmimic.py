@@ -719,7 +719,7 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
                                 simsteps_per_dataframe=self.args.simsteps_per_dataframe,
                                 screen_width=self.args.window_width,
                                 screen_height=self.args.window_height,
-                                gravity=args.gravity)
+                                gravity=self.args.gravity)
 
 
 if __name__ == "__main__":
@@ -750,8 +750,8 @@ if __name__ == "__main__":
     # env.reward(env.control_skel, 0)
 
     # PID Test stuff
-    start_frame = 200
-    target_frame = 0
+    start_frame = 0
+    target_frame = 200
     env.sync_skel_to_frame(env.control_skel, target_frame, 0, 0)
 
     # [print(dof_name, env.metadict[dof_name]) for dof_name in env._actuated_dof_names]
