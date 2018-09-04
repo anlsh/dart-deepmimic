@@ -633,7 +633,7 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
                           help="DOESN'T DO ANYTHING RIGHT NOW: True if you want a window to render to")
         self.add_argument('--max-torque', type=float, default=90,
                           help="Maximum torque")
-        self.add_argument('--max-angle', type=float, default=1000,
+        self.add_argument('--max-angle', type=float, default=5,
                           help="Max magnitude of angle (in terms of pi) that PID can output")
         self.add_argument('--default-damping', type=float, default=80,
                           help="Default damping coefficient for joints")
@@ -750,7 +750,7 @@ if __name__ == "__main__":
     # env.reward(env.control_skel, 0)
 
     # PID Test stuff
-    start_frame = 0
+    start_frame = 200
     target_frame = 0
     env.sync_skel_to_frame(env.control_skel, target_frame, 0, 0)
 
