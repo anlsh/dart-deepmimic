@@ -492,6 +492,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # VELOCITY REWARD #
         ###################
 
+        # TODO Make sure that the quaternions of the velocity euler angles
+        # are, in fact, the velocity quaternions
         velocity_quats = zip(dangles, drefangles)
         velocity_error = [new - old for new, old in velocity_quats]
 
@@ -575,6 +577,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         expanded_target_euler = self._expanded_euler_from_action(action_vector)
         dof_targets = self._expanded_euler_to_dofvector(expanded_target_euler)
 
+        # TODO Is this PID implementation correct?
         tau = self.p_gain * (dof_targets - self.control_skel.q[6:]) \
               - self.d_gain * (self.control_skel.dq[6:])
         tau = np.clip(tau, -self.max_torque, self.max_torque)
