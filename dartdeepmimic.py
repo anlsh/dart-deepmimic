@@ -180,11 +180,11 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         self.ref_euler_posframes = None
         self.ref_euler_velframes = None
-        self.ref_quat_posframes = None
+        self.ref_quat_frames = None
         self.num_frames = 0
 
         self.num_frames, frames = self.construct_frames(raw_framelist)
-        self.ref_euler_posframes, self.ref_euler_velframes, self.ref_quat_posframes = frames
+        self.ref_euler_posframes, self.ref_euler_velframes, self.ref_quat_frames = frames
 
         self._end_effector_indices = [i for i, node
                                        in enumerate(self.ref_skel.bodynodes)
@@ -308,7 +308,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
             self.sync_skel_to_frame(self.ref_skel, None, 0, 0,
                                     pos_frame, vel_frame)
-            quat_frames[i] = self.gencoordtuple_as_pos_and_qautlist(self.ref_skel)
+            quat_frames[i] = self.posveltuple_as_trans_plus_qautlist(self.ref_skel)
 
         return num_frames, (pos_frames, vel_framelist, quat_frames)
 
@@ -377,13 +377,13 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             warnings.warn("_get_obs used w/ non-control skeleton, you sure you know what you're doing?", RuntimeWarning)
 
         if self.statemode == StateMode.GEN_EULER:
-            state = self.gencoordtuple_as_pos_and_eulerlist(
+            state = self.posveltuple_as_trans_plus_eulerlist(
                 skel)
         elif self.statemode == StateMode.GEN_QUAT:
-            state = self.gencoordtuple_as_pos_and_qautlist(
+            state = self.posveltuple_as_trans_plus_qautlist(
                 skel)
         elif self.statemode == StateMode.GEN_AXIS:
-            state = self.gencoordtuple_as_pos_and_axisanglelist(
+            state = self.posveltuple_as_trans_plus_axisanglelist(
                 skel)
         else:
             raise RuntimeError("Unimplemented state code: "
@@ -395,7 +395,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         return np.concatenate([posvector, velvector])
 
 
-    def gencoordtuple_as_pos_and_eulerlist(self, skeleton):
+    def posveltuple_as_trans_plus_eulerlist(self, skeleton):
         """
         @type skeleton: A dart skeleton
 
@@ -408,7 +408,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         fully-specified euler angles for each of the dofs (in a consistent but
         opaque order)
         """
-        def _genq_to_pos_and_eulerdict(generalized_q):
+        def _genq_to_trans_plus_eulerdict(generalized_q):
             """
             @type generalized_q: A vector of dof values, as given by skel.q or .dq
 
@@ -430,8 +430,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                                                         order)
             return root_translation, expanded_angles
 
-        pos, angles_dict = _genq_to_pos_and_eulerdict(skeleton.q)
-        dpos, dangles_dict = _genq_to_pos_and_eulerdict(skeleton.dq)
+        pos, angles_dict = _genq_to_trans_plus_eulerdict(skeleton.q)
+        dpos, dangles_dict = _genq_to_trans_plus_eulerdict(skeleton.dq)
 
         angles = np.array([angles_dict[key] for key in self._dof_names])
         dangles = np.array([dangles_dict[key] for key in self._dof_names])
@@ -439,13 +439,13 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         return (pos, angles), (dpos, dangles)
 
 
-    def gencoordtuple_as_pos_and_qautlist(self, skel):
+    def posveltuple_as_trans_plus_qautlist(self, skel):
         """
-        Same as gencoordtuple_as_pos_and_eulerlist, but with the angles
+        Same as posveltuple_as_trans_plus_eulerlist, but with the angles
         converted to quaternions
         """
 
-        pos_info, vel_info = self.gencoordtuple_as_pos_and_eulerlist(skel)
+        pos_info, vel_info = self.posveltuple_as_trans_plus_eulerlist(skel)
         pos, angles = pos_info
         dpos, dangles = vel_info
 
@@ -454,9 +454,9 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         return (pos, angles), (dpos, dangles)
 
-    def gencoordtuple_as_pos_and_axisanglelist(self, skel):
+    def posveltuple_as_trans_plus_axisanglelist(self, skel):
         """
-        Same as gencoordtuple_as_pos_and_eulerlist, but with the angles
+        Same as posveltuple_as_trans_plus_eulerlist, but with the angles
         converted to axisangle
         """
         raise NotImplementedError()
@@ -464,8 +464,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
     def reward(self, skel, framenum):
 
         self.sync_skel_to_frame(self.ref_skel, framenum, 0, 0)
-        pos, vel = self.gencoordtuple_as_pos_and_qautlist(skel)
-        refpos, refvel = self.ref_quat_posframes[framenum]
+        pos, vel = self.posveltuple_as_trans_plus_qautlist(skel)
+        refpos, refvel = self.ref_quat_frames[framenum]
 
         pos, angles = pos
         dpos, dangles = vel
@@ -776,7 +776,7 @@ if __name__ == "__main__":
     # [print(dof_name, env.metadict[dof_name]) for dof_name in env._actuated_dof_names]
 
     # print("Provided Target Q: \n", env.control_skel.q[6:])
-    target_state = env.gencoordtuple_as_pos_and_eulerlist(env.control_skel)
+    target_state = env.posveltuple_as_trans_plus_eulerlist(env.control_skel)
     pos, vel = target_state
     target_angles = pos[1][1:]
     # print("Provided Target Angles\n", target_angles)
