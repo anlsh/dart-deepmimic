@@ -109,7 +109,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                  visualize, simsteps_per_dataframe,
                  screen_width,
                  screen_height,
-                 gravity):
+                 gravity, self_collide):
 
         #######################################
         # Just set a bunch of self.parameters #
@@ -128,6 +128,9 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.gravity = gravity
         if not self.gravity:
             warnings.warn("Gravity is disabled, be sure you meant to do this!", RuntimeWarning)
+        self.self_collide = self_collide
+        if not self.self_collide:
+            warnings.warn("Self collisions are disabled, be sure you meant to do this!", RuntimeWarning)
         self.p_gain = p_gain
         self.d_gain = d_gain
         if self.p_gain < 0 or self.d_gain < 0:
@@ -196,6 +199,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.action_dim = ActionMode.lengths[actionmode] \
                           * (len(self._actuated_dof_names))
 
+        # Setting of control_skel to ref_skel is just temporary so that
+        # load_world can call self._get_obs() and set it correctly afterwards
         self.control_skel = self.ref_skel
         self.load_world()
 
@@ -216,9 +221,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.dart_world.set_gravity(int(self.gravity) * GRAVITY_VECTOR)
         self.control_skel = self.dart_world.skeletons[-1]
 
-        # TODO Enable self collisions
-        # Have to explicitly enable self collisions
-        # self.control_skel.set_self_collision_check(True)
+        self.control_skel.set_self_collision_check(self.self_collide)
 
         for joint in self.control_skel.joints:
             if joint.name == ROOT_KEY:
@@ -677,9 +680,21 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
                           help="D for the PD controller")
 
         gravity_group = self.add_mutually_exclusive_group()
-        gravity_group.add_argument('--gravity', dest='gravity', action='store_true')
-        gravity_group.add_argument('--no-gravity', dest='gravity', action='store_false')
+        gravity_group.add_argument('--gravity',
+                                   dest='gravity',
+                                   action='store_true')
+        gravity_group.add_argument('--no-gravity',
+                                   dest='gravity',
+                                   action='store_false')
         self.set_defaults(gravity=True, help="Whether to enable gravity in the world")
+        self_collide_group = self.add_mutually_exclusive_group()
+        self_collide_group.add_argument('--self-collide',
+                                        dest='selfcollide',
+                                        action='store_true')
+        self_collide_group.add_argument('--no-self-collide',
+                                        dest='selfcollide',
+                                        action='store_false')
+        self.set_defaults(self_collide=True, help="Whether to enable selfcollisions in the skeleton")
 
         self.args = None
 
@@ -715,7 +730,8 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
                                 simsteps_per_dataframe=self.args.simsteps_per_dataframe,
                                 screen_width=self.args.window_width,
                                 screen_height=self.args.window_height,
-                                gravity=self.args.gravity)
+                                gravity=self.args.gravity,
+                                self_collide=self.args.selfcollide)
 
 
 if __name__ == "__main__":
