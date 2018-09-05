@@ -58,7 +58,9 @@ def quaternion_difference(a, b):
 
 def quaternion_rotation_angle(a):
     # Returns the rotation of a quaternion about its axis in radians
-    return atan2(norm(a[1:]), a[0])
+    # Lifted from wikipedia https://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation
+    # Section: Recovering_the_axis-angle_representation
+    return 2 * atan2(norm(a[1:]), a[0])
 
 
 def get_metadict(amc_frame, skel_dofs, asf):
@@ -558,7 +560,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         """
         action_vector is of length (anglemodelength) * (num_actuated_joints)
         """
-
         expanded_target_euler = self._expanded_euler_from_action(action_vector)
         dof_targets = self._expanded_euler_to_dofvector(expanded_target_euler)
 
