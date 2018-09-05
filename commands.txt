@@ -1,3 +1,11 @@
 # TRAINING ON ROME
 
 python train_dartdeepmimic.py --control-skel-path $(pwd)/assets/skel/human_pid_test.skel --asf-path $(pwd)/assets/asf/07.asf --ref-motion-path $(pwd)/assets/mocap/07_02.amc --state-mode 0 --visualize false --max-torque 1000 --default-damping 80 --p-gain 1000 --d-gain 1000 --output-params-prefix /tmp/params --num-cpus 4 --initial-params-path /tmp/params/params-fixed2500 |& tee -a RUN.log
+
+# Updated hyperparams
+
+python dartdeepmimic.py --control-skel-path $(pwd)/assets/skel/human.skel --asf-path $(pwd)/assets/asf/07.asf --ref-motion-path $(pwd)/assets/mocap/07_02.amc --state-mode 0 --visualize false --max-torque 2000 --default-damping 80 --p-gain 10000 --d-gain 100
+
+# Monday evening commadn
+
+python train_dartdeepmimic.py --control-skel-path $(pwd)/assets/skel/human.skel --asf-path $(pwd)/assets/asf/07.asf --ref-motion-path $(pwd)/assets/mocap/07_02.amc --state-mode 0 --visualize false --max-torque 2000 --default-damping 80 --p-gain 10000 --d-gain 100 --output-params-prefix $(pwd)/params/monday-evening --train-save-interval 50 --num-cpus 4 --reward-cutoff .2 --pos-init-noise 0 --vel-init-noise 0 |& tee -a $(pwd)/params/monday-evening.log
