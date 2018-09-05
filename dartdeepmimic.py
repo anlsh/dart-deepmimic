@@ -331,6 +331,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             Given a list of dof objects, set their positions and velocities
             accordingly
             """
+            if not(len(dof_list) == len(pos_list) == len(vel_list)):
+                raise RuntimeError("Zip got tattered lists")
             for dof, pos, vel in zip(dof_list, pos_list, vel_list):
                 pos = np.random.normal(pos, pstdv)
                 vel = np.random.normal(vel, vstdv)
@@ -341,12 +343,17 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # World to root joint is a bit special so we handle it here...
         root_pos_data = pos_frame[0][1]
         root_vel_data = vel_frame[0][1]
-        map_dofs(skel.dofs[3:6], root_pos_data[:3], root_vel_data[:3],
-                 pos_stdv, vel_stdv)
+        # Set the root position
+        # The root position data is dofs 1-3 BUT it is actually the first
+        # component of pos_frame[0], so the following calculation should be
+        # correct
         # The root pos is never fuzzed (mostly to prevent clipping into the
         # ground)
-        map_dofs(skel.dofs[0:3], root_pos_data[3:], root_vel_data[3:],
+        map_dofs(skel.dofs[3:6], root_pos_data[:3], root_vel_data[:3],
                  0, vel_stdv)
+        # Set the root orientation
+        map_dofs(skel.dofs[0:3], root_pos_data[3:], root_vel_data[3:],
+                 pos_stdv, vel_stdv)
 
         joint_index = 0
         # And handle the rest of the dofs normally
@@ -694,6 +701,7 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
                                    dest='gravity',
                                    action='store_false')
         self.set_defaults(gravity=True, help="Whether to enable gravity in the world")
+
         self_collide_group = self.add_mutually_exclusive_group()
         self_collide_group.add_argument('--self-collide',
                                         dest='selfcollide',
