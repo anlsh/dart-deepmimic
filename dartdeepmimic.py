@@ -230,6 +230,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                 joint.set_damping_coefficient(index, self.default_damping)
                 joint.set_spring_stiffness(index, self.default_spring)
 
+
     def construct_frames(self, raw_framelist):
         """
         AMC data is given in sequential degrees, while dart specifies angles
