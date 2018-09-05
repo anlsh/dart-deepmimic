@@ -249,6 +249,15 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             rmatrix = compose_matrix(angles=rvector, angle_order="sxyz")
             return euler_from_matrix(rmatrix[:3, :3], axes="rxyz")
 
+
+        def euler_velocity(final, initial, dt):
+            # TODO IMPLEMENT THIS CORRECTLY
+            """
+            Given two xyz euler angles (sequentian degrees)
+            Return the euler angle velocity (in rotating radians i think)
+            """
+            return np.divide(sd2rr(np.subtract(final, initial)), dt)
+
         num_frames = len(raw_framelist)
         elements_per_frame = len(raw_framelist[0])
 
@@ -273,13 +282,10 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             pos_frame[0] = (ROOT_KEY,
                             np.concatenate([curr_root_pos,
                                             sd2rr(curr_root_theta)]))
-            # TODO EMERGENCY Validate that this subtraction of angles works...
             vel_frame[0] = (ROOT_KEY,
                             np.concatenate([np.subtract(curr_root_pos,
-                                                        old_root_pos),
-                                            sd2rr(np.subtract(curr_root_theta,
-                                                              old_root_theta))])
-                            / REFMOTION_DT)
+                                                        old_root_pos) / REFMOTION_DT,
+                                            euler_velocity(curr_root_theta, old_root_theta, REFMOTION_DT)]))
 
             # Deal with the non-root joints in full generality
             joint_index = 0
@@ -291,8 +297,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                 old_theta = expand_angle(old_frame[joint_index][1], order)
 
                 current_rotation_euler = compress_angle(sd2rr(curr_theta), order)
-                velocity_rotation_euler = compress_angle(sd2rr(np.subtract(curr_theta,
-                                                                           old_theta))) / REFMOTION_DT
+                velocity_rotation_euler = compress_angle(euler_velocity(curr_theta,
+                                                                        old_theta, REFMOTION_DT), order)
 
                 pos_frame[joint_index] = (joint_name, current_rotation_euler)
                 vel_frame[joint_index] = (joint_name, velocity_rotation_euler)
