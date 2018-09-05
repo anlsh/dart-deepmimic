@@ -111,6 +111,10 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                  screen_height,
                  gravity):
 
+        #######################################
+        # Just set a bunch of self.parameters #
+        #######################################
+
         self.statemode = statemode
         self.actionmode = actionmode
         self.simsteps_per_dataframe = simsteps_per_dataframe
@@ -124,6 +128,10 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.gravity = gravity
         if not self.gravity:
             warnings.warn("Gravity is disabled, be sure you meant to do this!", RuntimeWarning)
+        self.p_gain = p_gain
+        self.d_gain = d_gain
+        if self.p_gain < 0 or self.d_gain < 0:
+            raise RuntimeError("All PID gains should be positive")
 
         self.framenum = 0
 
@@ -161,9 +169,10 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.metadict = get_metadict(raw_framelist[0],
                                      self.ref_skel.dofs, asf)
 
-        # The sorting is absolutely critical
+        # The sorting is critical
         self._dof_names = [key for key in self.metadict]
         self._dof_names.sort(key=lambda x:self.metadict[x][0][0])
+        # The first degree of freedom is always the root
         self._actuated_dof_names = self._dof_names[1:]
 
         self.ref_euler_posframes = None
@@ -183,26 +192,12 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             self.ref_skel.bodynodes[i].name[:-5]].offset
                                        for i in self._end_effector_indices]
 
-        ################################################
-        # Do some calculations related to action space #
-        ################################################
-
         # Calculate the size of the neural network output vector
         self.action_dim = ActionMode.lengths[actionmode] \
                           * (len(self._actuated_dof_names))
 
         self.control_skel = self.ref_skel
         self.load_world()
-
-        ##################################
-        # Simulation stuff for DeepMimic #
-        ##################################
-
-        self.p_gain = p_gain
-        self.d_gain = d_gain
-
-        if self.p_gain < 0 or self.d_gain < 0:
-            raise RuntimeError("All PID gains should be positive")
 
     def load_world(self):
 
