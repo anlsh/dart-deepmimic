@@ -232,8 +232,11 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             = frames
 
         # Calculate the size of the neural network output vector
-        self.action_dim = ActionMode.lengths[actionmode] \
-                          * (len(self._actuated_dof_names))
+        self.action_dim = 0
+        for name in self._actuated_dof_names:
+            indices, _ = self.metadict[name]
+            action_dim += 0 if len(indices) == 1 \
+                          else ActionMode.lengths[self.actionmode]
 
         # Setting of control_skel to ref_skel is just temporary so that
         # load_world can call self._get_obs() and set it correctly afterwards
@@ -491,7 +494,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         q_index = 6
         netvector_index = 0
         for dof_name in self._actuated_dof_names:
-            indices, _ = self.metadict
+            indices, _ = self.metadict[dof_name]
 
             if len(indices) == 1:
                 q[q_index] = netvector[netvector_index:netvector_index+1]
@@ -512,6 +515,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             raise RuntimeError("Not all net outputs used")
 
         return q
+
 
     def step(self, action_vector):
         """
