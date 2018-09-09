@@ -586,7 +586,7 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
                           help='Path to the reference motion AMC')
         self.add_argument('--state-mode', default=0, type=int,
                           help="Code for the state representation")
-        self.add_argument('--action-mode', default=0, type=int,
+        self.add_argument('--action-mode', type=int,
                           help="Code for the action representation")
         self.add_argument('--visualize', default=False,
                           help="DOESN'T DO ANYTHING RIGHT NOW: True if you want"
