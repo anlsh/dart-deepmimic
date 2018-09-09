@@ -475,54 +475,49 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         return reward
 
-    def _expanded_euler_from_action(self, raw_action):
-        """
-        Given a 1-dimensional vector representing a neural network output,
-        construct from it a set of target angles for the ACTUATED degrees of
-        freedom
-        (the ones in metadict, minus the root)
+    def q_from_netvector(self, netvector):
 
-        Because of how action_dim is defined up in __init__, raw_action
-        should always have the correct dimensions
-        """
-
-        # Reshape into a list of 3-vectors
-        output_angles = np.reshape(raw_action,
-                                   (-1, ActionMode.lengths[self.actionmode]))
-
-        # TODO Normalize and validate values to make sure they're actually
-        # valid euler angles / quaternions / whatever
-        if self.actionmode == ActionMode.GEN_EULER:
-            return output_angles
-        elif self.actionmode == ActionMode.GEN_QUAT:
-            return [euler_from_quaternion(*t, axes="rxyz")
-                    for t in output_angles]
-        elif self.actionmode == ActionMode.GEN_AXIS:
-            return [euler_from_axisangle(*t, axes="rxyz")
-                    for t in output_angles]
+        if self.statemode == StateMode.GEN_EULER:
+            angle_tform = lambda x: x
+        elif self.statemode == StateMode.GEN_QUAT:
+            angle_tform = lambda x: euler_from_quaternion(*x, axes="rxyz")
+        elif self.statemode == StateMode.GEN_AXIS:
+            angle_tform = lambda x: euler_from_axisangle(*x, axes="rxyz")
         else:
-            raise RuntimeError("Unrecognized or unimplemented action code: "
-                               + str(self.actionmode))
+            raise RuntimeError("Unimplemented state code: "
+                               + str(self.statemode))
 
-    def _expanded_euler_to_dofvector(self, expanded_euler):
+        q = np.zeros(len(self.control_skel.q))
+        q_index = 6
+        netvector_index = 0
+        for dof_name in self._actuated_dof_names:
+            indices, _ = self.metadict
 
-        if len(expanded_euler) != len(self._actuated_dof_names):
-            raise RuntimeError("Mismatch between number of actuated dofs"
-                               + " and angles passed in")
-        # expanded_euler calculated correctly
-        # print("Calculated Angle Targets\n", expanded_euler)
+            if len(indices) == 1:
+                q[q_index] = netvector[netvector_index:netvector_index+1]
+                q_index += 1
+                netvector_index += 1
 
-        # ret = np.concatenate([compress_angle(expanded_euler[i],
-        #                                      self.metadict[key][1])
-        #                       for i, key in enumerate(self._actuated_dof_names)])
-        return ret
+            else:
+                raw_angle = netvector[netvector_index:netvector_index \
+                                      + ActionMode.lengths[self.actionmode]]
+                euler_angle = angle_tform(raw_angle)
+                q[q_index:q_index + len(indices)] = euler_angle[:len(indices)]
+                q_index += len(indices)
+                netvector_index += ActionMode.lengths[self.actionmode]
+
+        if q_index != len(self.ref_skel.q):
+            raise RuntimeError("Not all dofs mapped over")
+        if netvector_index != len(netvector):
+            raise RuntimeError("Not all net outputs used")
+
+        return q
 
     def step(self, action_vector):
         """
         action_vector is of length (anglemodelength) * (num_actuated_joints)
         """
-        expanded_target_euler = self._expanded_euler_from_action(action_vector)
-        dof_targets = self._expanded_euler_to_dofvector(expanded_target_euler)
+        dof_targets = self.q_from_netvector(action_vector)
 
         tau = self.p_gain * (dof_targets - self.control_skel.q[6:]) \
               - self.d_gain * (self.control_skel.dq[6:])
