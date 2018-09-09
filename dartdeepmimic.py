@@ -24,6 +24,8 @@ ROOT_KEY = "root"
 ROOT_THETA_ORDER = "xyz"
 GRAVITY_VECTOR = np.array([0, -9.8, 0])
 
+END_OFFSET = np.array([1, 1, 1])
+
 
 class StateMode:
     """
@@ -179,23 +181,14 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # The first degree of freedom is always the root
         self._actuated_dof_names = self._dof_names[1:]
 
-        self.ref_euler_posframes = None
-        self.ref_euler_velframes = None
-        self.ref_quat_frames = None
-        self.num_frames = 0
-
-        self.num_frames, frames = self.construct_frames(raw_framelist)
-        self.ref_euler_posframes, self.ref_euler_velframes, \
-            self.ref_quat_frames = frames
-
         self._end_effector_indices = [i for i, node
                                        in enumerate(self.ref_skel.bodynodes)
                                      if len(node.child_bodynodes) == 0]
 
-        # TODO Parse the actual joint offsets from the .skel
-        # The below should be proportianal to the actual values
-        self._end_effector_offsets = [np.array([1, 1, 1])] \
-                                     * len(self._end_effector_indices)
+        self.num_frames, frames = self.construct_frames(raw_framelist)
+        self.ref_euler_posframes, self.ref_euler_velframes, \
+            self.ref_quat_frames, self.ref_com_frames, self.ref_ee_frames \
+            = frames
 
         # Calculate the size of the neural network output vector
         self.action_dim = ActionMode.lengths[actionmode] \
@@ -253,7 +246,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
 
         def euler_velocity(final, initial, dt):
-            # TODO IMPLEMENT THIS CORRECTLY
             """
             Given two xyz euler angles (sequentian degrees)
             Return the euler angle velocity (in rotating radians i think)
@@ -266,6 +258,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         pos_frames = [None] * num_frames
         vel_framelist = [None] * num_frames
         quat_frames = [None] * num_frames
+        com_frames = [None] * num_frames
+        ee_frames = [None] * num_frames
 
         for i in range(len(raw_framelist)):
             old_i = i - 1 if i > 0 else 0
@@ -315,9 +309,16 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
             self.sync_skel_to_frame(self.ref_skel, None, 0, 0,
                                     pos_frame, vel_frame)
-            quat_frames[i] = self.posveltuple_as_trans_plus_qautlist(self.ref_skel)
+            com_frames[i] = self.ref_skel.com()
+            quat_frames[i] = self.quaternion_angles(self.ref_skel)
 
-        return num_frames, (pos_frames, vel_framelist, quat_frames)
+            # TODO Parse actual end positions
+            ee_frames[i] = [self.ref_skel.bodynodes[ii].to_world(END_OFFSET)
+                            for ii in self._end_effector_indices]
+
+        return num_frames, (pos_frames, vel_framelist, quat_frames, com_frames,
+                            ee_frames)
+
 
     def sync_skel_to_frame(self, skel, frame_index, pos_stdv, vel_stdv,
                            pos_frame=None, vel_frame=None):
@@ -385,9 +386,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         if skel is None:
             skel = self.control_skel
         else:
-            # There's not any reason I can think of to actually use any other
-            # skeleton, the print method is just here so I never accidentally
-            # replace it
             warnings.warn("_get_obs used w/ non-control skeleton, you sure"
                           + "you know what you're doing?", RuntimeWarning)
 
@@ -437,34 +435,28 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
             converted_angle = quaternion_from_euler(*euler_angle,
                                                     axes="rxyz")
-            angles = np.concatenate([angles, converted_angle])
+            angles = np.append(angles, converted_angle)
 
     def reward(self, skel, framenum):
 
-        self.sync_skel_to_frame(self.ref_skel, framenum, 0, 0)
-        pos, vel = self.posveltuple_as_trans_plus_qautlist(skel)
-        refpos, refvel = self.ref_quat_frames[framenum]
+        angles = self.quaternion_angles(skel)
 
-        pos, angles = pos
-        dpos, dangles = vel
-
-        refpos, refangles = refpos
-        drefpos, drefangles = refvel
+        ref_angles = self.ref_quat_frames[framenum]
+        ref_com = self.ref_com_frames[framenum]
+        ref_ee_positions = self.ref_ee_pos_frames[framenum]
 
         #####################
         # POSITIONAL REWARD #
         #####################
 
         posdiff = [quaternion_difference(ra, a)
-                   for a, ra in zip(angles, refangles)]
+                   for a, ra in zip(angles, ref_angles)]
         posdiffmag = sum([quaternion_rotation_angle(d)**2 for d in posdiff])
 
         ###################
         # VELOCITY REWARD #
         ###################
 
-        # TODO Make sure that the quaternions of the velocity euler angles
-        # are, in fact, the velocity quaternions
         velocity_quats = zip(dangles, drefangles)
         velocity_error = [new - old for new, old in velocity_quats]
 
@@ -474,18 +466,15 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # END EFFECTOR REWARD #
         #######################
 
-        # TODO THe units are off, the paper specifically specifies units of
-        # meters
-        eediffmag = sum([norm(self.control_skel.bodynodes[i].to_world(offset)
-                              - self.ref_skel.bodynodes[i].to_world(offset))**2
-                         for i, offset in zip(self._end_effector_indices,
-                                              self._end_effector_offsets)])
+        eediffmag = sum([norm(self.control_skel.bodynodes[i].to_world(END_OFFSET)
+                              - ref_ee_positions[i])**2
+                         for i in self._end_effector_indices])
 
         #########################
         # CENTER OF MASS REWARD #
         #########################
 
-        comdiffmag = norm(self.control_skel.com() - self.ref_skel.com())**2
+        comdiffmag = norm(self.control_skel.com() - ref_com)**2
 
         ################
         # TOTAL REWARD #
@@ -549,7 +538,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         expanded_target_euler = self._expanded_euler_from_action(action_vector)
         dof_targets = self._expanded_euler_to_dofvector(expanded_target_euler)
 
-        # TODO Is this PID implementation correct?
         tau = self.p_gain * (dof_targets - self.control_skel.q[6:]) \
               - self.d_gain * (self.control_skel.dq[6:])
         tau = np.clip(tau, -self.max_torque, self.max_torque)
