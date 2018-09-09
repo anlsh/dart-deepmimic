@@ -296,19 +296,21 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             joint_index = 0
             for joint_name, curr_joint_angles in current_frame[1:]:
                 joint_index += 1
-                _, order = self.metadict[joint_name]
+                dof_indices, _ = self.metadict[joint_name]
 
-                curr_theta = expand_angle(curr_joint_angles, order)
-                old_theta = expand_angle(old_frame[joint_index][1], order)
+                length = dof_indices[-1] + 1 - dof_indices[0]
 
-                current_rotation_euler = compress_angle(sd2rr(curr_theta), order)
-                velocity_rotation_euler = compress_angle(euler_velocity(curr_theta,
-                                                                        old_theta,
-                                                                        REFMOTION_DT),
-                                                         order)
+                curr_theta = pad2length(curr_joint_angles, 3)
+                old_theta = pad2length(old_frame[joint_index][1], 3)
 
-                pos_frame[joint_index] = (joint_name, current_rotation_euler)
-                vel_frame[joint_index] = (joint_name, velocity_rotation_euler)
+                # TODO This is of course not angular velocity at all..
+                vel_theta = euler_velocity(curr_theta,
+                                           old_theta,
+                                           REFMOTION_DT)[:length]
+                curr_theta = sd2rr(curr_theta)[:length]
+
+                pos_frame[joint_index] = (joint_name, curr_theta)
+                vel_frame[joint_index] = (joint_name, vel_theta)
 
             pos_frames[i] = pos_frame
             vel_framelist[i] = vel_frame
