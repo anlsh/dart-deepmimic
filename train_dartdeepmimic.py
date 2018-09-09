@@ -5,9 +5,9 @@ import os.path as osp
 import gym, logging
 from baselines.bench import Monitor
 from baselines import logger
-import argparse
 
-from dartdeepmimic import DartDeepMimicEnv, DartDeepMimicArgParse
+from dartdeepmimic import DartDeepMimicEnv
+from ddm_argparse import DartDeepMimicArgParse
 
 
 # class PolicyLoaderAgent(object):

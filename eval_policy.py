@@ -1,5 +1,5 @@
 import argparse
-from dartdeepmimic import DartDeepMimicArgParse
+from ddm_argparse import DartDeepMimicArgParse
 from baselines.common import tf_util as U
 from baselines.ppo1 import mlp_policy, pposgd_simple
 import numpy as np
