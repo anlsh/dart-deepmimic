@@ -13,6 +13,7 @@ import numpy as np
 import pydart2 as pydart
 import random
 import warnings
+from copy import deepcopy
 
 # Customizable parameters
 ROOT_THETA_KEY = "root"
@@ -23,6 +24,8 @@ REFMOTION_DT = 1 / 120
 ROOT_KEY = "root"
 ROOT_THETA_ORDER = "xyz"
 GRAVITY_VECTOR = np.array([0, -9.8, 0])
+
+END_OFFSET = np.array([1, 1, 1])
 
 
 class StateMode:
@@ -50,6 +53,11 @@ class ActionMode:
     # type. For instance euler is 3 numbers, a quaternion is 4
     lengths = [3, 4, 4]
 
+def pad2length(vector, length):
+    padded = np.zeros(length)
+    padded[:len(vector)] = deepcopy(vector)
+    return padded
+
 
 def quaternion_difference(a, b):
     return quaternion_multiply(b, quaternion_inverse(a))
@@ -63,7 +71,7 @@ def quaternion_rotation_angle(a):
     return 2 * atan2(norm(a[1:]), a[0])
 
 
-def get_metadict(amc_frame, skel_dofs):
+def get_metadict(amc_frame, skel):
     """
     @type amc_frame: A list of (joint-name, joint-data) tuples
     @type skel_dofs: The array of skeleton dofs, as given by skel.dofs
@@ -79,13 +87,52 @@ def get_metadict(amc_frame, skel_dofs):
     # actuated dofs is no longer given by (size of output dict - 1), then
     # the setting of action_dim in DartDeepMimic will need to be updated
 
+    skel_dofs = skel.dofs
+
     metadict = {}
     for dof_name, _ in amc_frame:
         indices = [i for i, dof in enumerate(skel_dofs)
                    if dof.name.startswith(dof_name)]
-        metadict[dof_name] = (indices)
+        child_body = [body for body in skel.bodynodes
+                      if body.name.startswith(dof_name)][0]
+        metadict[dof_name] = (indices, child_body)
 
     return metadict
+
+
+def map_dofs(dof_list, pos_list, vel_list, pstdv, vstdv):
+    """
+    Given a list of dof objects, set their positions and velocities
+    accordingly
+    """
+    if not(len(dof_list) == len(pos_list) == len(vel_list)):
+        raise RuntimeError("Zip got tattered lists")
+    for dof, pos, vel in zip(dof_list, pos_list, vel_list):
+        pos = np.random.normal(pos, pstdv)
+        vel = np.random.normal(vel, vstdv)
+
+        dof.set_position(float(pos))
+        dof.set_velocity(float(vel))
+
+def sd2rr(rvector):
+    """
+    Takes a vector of sequential degrees and returns the rotation it
+    describes in rotating radians (the format DART expects angles in)
+    """
+
+    rvector = np.multiply(rvector, pi / 180)
+
+    rmatrix = compose_matrix(angles=rvector, angle_order="sxyz")
+    return euler_from_matrix(rmatrix[:3, :3], axes="rxyz")
+
+
+def euler_velocity(final, initial, dt):
+    """
+    Given two xyz euler angles (sequentian degrees)
+    Return the euler angle velocity (in rotating radians i think)
+    """
+    # TODO IT'S NOT RIGHT AAAAHHHH
+    return np.divide(sd2rr(np.subtract(final, initial)), dt)
 
 
 class DartDeepMimicEnv(dart_env.DartEnv):
@@ -167,7 +214,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         raw_framelist = AMC(reference_motion_path).frames
         self.metadict = get_metadict(raw_framelist[0],
-                                     self.ref_skel.dofs, asf)
+                                     self.ref_skel)
 
         # The sorting is critical
         self._dof_names = [key for key in self.metadict]
@@ -175,27 +222,21 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # The first degree of freedom is always the root
         self._actuated_dof_names = self._dof_names[1:]
 
-        self.ref_euler_posframes = None
-        self.ref_euler_velframes = None
-        self.ref_quat_frames = None
-        self.num_frames = 0
-
-        self.num_frames, frames = self.construct_frames(raw_framelist)
-        self.ref_euler_posframes, self.ref_euler_velframes, \
-            self.ref_quat_frames = frames
-
         self._end_effector_indices = [i for i, node
                                        in enumerate(self.ref_skel.bodynodes)
                                      if len(node.child_bodynodes) == 0]
 
-        # TODO Parse the actual joint offsets from the .skel
-        # The below should be proportianal to the actual values
-        self._end_effector_offsets = [np.array([1, 1, 1])] \
-                                     * len(self._end_effector_indices)
+        self.num_frames, frames = self.construct_frames(raw_framelist)
+        self.ref_q_frames, self.ref_dq_frames, \
+            self.ref_quat_frames, self.ref_com_frames, self.ref_ee_frames \
+            = frames
 
         # Calculate the size of the neural network output vector
-        self.action_dim = ActionMode.lengths[actionmode] \
-                          * (len(self._actuated_dof_names))
+        self.action_dim = 0
+        for name in self._actuated_dof_names:
+            indices, _ = self.metadict[name]
+            self.action_dim += 0 if len(indices) == 1 \
+                          else ActionMode.lengths[self.actionmode]
 
         # Setting of control_skel to ref_skel is just temporary so that
         # load_world can call self._get_obs() and set it correctly afterwards
@@ -236,32 +277,14 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         all positions and velocities and store the results
         """
 
-        def sd2rr(rvector):
-            """
-            Takes a vector of sequential degrees and returns the rotation it
-            describes in rotating radians (the format DART expects angles in)
-            """
-
-            rvector = np.multiply(rvector, pi / 180)
-
-            rmatrix = compose_matrix(angles=rvector, angle_order="sxyz")
-            return euler_from_matrix(rmatrix[:3, :3], axes="rxyz")
-
-
-        def euler_velocity(final, initial, dt):
-            # TODO IMPLEMENT THIS CORRECTLY
-            """
-            Given two xyz euler angles (sequentian degrees)
-            Return the euler angle velocity (in rotating radians i think)
-            """
-            return np.divide(sd2rr(np.subtract(final, initial)), dt)
-
         num_frames = len(raw_framelist)
         elements_per_frame = len(raw_framelist[0])
 
         pos_frames = [None] * num_frames
-        vel_framelist = [None] * num_frames
+        vel_frames = [None] * num_frames
         quat_frames = [None] * num_frames
+        com_frames = [None] * num_frames
+        ee_frames = [None] * num_frames
 
         for i in range(len(raw_framelist)):
             old_i = i - 1 if i > 0 else 0
@@ -269,8 +292,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             current_frame = raw_framelist[i]
             old_frame = raw_framelist[old_i]
 
-            pos_frame = [None] * elements_per_frame
-            vel_frame = [None] * elements_per_frame
+            q = np.zeros(len(self.ref_skel.q))
+            dq = np.zeros(len(self.ref_skel.dq))
 
             # Root data is a little bit special, so we handle it here
             curr_root_data = np.array(current_frame[0][1])
@@ -278,45 +301,47 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                                     curr_root_data[:3], curr_root_data[3:]
             old_root_data = np.array(old_frame[0][1])
             old_root_pos, old_root_theta = old_root_data[:3], old_root_data[3:]
-            pos_frame[0] = (ROOT_KEY,
-                            np.concatenate([curr_root_pos,
-                                            sd2rr(curr_root_theta)]))
-            vel_frame[0] = (ROOT_KEY,
-                            np.concatenate([np.subtract(curr_root_pos,
-                                                        old_root_pos) / REFMOTION_DT,
-                                            euler_velocity(curr_root_theta,
-                                                           old_root_theta,
-                                                           REFMOTION_DT)]))
+            q[3:6] = curr_root_pos
+            q[0:3] = sd2rr(curr_root_theta)
+            dq[3:6] = np.subtract(curr_root_pos, old_root_pos) / REFMOTION_DT
+            dq[0:3] = euler_velocity(curr_root_theta, old_root_theta,
+                                     REFMOTION_DT)
 
             # Deal with the non-root joints in full generality
             joint_index = 0
             for joint_name, curr_joint_angles in current_frame[1:]:
                 joint_index += 1
-                _, order = self.metadict[joint_name]
+                dof_indices, _ = self.metadict[joint_name]
 
-                curr_theta = expand_angle(curr_joint_angles, order)
-                old_theta = expand_angle(old_frame[joint_index][1], order)
+                length = dof_indices[-1] + 1 - dof_indices[0]
 
-                current_rotation_euler = compress_angle(sd2rr(curr_theta), order)
-                velocity_rotation_euler = compress_angle(euler_velocity(curr_theta,
-                                                                        old_theta,
-                                                                        REFMOTION_DT),
-                                                         order)
+                curr_theta = pad2length(curr_joint_angles, 3)
+                old_theta = pad2length(old_frame[joint_index][1], 3)
 
-                pos_frame[joint_index] = (joint_name, current_rotation_euler)
-                vel_frame[joint_index] = (joint_name, velocity_rotation_euler)
+                # TODO This is not angular velocity at all..
+                vel_theta = euler_velocity(curr_theta,
+                                           old_theta,
+                                           REFMOTION_DT)[:length]
+                curr_theta = sd2rr(curr_theta)[:length]
 
-            pos_frames[i] = pos_frame
-            vel_framelist[i] = vel_frame
+                q[dof_indices[0]:dof_indices[-1] + 1] = curr_theta
+                dq[dof_indices[0]:dof_indices[-1] + 1] = vel_theta
 
-            self.sync_skel_to_frame(self.ref_skel, None, 0, 0,
-                                    pos_frame, vel_frame)
-            quat_frames[i] = self.posveltuple_as_trans_plus_qautlist(self.ref_skel)
+            pos_frames[i] = q
+            vel_frames[i] = dq
 
-        return num_frames, (pos_frames, vel_framelist, quat_frames)
+            map_dofs(self.ref_skel.dofs, q, dq, 0, 0)
+            com_frames[i] = self.ref_skel.com()
+            quat_frames[i] = self.quaternion_angles(self.ref_skel)
+            # TODO Parse actual end positions
+            ee_frames[i] = [self.ref_skel.bodynodes[ii].to_world(END_OFFSET)
+                            for ii in self._end_effector_indices]
 
-    def sync_skel_to_frame(self, skel, frame_index, pos_stdv, vel_stdv,
-                           pos_frame=None, vel_frame=None):
+        return num_frames, (pos_frames, vel_frames, quat_frames, com_frames,
+                            ee_frames)
+
+
+    def sync_skel_to_frame(self, skel, frame_index, pos_stdv, vel_stdv):
         """
         Given a skeleton and mocap frame index, use self.metadict to sync all
         the dofs. Will work on different skeleton objects as long as they're
@@ -325,50 +350,15 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         If noise is true, then positions and velocities will have random normal
         noise added to them
         """
-        if frame_index is not None:
-            pos_frame = self.ref_euler_posframes[frame_index]
-            vel_frame = self.ref_euler_velframes[frame_index]
-
-        def map_dofs(dof_list, pos_list, vel_list, pstdv, vstdv):
-            """
-            Given a list of dof objects, set their positions and velocities
-            accordingly
-            """
-            if not(len(dof_list) == len(pos_list) == len(vel_list)):
-                raise RuntimeError("Zip got tattered lists")
-            for dof, pos, vel in zip(dof_list, pos_list, vel_list):
-                pos = np.random.normal(pos, pstdv)
-                vel = np.random.normal(vel, vstdv)
-
-                dof.set_position(float(pos))
-                dof.set_velocity(float(vel))
-
-        # World to root joint is a bit special so we handle it here...
-        root_pos_data = pos_frame[0][1]
-        root_vel_data = vel_frame[0][1]
         # Set the root position
-        # The root position data is dofs 1-3 BUT it is actually the first
-        # component of pos_frame[0], so the following calculation should be
-        # correct
-        # The root pos is never fuzzed (mostly to prevent clipping into the
+        # The root pos is never fuzzed (prevent clipping into the
         # ground)
-        map_dofs(skel.dofs[3:6], root_pos_data[:3], root_vel_data[:3],
-                 0, vel_stdv)
-        # Set the root orientation
-        map_dofs(skel.dofs[0:3], root_pos_data[3:], root_vel_data[3:],
-                 pos_stdv, vel_stdv)
+        q = self.ref_q_frames[frame_index]
+        dq = self.ref_dq_frames[frame_index]
 
-        joint_index = 0
-        # And handle the rest of the dofs normally
-        for joint_name, joint_angles in pos_frame[1:]:
-            joint_index += 1
-            dof_indices, order = self.metadict[joint_name]
-            start_index, end_index = dof_indices[0], dof_indices[-1]
-
-            joint_velocities = vel_frame[joint_index][1]
-
-            map_dofs(skel.dofs[start_index : end_index + 1],
-                     joint_angles, joint_velocities, pos_stdv, vel_stdv)
+        map_dofs(skel.dofs[3:6], q[3:6], dq[3:6], 0, vel_stdv)
+        map_dofs(skel.dofs[0:3], q[:3], dq[:3], 0, vel_stdv)
+        map_dofs(skel.dofs[6:], q[6:], dq[6:], pos_stdv, vel_stdv)
 
 
     def _get_obs(self, skel=None):
@@ -381,145 +371,99 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         if skel is None:
             skel = self.control_skel
         else:
-            # There's not any reason I can think of to actually use any other
-            # skeleton, the print method is just here so I never accidentally
-            # replace it
             warnings.warn("_get_obs used w/ non-control skeleton, you sure"
                           + "you know what you're doing?", RuntimeWarning)
 
         if self.statemode == StateMode.GEN_EULER:
-            state = self.posveltuple_as_trans_plus_eulerlist(
-                skel)
+            angle_tform = lambda x: x
         elif self.statemode == StateMode.GEN_QUAT:
-            state = self.posveltuple_as_trans_plus_qautlist(
-                skel)
+            angle_tform = lambda x: quaternion_from_euler(*x, axes="rxyz")
         elif self.statemode == StateMode.GEN_AXIS:
-            state = self.posveltuple_as_trans_plus_axisanglelist(
-                skel)
+            angle_tform = lambda x: axisangle_from_euler(*x, axes="rxyz")
         else:
             raise RuntimeError("Unimplemented state code: "
                                + str(self.statemode))
 
-        pos, vel = state
-        posvector = np.concatenate([pos[0], np.concatenate(pos[1])])
-        velvector = np.concatenate([vel[0], np.concatenate(vel[1])])
-        return np.concatenate([posvector, velvector])
+        # TODO Make this part more efficient
+        state = np.array([])
+        for dof_name in self._dof_names:
+            indices, body = self.metadict[dof_name]
 
+            if dof_name != ROOT_KEY:
+                if len(indices) > 1:
+                    euler_angle = pad2length(skel.q[indices[0]:indices[-1]+1],
+                                            3)
+                    converted_angle = angle_tform(euler_angle)
+                else:
+                    converted_angle = skel.q[indices[0]:indices[0]+1]
+            else:
+                converted_angle = skel.q[0:3]
 
-    def posveltuple_as_trans_plus_eulerlist(self, skeleton):
-        """
-        @type skeleton: A dart skeleton
+            relpos = body.com() - skel.com()
+            linvel = body.dC
+            # TODO Need to convert dq into an angular velocity
+            dq = skel.dq[indices[0]:indices[-1]+1]
+            state = np.concatenate([state, converted_angle, relpos, linvel, dq])
 
-        @return: A tuple where first component is positional info, second is
-        velocity info
+        return state
 
+    def quaternion_angles(self, skel=None):
+        if skel is None:
+            skel = self.control_skel
 
-        Each component is itself a tuple where the first element is an array
-        containing the translational component, and the second is a list of
-        fully-specified euler angles for each of the dofs (in a consistent but
-        opaque order)
-        """
-        def _genq_to_trans_plus_eulerdict(generalized_q):
-            """
-            @type generalized_q: A vector of dof values, as given by skel.q or
-            .dq
+        angles = np.array([])
 
-            @return: A tuple where
-                - index 0 is the root positional component
-                - [1] is a dictionary mapping dof names to fully specified euler
-                angles in xyz order
-            @type: Tuple
-            """
+        for dof_name in self._dof_names:
 
-            root_translation = generalized_q[3:6]
-            expanded_angles = {ROOT_THETA_KEY: expand_angle(generalized_q[0:3],
-                                                            ROOT_THETA_ORDER)}
-            for dof_name in self._actuated_dof_names:
-                indices, order = self.metadict[dof_name]
-                fi = indices[0]
-                li = indices[-1]
-                expanded_angles[dof_name] = expand_angle(generalized_q[fi:li+1],
-                                                         order)
-            return root_translation, expanded_angles
+            indices, _ = self.metadict[dof_name]
 
-        pos, angles_dict = _genq_to_trans_plus_eulerdict(skeleton.q)
-        dpos, dangles_dict = _genq_to_trans_plus_eulerdict(skeleton.dq)
+            if dof_name != ROOT_KEY:
+                euler_angle = pad2length(skel.q[indices[0]:indices[-1]+1],
+                                         3)
+            else:
+                euler_angle = skel.q[0:3]
 
-        angles = np.array([angles_dict[key] for key in self._dof_names])
-        dangles = np.array([dangles_dict[key] for key in self._dof_names])
+            converted_angle = quaternion_from_euler(*euler_angle,
+                                                    axes="rxyz")
+            angles = np.append(angles, converted_angle)
 
-        return (pos, angles), (dpos, dangles)
-
-
-    def posveltuple_as_trans_plus_qautlist(self, skel):
-        """
-        Same as posveltuple_as_trans_plus_eulerlist, but with the angles
-        converted to quaternions
-        """
-
-        pos_info, vel_info = self.posveltuple_as_trans_plus_eulerlist(skel)
-        pos, angles = pos_info
-        dpos, dangles = vel_info
-
-        angles = [quaternion_from_euler(*t, axes="rxyz") for t in angles]
-        dangles = [quaternion_from_euler(*t, axes="rxyz") for t in dangles]
-
-        return (pos, angles), (dpos, dangles)
-
-    def posveltuple_as_trans_plus_axisanglelist(self, skel):
-        """
-        Same as posveltuple_as_trans_plus_eulerlist, but with the angles
-        converted to axisangle
-        """
-        raise NotImplementedError()
 
     def reward(self, skel, framenum):
 
-        self.sync_skel_to_frame(self.ref_skel, framenum, 0, 0)
-        pos, vel = self.posveltuple_as_trans_plus_qautlist(skel)
-        refpos, refvel = self.ref_quat_frames[framenum]
+        angles = self.quaternion_angles(skel)
 
-        pos, angles = pos
-        dpos, dangles = vel
-
-        refpos, refangles = refpos
-        drefpos, drefangles = refvel
+        ref_angles = self.ref_quat_frames[framenum]
+        ref_com = self.ref_com_frames[framenum]
+        ref_ee_positions = self.ref_ee_pos_frames[framenum]
 
         #####################
         # POSITIONAL REWARD #
         #####################
 
         posdiff = [quaternion_difference(ra, a)
-                   for a, ra in zip(angles, refangles)]
+                   for a, ra in zip(angles, ref_angles)]
         posdiffmag = sum([quaternion_rotation_angle(d)**2 for d in posdiff])
 
         ###################
         # VELOCITY REWARD #
         ###################
 
-        # TODO Make sure that the quaternions of the velocity euler angles
-        # are, in fact, the velocity quaternions
-        velocity_quats = zip(dangles, drefangles)
-        velocity_error = [new - old for new, old in velocity_quats]
-
-        veldiffmag = sum([norm(v)**2 for v in velocity_error])
+        ref_dq = self.ref_dq_frames[framenum]
+        veldiffmag = norm(skel.q - ref_dq)
 
         #######################
         # END EFFECTOR REWARD #
         #######################
 
-        # TODO THe units are off, the paper specifically specifies units of
-        # meters
-        eediffmag = sum([norm(self.control_skel.bodynodes[i].to_world(offset)
-                              - self.ref_skel.bodynodes[i].to_world(offset))**2
-                         for i, offset in zip(self._end_effector_indices,
-                                              self._end_effector_offsets)])
+        eediffmag = sum([norm(self.control_skel.bodynodes[i].to_world(END_OFFSET)
+                              - ref_ee_positions[i])**2
+                         for i in self._end_effector_indices])
 
         #########################
         # CENTER OF MASS REWARD #
         #########################
 
-        comdiffmag = norm(self.control_skel.com() - self.ref_skel.com())**2
+        comdiffmag = norm(self.control_skel.com() - ref_com)**2
 
         ################
         # TOTAL REWARD #
@@ -534,56 +478,51 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         return reward
 
-    def _expanded_euler_from_action(self, raw_action):
-        """
-        Given a 1-dimensional vector representing a neural network output,
-        construct from it a set of target angles for the ACTUATED degrees of
-        freedom
-        (the ones in metadict, minus the root)
+    def q_from_netvector(self, netvector):
 
-        Because of how action_dim is defined up in __init__, raw_action
-        should always have the correct dimensions
-        """
-
-        # Reshape into a list of 3-vectors
-        output_angles = np.reshape(raw_action,
-                                   (-1, ActionMode.lengths[self.actionmode]))
-
-        # TODO Normalize and validate values to make sure they're actually
-        # valid euler angles / quaternions / whatever
-        if self.actionmode == ActionMode.GEN_EULER:
-            return output_angles
-        elif self.actionmode == ActionMode.GEN_QUAT:
-            return [euler_from_quaternion(*t, axes="rxyz")
-                    for t in output_angles]
-        elif self.actionmode == ActionMode.GEN_AXIS:
-            return [euler_from_axisangle(*t, axes="rxyz")
-                    for t in output_angles]
+        if self.statemode == StateMode.GEN_EULER:
+            angle_tform = lambda x: x
+        elif self.statemode == StateMode.GEN_QUAT:
+            angle_tform = lambda x: euler_from_quaternion(*x, axes="rxyz")
+        elif self.statemode == StateMode.GEN_AXIS:
+            angle_tform = lambda x: euler_from_axisangle(*x, axes="rxyz")
         else:
-            raise RuntimeError("Unrecognized or unimplemented action code: "
-                               + str(self.actionmode))
+            raise RuntimeError("Unimplemented state code: "
+                               + str(self.statemode))
 
-    def _expanded_euler_to_dofvector(self, expanded_euler):
+        q = np.zeros(len(self.control_skel.q))
+        q_index = 6
+        netvector_index = 0
+        for dof_name in self._actuated_dof_names:
+            indices, _ = self.metadict[dof_name]
 
-        if len(expanded_euler) != len(self._actuated_dof_names):
-            raise RuntimeError("Mismatch between number of actuated dofs"
-                               + " and angles passed in")
-        # expanded_euler calculated correctly
-        # print("Calculated Angle Targets\n", expanded_euler)
+            if len(indices) == 1:
+                q[q_index] = netvector[netvector_index:netvector_index+1]
+                q_index += 1
+                netvector_index += 1
 
-        ret = np.concatenate([compress_angle(expanded_euler[i],
-                                             self.metadict[key][1])
-                              for i, key in enumerate(self._actuated_dof_names)])
-        return ret
+            else:
+                raw_angle = netvector[netvector_index:netvector_index \
+                                      + ActionMode.lengths[self.actionmode]]
+                euler_angle = angle_tform(raw_angle)
+                q[q_index:q_index + len(indices)] = euler_angle[:len(indices)]
+                q_index += len(indices)
+                netvector_index += ActionMode.lengths[self.actionmode]
+
+        if q_index != len(self.ref_skel.q):
+            raise RuntimeError("Not all dofs mapped over")
+        if netvector_index != len(netvector):
+            raise RuntimeError("Not all net outputs used")
+
+        return q
+
 
     def step(self, action_vector):
         """
         action_vector is of length (anglemodelength) * (num_actuated_joints)
         """
-        expanded_target_euler = self._expanded_euler_from_action(action_vector)
-        dof_targets = self._expanded_euler_to_dofvector(expanded_target_euler)
+        dof_targets = self.q_from_netvector(action_vector)
 
-        # TODO Is this PID implementation correct?
         tau = self.p_gain * (dof_targets - self.control_skel.q[6:]) \
               - self.d_gain * (self.control_skel.dq[6:])
         tau = np.clip(tau, -self.max_torque, self.max_torque)
@@ -765,17 +704,17 @@ if __name__ == "__main__":
     args = parser.parse_args()
     env = parser.get_env()
 
-    # obs = env.reset(0, False)
-    # done = False
-    # i = 0
-    # while True:
-    #     env.render()
-    #     obs = env.reset(i, False)
-    #     # a = env.action_space.sample()
-    #     # state, reward, done, info = env.step(a)
-    #     i += 1
-    #     if done:
-    #         env.reset()
+    env.reset(0, 0, 0)
+    done = False
+    i = 0
+    while True:
+        env.render()
+        env.sync_skel_to_frame(env.control_skel, i, 0, 0)
+        # a = env.action_space.sample()
+        # state, reward, done, info = env.step(a)
+        i += 1
+        if done:
+            env.reset()
 
     # for i in range(env.num_frames):
     #     env.reset(i, False)
@@ -785,22 +724,25 @@ if __name__ == "__main__":
     # env.reward(env.control_skel, 0)
 
     # PID Test stuff
-    start_frame = 0
-    target_frame = 200
-    env.sync_skel_to_frame(env.control_skel, target_frame, 0, 0)
+    # start_frame = 0
+    # target_frame = 200
+    # env.sync_skel_to_frame(env.control_skel, target_frame, 0, 0)
 
-    # [print(dof_name, env.metadict[dof_name]) for dof_name in env._actuated_dof_names]
+    # # print("Provided Target Q: \n", env.control_skel.q[6:])
+    # target_state = env.posveltuple_as_trans_plus_eulerlist(env.control_skel)
+    # pos, vel = target_state
+    # target_angles = pos[1][1:]
+    # # print("Provided Target Angles\n", target_angles)
 
-    # print("Provided Target Q: \n", env.control_skel.q[6:])
-    target_state = env.posveltuple_as_trans_plus_eulerlist(env.control_skel)
-    pos, vel = target_state
-    target_angles = pos[1][1:]
-    # print("Provided Target Angles\n", target_angles)
+    # obs = env.sync_skel_to_frame(env.control_skel, start_frame, 0, 0)
+    # print(env.control_skel.dq)
 
-    obs = env.sync_skel_to_frame(env.control_skel, start_frame, 0, 0)
-    print(env.control_skel.dq)
+    # while True:
+    #     env.framenum = target_frame
+    #     s, r, done, info = env.step(np.concatenate(target_angles))
+    #     env.render()
 
-    while True:
-        env.framenum = target_frame
-        s, r, done, info = env.step(np.concatenate(target_angles))
-        env.render()
+    # frame = 0
+    # env.sync_skel_to_frame(env.control_skel, 0, 0, 0)
+    # while True:
+    #     env.render()
