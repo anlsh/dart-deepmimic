@@ -63,7 +63,7 @@ def quaternion_rotation_angle(a):
     return 2 * atan2(norm(a[1:]), a[0])
 
 
-def get_metadict(amc_frame, skel_dofs):
+def get_metadict(amc_frame, skel):
     """
     @type amc_frame: A list of (joint-name, joint-data) tuples
     @type skel_dofs: The array of skeleton dofs, as given by skel.dofs
@@ -79,11 +79,15 @@ def get_metadict(amc_frame, skel_dofs):
     # actuated dofs is no longer given by (size of output dict - 1), then
     # the setting of action_dim in DartDeepMimic will need to be updated
 
+    skel_dofs = skel.dofs
+
     metadict = {}
     for dof_name, _ in amc_frame:
         indices = [i for i, dof in enumerate(skel_dofs)
                    if dof.name.startswith(dof_name)]
-        metadict[dof_name] = (indices)
+        child_body = [body for body in skel.bodynodes
+                      if body.name.startswith(dof_name)][0]
+        metadict[dof_name] = (indices, child_body)
 
     return metadict
 
@@ -167,7 +171,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         raw_framelist = AMC(reference_motion_path).frames
         self.metadict = get_metadict(raw_framelist[0],
-                                     self.ref_skel.dofs, asf)
+                                     self.ref_skel)
 
         # The sorting is critical
         self._dof_names = [key for key in self.metadict]
@@ -362,7 +366,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # And handle the rest of the dofs normally
         for joint_name, joint_angles in pos_frame[1:]:
             joint_index += 1
-            dof_indices, order = self.metadict[joint_name]
+            dof_indices = self.metadict[joint_name]
             start_index, end_index = dof_indices[0], dof_indices[-1]
 
             joint_velocities = vel_frame[joint_index][1]
@@ -435,7 +439,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             expanded_angles = {ROOT_THETA_KEY: expand_angle(generalized_q[0:3],
                                                             ROOT_THETA_ORDER)}
             for dof_name in self._actuated_dof_names:
-                indices, order = self.metadict[dof_name]
+                indices = self.metadict[dof_name]
                 fi = indices[0]
                 li = indices[-1]
                 expanded_angles[dof_name] = expand_angle(generalized_q[fi:li+1],
@@ -571,9 +575,9 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # expanded_euler calculated correctly
         # print("Calculated Angle Targets\n", expanded_euler)
 
-        ret = np.concatenate([compress_angle(expanded_euler[i],
-                                             self.metadict[key][1])
-                              for i, key in enumerate(self._actuated_dof_names)])
+        # ret = np.concatenate([compress_angle(expanded_euler[i],
+        #                                      self.metadict[key][1])
+        #                       for i, key in enumerate(self._actuated_dof_names)])
         return ret
 
     def step(self, action_vector):
@@ -788,8 +792,6 @@ if __name__ == "__main__":
     start_frame = 0
     target_frame = 200
     env.sync_skel_to_frame(env.control_skel, target_frame, 0, 0)
-
-    # [print(dof_name, env.metadict[dof_name]) for dof_name in env._actuated_dof_names]
 
     # print("Provided Target Q: \n", env.control_skel.q[6:])
     target_state = env.posveltuple_as_trans_plus_eulerlist(env.control_skel)
