@@ -730,17 +730,17 @@ if __name__ == "__main__":
     args = parser.parse_args()
     env = parser.get_env()
 
-    # obs = env.reset(0, False)
-    # done = False
-    # i = 0
-    # while True:
-    #     env.render()
-    #     obs = env.reset(i, False)
-    #     # a = env.action_space.sample()
-    #     # state, reward, done, info = env.step(a)
-    #     i += 1
-    #     if done:
-    #         env.reset()
+    env.reset(0, 0, 0)
+    done = False
+    i = 0
+    while True:
+        env.render()
+        obs = env.reset(i, 0, 0)
+        # a = env.action_space.sample()
+        # state, reward, done, info = env.step(a)
+        i += 1
+        if done:
+            env.reset()
 
     # for i in range(env.num_frames):
     #     env.reset(i, False)
@@ -768,7 +768,7 @@ if __name__ == "__main__":
     #     s, r, done, info = env.step(np.concatenate(target_angles))
     #     env.render()
 
-    frame = 0
-    env.sync_skel_to_frame(env.control_skel, 0, 0, 0)
-    while True:
-        env.render()
+    # frame = 0
+    # env.sync_skel_to_frame(env.control_skel, 0, 0, 0)
+    # while True:
+    #     env.render()
