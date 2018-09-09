@@ -375,7 +375,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # And handle the rest of the dofs normally
         for joint_name, joint_angles in pos_frame[1:]:
             joint_index += 1
-            dof_indices = self.metadict[joint_name]
+            dof_indices, _ = self.metadict[joint_name]
             start_index, end_index = dof_indices[0], dof_indices[-1]
 
             joint_velocities = vel_frame[joint_index][1]
@@ -424,6 +424,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             # TODO Need to convert dq into an angular velocity
             dq = skel.dq[indices[0]:indices[-1]+1]
             state = np.concatenate([state, converted_angle, relpos, linvel, dq])
+
+        return state
 
     def quaternion_angles(self, skel=None):
         if skel is None:
