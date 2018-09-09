@@ -1,6 +1,5 @@
 import pdb
 from amc import AMC
-from asf_skeleton import ASF_Skeleton
 from gym.envs.dart import dart_env
 from joint import expand_angle, compress_angle
 from math import exp, pi, atan2
@@ -58,12 +57,13 @@ def quaternion_difference(a, b):
 
 def quaternion_rotation_angle(a):
     # Returns the rotation of a quaternion about its axis in radians
-    # Lifted from wikipedia https://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation
+    # Lifted from wikipedia
+    # https://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation
     # Section: Recovering_the_axis-angle_representation
     return 2 * atan2(norm(a[1:]), a[0])
 
 
-def get_metadict(amc_frame, skel_dofs, asf):
+def get_metadict(amc_frame, skel_dofs):
     """
     @type amc_frame: A list of (joint-name, joint-data) tuples
     @type skel_dofs: The array of skeleton dofs, as given by skel.dofs
@@ -79,20 +79,18 @@ def get_metadict(amc_frame, skel_dofs, asf):
     # actuated dofs is no longer given by (size of output dict - 1), then
     # the setting of action_dim in DartDeepMimic will need to be updated
 
-    dof_data = {}
+    metadict = {}
     for dof_name, _ in amc_frame:
-        joint = asf.name2joint[dof_name]
-        axes_str = joint.dofs
         indices = [i for i, dof in enumerate(skel_dofs)
                    if dof.name.startswith(dof_name)]
-        dof_data[dof_name] = (indices, axes_str)
+        metadict[dof_name] = (indices)
 
-    return dof_data
+    return metadict
 
 
 class DartDeepMimicEnv(dart_env.DartEnv):
 
-    def __init__(self, control_skeleton_path, asf_path,
+    def __init__(self, control_skeleton_path,
                  reference_motion_path,
                  statemode,
                  actionmode,
@@ -167,7 +165,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.ref_skel = pydart.World(REFMOTION_DT / self.simsteps_per_dataframe,
                                      control_skeleton_path).skeletons[-1]
 
-        asf = ASF_Skeleton(asf_path)
         raw_framelist = AMC(reference_motion_path).frames
         self.metadict = get_metadict(raw_framelist[0],
                                      self.ref_skel.dofs, asf)
@@ -646,8 +643,6 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
         super().__init__()
         self.add_argument('--control-skel-path', required=True,
                           help='Path to the control skeleton')
-        self.add_argument('--asf-path', required=True,
-                          help='Path to asf which the skeleton was parsed from')
         self.add_argument('--ref-motion-path', required=True,
                           help='Path to the reference motion AMC')
         self.add_argument('--state-mode', default=0, type=int,
@@ -734,7 +729,6 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
     def get_env(self):
 
         return DartDeepMimicEnv(control_skeleton_path=self.args.control_skel_path,
-                                asf_path=self.args.asf_path,
                                 reference_motion_path=self.args.ref_motion_path,
                                 statemode=self.args.state_mode,
                                 actionmode=self.args.action_mode,
