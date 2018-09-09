@@ -184,16 +184,17 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.num_frames = 0
 
         self.num_frames, frames = self.construct_frames(raw_framelist)
-        self.ref_euler_posframes, self.ref_euler_velframes, self.ref_quat_frames = frames
+        self.ref_euler_posframes, self.ref_euler_velframes, \
+            self.ref_quat_frames = frames
 
         self._end_effector_indices = [i for i, node
                                        in enumerate(self.ref_skel.bodynodes)
                                      if len(node.child_bodynodes) == 0]
 
-        # TODO End reliance on underlying asf
-        self._end_effector_offsets = [asf.name2joint[
-            self.ref_skel.bodynodes[i].name[:-5]].offset
-                                       for i in self._end_effector_indices]
+        # TODO Parse the actual joint offsets from the .skel
+        # The below should be proportianal to the actual values
+        self._end_effector_offsets = [np.array([1, 1, 1])] \
+                                     * len(self._end_effector_indices)
 
         # Calculate the size of the neural network output vector
         self.action_dim = ActionMode.lengths[actionmode] \
@@ -276,7 +277,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
             # Root data is a little bit special, so we handle it here
             curr_root_data = np.array(current_frame[0][1])
-            curr_root_pos, curr_root_theta = curr_root_data[:3], curr_root_data[3:]
+            curr_root_pos, curr_root_theta = \
+                                    curr_root_data[:3], curr_root_data[3:]
             old_root_data = np.array(old_frame[0][1])
             old_root_pos, old_root_theta = old_root_data[:3], old_root_data[3:]
             pos_frame[0] = (ROOT_KEY,
@@ -285,7 +287,9 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             vel_frame[0] = (ROOT_KEY,
                             np.concatenate([np.subtract(curr_root_pos,
                                                         old_root_pos) / REFMOTION_DT,
-                                            euler_velocity(curr_root_theta, old_root_theta, REFMOTION_DT)]))
+                                            euler_velocity(curr_root_theta,
+                                                           old_root_theta,
+                                                           REFMOTION_DT)]))
 
             # Deal with the non-root joints in full generality
             joint_index = 0
@@ -298,7 +302,9 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
                 current_rotation_euler = compress_angle(sd2rr(curr_theta), order)
                 velocity_rotation_euler = compress_angle(euler_velocity(curr_theta,
-                                                                        old_theta, REFMOTION_DT), order)
+                                                                        old_theta,
+                                                                        REFMOTION_DT),
+                                                         order)
 
                 pos_frame[joint_index] = (joint_name, current_rotation_euler)
                 vel_frame[joint_index] = (joint_name, velocity_rotation_euler)
@@ -381,7 +387,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             # There's not any reason I can think of to actually use any other
             # skeleton, the print method is just here so I never accidentally
             # replace it
-            warnings.warn("_get_obs used w/ non-control skeleton, you sure you know what you're doing?", RuntimeWarning)
+            warnings.warn("_get_obs used w/ non-control skeleton, you sure"
+                          + "you know what you're doing?", RuntimeWarning)
 
         if self.statemode == StateMode.GEN_EULER:
             state = self.posveltuple_as_trans_plus_eulerlist(
@@ -417,7 +424,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         """
         def _genq_to_trans_plus_eulerdict(generalized_q):
             """
-            @type generalized_q: A vector of dof values, as given by skel.q or .dq
+            @type generalized_q: A vector of dof values, as given by skel.q or
+            .dq
 
             @return: A tuple where
                 - index 0 is the root positional component
@@ -433,8 +441,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                 indices, order = self.metadict[dof_name]
                 fi = indices[0]
                 li = indices[-1]
-                expanded_angles[dof_name] = expand_angle(generalized_q[fi:li + 1],
-                                                        order)
+                expanded_angles[dof_name] = expand_angle(generalized_q[fi:li+1],
+                                                         order)
             return root_translation, expanded_angles
 
         pos, angles_dict = _genq_to_trans_plus_eulerdict(skeleton.q)
@@ -561,7 +569,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
     def _expanded_euler_to_dofvector(self, expanded_euler):
 
         if len(expanded_euler) != len(self._actuated_dof_names):
-            raise RuntimeError("Mismatch between number of actuated dofs and angles passed in")
+            raise RuntimeError("Mismatch between number of actuated dofs"
+                               + " and angles passed in")
         # expanded_euler calculated correctly
         # print("Calculated Angle Targets\n", expanded_euler)
 
@@ -646,11 +655,13 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
         self.add_argument('--action-mode', default=0, type=int,
                           help="Code for the action representation")
         self.add_argument('--visualize', default=False,
-                          help="DOESN'T DO ANYTHING RIGHT NOW: True if you want a window to render to")
+                          help="DOESN'T DO ANYTHING RIGHT NOW: True if you want"
+                          + " a window to render to")
         self.add_argument('--max-torque', type=float, default=90,
                           help="Maximum torque")
         self.add_argument('--max-angle', type=float, default=5,
-                          help="Max magnitude of angle (in terms of pi) that PID can output")
+                          help="Max magnitude of angle (in terms of pi) that "
+                          + "PID can output")
         self.add_argument('--default-damping', type=float, default=80,
                           help="Default damping coefficient for joints")
         self.add_argument('--default-spring', type=float, default=0,
@@ -659,8 +670,8 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
                           help="Number of simulation steps per frame of mocap" +
                           " data")
         self.add_argument('--reward-cutoff', type=float, default=0.1,
-                          help="Terminate the episode when rewards below this " +
-                          "threshold are calculated. Should be in range (0, 1)")
+                          help="Terminate the episode when rewards below this" +
+                          " threshold are calculated. Should be in range (0, 1)")
         self.add_argument('--window-width', type=int, default=80,
                           help="Window width")
         self.add_argument('--window-height', type=int, default=45,
