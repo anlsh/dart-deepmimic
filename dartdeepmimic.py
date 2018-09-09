@@ -13,6 +13,7 @@ import numpy as np
 import pydart2 as pydart
 import random
 import warnings
+from copy import deepcopy
 
 # Customizable parameters
 ROOT_THETA_KEY = "root"
@@ -51,6 +52,11 @@ class ActionMode:
     # lengths[code] describes the space needed for an angle of that
     # type. For instance euler is 3 numbers, a quaternion is 4
     lengths = [3, 4, 4]
+
+def pad2length(vector, length):
+    padded = np.zeros(length)
+    padded[:len(vector)] = deepcopy(vector)
+    return padded
 
 
 def quaternion_difference(a, b):
@@ -405,9 +411,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             indices, body = self.metadict[dof_name]
 
             if dof_name != ROOT_KEY:
-                euler_angle = np.zeroes(3)
-                euler_angle[:indices[-1] + 1 - indices[0]] = \
-                                        skel.q[indices[0]:indices[-1]+1]
+                euler_angle = pad2length(skel.q[indices[0]:indices[-1]+1],
+                                         3)
             else:
                 euler_angle = skel.q[0:3]
 
@@ -423,19 +428,21 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             skel = self.control_skel
 
         angles = np.array([])
+
         for dof_name in self._dof_names:
+
             indices, _ = self.metadict[dof_name]
 
             if dof_name != ROOT_KEY:
-                euler_angle = np.zeroes(3)
-                euler_angle[:indices[-1] + 1 - indices[0]] = \
-                                        skel.q[indices[0]:indices[-1]+1]
+                euler_angle = pad2length(skel.q[indices[0]:indices[-1]+1],
+                                         3)
             else:
                 euler_angle = skel.q[0:3]
 
             converted_angle = quaternion_from_euler(*euler_angle,
                                                     axes="rxyz")
             angles = np.append(angles, converted_angle)
+
 
     def reward(self, skel, framenum):
 
@@ -739,20 +746,25 @@ if __name__ == "__main__":
     # env.reward(env.control_skel, 0)
 
     # PID Test stuff
-    start_frame = 0
-    target_frame = 200
-    env.sync_skel_to_frame(env.control_skel, target_frame, 0, 0)
+    # start_frame = 0
+    # target_frame = 200
+    # env.sync_skel_to_frame(env.control_skel, target_frame, 0, 0)
 
-    # print("Provided Target Q: \n", env.control_skel.q[6:])
-    target_state = env.posveltuple_as_trans_plus_eulerlist(env.control_skel)
-    pos, vel = target_state
-    target_angles = pos[1][1:]
-    # print("Provided Target Angles\n", target_angles)
+    # # print("Provided Target Q: \n", env.control_skel.q[6:])
+    # target_state = env.posveltuple_as_trans_plus_eulerlist(env.control_skel)
+    # pos, vel = target_state
+    # target_angles = pos[1][1:]
+    # # print("Provided Target Angles\n", target_angles)
 
-    obs = env.sync_skel_to_frame(env.control_skel, start_frame, 0, 0)
-    print(env.control_skel.dq)
+    # obs = env.sync_skel_to_frame(env.control_skel, start_frame, 0, 0)
+    # print(env.control_skel.dq)
 
+    # while True:
+    #     env.framenum = target_frame
+    #     s, r, done, info = env.step(np.concatenate(target_angles))
+    #     env.render()
+
+    frame = 0
+    env.sync_skel_to_frame(env.control_skel, 0, 0, 0)
     while True:
-        env.framenum = target_frame
-        s, r, done, info = env.step(np.concatenate(target_angles))
         env.render()
