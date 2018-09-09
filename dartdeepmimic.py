@@ -392,90 +392,101 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                           + "you know what you're doing?", RuntimeWarning)
 
         if self.statemode == StateMode.GEN_EULER:
-            state = self.posveltuple_as_trans_plus_eulerlist(
-                skel)
+            angle_tform = lambda x: x
         elif self.statemode == StateMode.GEN_QUAT:
-            state = self.posveltuple_as_trans_plus_qautlist(
-                skel)
+            angle_tform = lambda x: quaternion_from_euler(*x, axes="rxyz")
         elif self.statemode == StateMode.GEN_AXIS:
-            state = self.posveltuple_as_trans_plus_axisanglelist(
-                skel)
+            angle_tform = lambda x: axisangle_from_euler(*x, axes="rxyz")
         else:
             raise RuntimeError("Unimplemented state code: "
                                + str(self.statemode))
 
-        pos, vel = state
-        posvector = np.concatenate([pos[0], np.concatenate(pos[1])])
-        velvector = np.concatenate([vel[0], np.concatenate(vel[1])])
-        return np.concatenate([posvector, velvector])
+        # TODO Make this part more efficient
+        state = np.array([])
+        for dof_name in self._dof_names:
+            indices, body = self.metadict[dof_name]
+
+            if dof_name != ROOT_KEY:
+                euler_angle = np.zeroes(3)
+                euler_angle[:indices[-1] + 1 - indices[0]] = \
+                                        skel.q[indices[0]:indices[-1]+1]
+            else:
+                euler_angle = skel.q[0:3]
+
+            converted_angle = angle_tform(euler_angle)
+            relpos = body.com() - skel.com()
+            linvel = body.dC
+            # TODO Need to convert dq into an angular velocity
+            dq = skel.dq[indices[0]:indices[-1]+1]
+            state = np.concatenate([state, converted_angle, relpos, linvel, dq])
 
 
-    def posveltuple_as_trans_plus_eulerlist(self, skeleton):
-        """
-        @type skeleton: A dart skeleton
+    # def posveltuple_as_trans_plus_eulerlist(self, skeleton):
+    #     """
+    #     @type skeleton: A dart skeleton
 
-        @return: A tuple where first component is positional info, second is
-        velocity info
-
-
-        Each component is itself a tuple where the first element is an array
-        containing the translational component, and the second is a list of
-        fully-specified euler angles for each of the dofs (in a consistent but
-        opaque order)
-        """
-        def _genq_to_trans_plus_eulerdict(generalized_q):
-            """
-            @type generalized_q: A vector of dof values, as given by skel.q or
-            .dq
-
-            @return: A tuple where
-                - index 0 is the root positional component
-                - [1] is a dictionary mapping dof names to fully specified euler
-                angles in xyz order
-            @type: Tuple
-            """
-
-            root_translation = generalized_q[3:6]
-            expanded_angles = {ROOT_THETA_KEY: expand_angle(generalized_q[0:3],
-                                                            ROOT_THETA_ORDER)}
-            for dof_name in self._actuated_dof_names:
-                indices = self.metadict[dof_name]
-                fi = indices[0]
-                li = indices[-1]
-                expanded_angles[dof_name] = expand_angle(generalized_q[fi:li+1],
-                                                         order)
-            return root_translation, expanded_angles
-
-        pos, angles_dict = _genq_to_trans_plus_eulerdict(skeleton.q)
-        dpos, dangles_dict = _genq_to_trans_plus_eulerdict(skeleton.dq)
-
-        angles = np.array([angles_dict[key] for key in self._dof_names])
-        dangles = np.array([dangles_dict[key] for key in self._dof_names])
-
-        return (pos, angles), (dpos, dangles)
+    #     @return: A tuple where first component is positional info, second is
+    #     velocity info
 
 
-    def posveltuple_as_trans_plus_qautlist(self, skel):
-        """
-        Same as posveltuple_as_trans_plus_eulerlist, but with the angles
-        converted to quaternions
-        """
+    #     Each component is itself a tuple where the first element is an array
+    #     containing the translational component, and the second is a list of
+    #     fully-specified euler angles for each of the dofs (in a consistent but
+    #     opaque order)
+    #     """
+    #     def _genq_to_trans_plus_eulerdict(generalized_q):
+    #         """
+    #         @type generalized_q: A vector of dof values, as given by skel.q or
+    #         .dq
 
-        pos_info, vel_info = self.posveltuple_as_trans_plus_eulerlist(skel)
-        pos, angles = pos_info
-        dpos, dangles = vel_info
+    #         @return: A tuple where
+    #             - index 0 is the root positional component
+    #             - [1] is a dictionary mapping dof names to fully specified euler
+    #             angles in xyz order
+    #         @type: Tuple
+    #         """
 
-        angles = [quaternion_from_euler(*t, axes="rxyz") for t in angles]
-        dangles = [quaternion_from_euler(*t, axes="rxyz") for t in dangles]
+    #         root_translation = generalized_q[3:6]
+    #         expanded_angles = {ROOT_THETA_KEY: expand_angle(generalized_q[0:3],
+    #                                                         ROOT_THETA_ORDER)}
+    #         for dof_name in self._actuated_dof_names:
+    #             indices = self.metadict[dof_name]
+    #             fi = indices[0]
+    #             li = indices[-1]
+    #             expanded_angles[dof_name] = expand_angle(generalized_q[fi:li+1],
+    #                                                      order)
+    #         return root_translation, expanded_angles
 
-        return (pos, angles), (dpos, dangles)
+    #     pos, angles_dict = _genq_to_trans_plus_eulerdict(skeleton.q)
+    #     dpos, dangles_dict = _genq_to_trans_plus_eulerdict(skeleton.dq)
 
-    def posveltuple_as_trans_plus_axisanglelist(self, skel):
-        """
-        Same as posveltuple_as_trans_plus_eulerlist, but with the angles
-        converted to axisangle
-        """
-        raise NotImplementedError()
+    #     angles = np.array([angles_dict[key] for key in self._dof_names])
+    #     dangles = np.array([dangles_dict[key] for key in self._dof_names])
+
+    #     return (pos, angles), (dpos, dangles)
+
+
+    # def posveltuple_as_trans_plus_qautlist(self, skel):
+    #     """
+    #     Same as posveltuple_as_trans_plus_eulerlist, but with the angles
+    #     converted to quaternions
+    #     """
+
+    #     pos_info, vel_info = self.posveltuple_as_trans_plus_eulerlist(skel)
+    #     pos, angles = pos_info
+    #     dpos, dangles = vel_info
+
+    #     angles = [quaternion_from_euler(*t, axes="rxyz") for t in angles]
+    #     dangles = [quaternion_from_euler(*t, axes="rxyz") for t in dangles]
+
+    #     return (pos, angles), (dpos, dangles)
+
+    # def posveltuple_as_trans_plus_axisanglelist(self, skel):
+    #     """
+    #     Same as posveltuple_as_trans_plus_eulerlist, but with the angles
+    #     converted to axisangle
+    #     """
+    #     raise NotImplementedError()
 
     def reward(self, skel, framenum):
 
