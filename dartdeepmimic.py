@@ -100,6 +100,41 @@ def get_metadict(amc_frame, skel):
     return metadict
 
 
+def map_dofs(dof_list, pos_list, vel_list, pstdv, vstdv):
+    """
+    Given a list of dof objects, set their positions and velocities
+    accordingly
+    """
+    if not(len(dof_list) == len(pos_list) == len(vel_list)):
+        raise RuntimeError("Zip got tattered lists")
+    for dof, pos, vel in zip(dof_list, pos_list, vel_list):
+        pos = np.random.normal(pos, pstdv)
+        vel = np.random.normal(vel, vstdv)
+
+        dof.set_position(float(pos))
+        dof.set_velocity(float(vel))
+
+def sd2rr(rvector):
+    """
+    Takes a vector of sequential degrees and returns the rotation it
+    describes in rotating radians (the format DART expects angles in)
+    """
+
+    rvector = np.multiply(rvector, pi / 180)
+
+    rmatrix = compose_matrix(angles=rvector, angle_order="sxyz")
+    return euler_from_matrix(rmatrix[:3, :3], axes="rxyz")
+
+
+def euler_velocity(final, initial, dt):
+    """
+    Given two xyz euler angles (sequentian degrees)
+    Return the euler angle velocity (in rotating radians i think)
+    """
+    # TODO IT'S NOT RIGHT AAAAHHHH
+    return np.divide(sd2rr(np.subtract(final, initial)), dt)
+
+
 class DartDeepMimicEnv(dart_env.DartEnv):
 
     def __init__(self, control_skeleton_path,
@@ -192,7 +227,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                                      if len(node.child_bodynodes) == 0]
 
         self.num_frames, frames = self.construct_frames(raw_framelist)
-        self.ref_euler_posframes, self.ref_euler_velframes, \
+        self.ref_q_frames, self.ref_dq_frames, \
             self.ref_quat_frames, self.ref_com_frames, self.ref_ee_frames \
             = frames
 
@@ -239,30 +274,11 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         all positions and velocities and store the results
         """
 
-        def sd2rr(rvector):
-            """
-            Takes a vector of sequential degrees and returns the rotation it
-            describes in rotating radians (the format DART expects angles in)
-            """
-
-            rvector = np.multiply(rvector, pi / 180)
-
-            rmatrix = compose_matrix(angles=rvector, angle_order="sxyz")
-            return euler_from_matrix(rmatrix[:3, :3], axes="rxyz")
-
-
-        def euler_velocity(final, initial, dt):
-            """
-            Given two xyz euler angles (sequentian degrees)
-            Return the euler angle velocity (in rotating radians i think)
-            """
-            return np.divide(sd2rr(np.subtract(final, initial)), dt)
-
         num_frames = len(raw_framelist)
         elements_per_frame = len(raw_framelist[0])
 
         pos_frames = [None] * num_frames
-        vel_framelist = [None] * num_frames
+        vel_frames = [None] * num_frames
         quat_frames = [None] * num_frames
         com_frames = [None] * num_frames
         ee_frames = [None] * num_frames
@@ -273,8 +289,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             current_frame = raw_framelist[i]
             old_frame = raw_framelist[old_i]
 
-            pos_frame = [None] * elements_per_frame
-            vel_frame = [None] * elements_per_frame
+            q = np.zeros(len(self.ref_skel.q))
+            dq = np.zeros(len(self.ref_skel.dq))
 
             # Root data is a little bit special, so we handle it here
             curr_root_data = np.array(current_frame[0][1])
@@ -282,15 +298,11 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                                     curr_root_data[:3], curr_root_data[3:]
             old_root_data = np.array(old_frame[0][1])
             old_root_pos, old_root_theta = old_root_data[:3], old_root_data[3:]
-            pos_frame[0] = (ROOT_KEY,
-                            np.concatenate([curr_root_pos,
-                                            sd2rr(curr_root_theta)]))
-            vel_frame[0] = (ROOT_KEY,
-                            np.concatenate([np.subtract(curr_root_pos,
-                                                        old_root_pos) / REFMOTION_DT,
-                                            euler_velocity(curr_root_theta,
-                                                           old_root_theta,
-                                                           REFMOTION_DT)]))
+            q[3:6] = curr_root_pos
+            q[0:3] = sd2rr(curr_root_theta)
+            dq[3:6] = np.subtract(curr_root_pos, old_root_pos) / REFMOTION_DT
+            dq[0:3] = euler_velocity(curr_root_theta, old_root_theta,
+                                     REFMOTION_DT)
 
             # Deal with the non-root joints in full generality
             joint_index = 0
@@ -303,33 +315,30 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                 curr_theta = pad2length(curr_joint_angles, 3)
                 old_theta = pad2length(old_frame[joint_index][1], 3)
 
-                # TODO This is of course not angular velocity at all..
+                # TODO This is not angular velocity at all..
                 vel_theta = euler_velocity(curr_theta,
                                            old_theta,
                                            REFMOTION_DT)[:length]
                 curr_theta = sd2rr(curr_theta)[:length]
 
-                pos_frame[joint_index] = (joint_name, curr_theta)
-                vel_frame[joint_index] = (joint_name, vel_theta)
+                q[dof_indices[0]:dof_indices[-1] + 1] = curr_theta
+                dq[dof_indices[0]:dof_indices[-1] + 1] = vel_theta
 
-            pos_frames[i] = pos_frame
-            vel_framelist[i] = vel_frame
+            pos_frames[i] = q
+            vel_frames[i] = dq
 
-            self.sync_skel_to_frame(self.ref_skel, None, 0, 0,
-                                    pos_frame, vel_frame)
+            map_dofs(self.ref_skel.dofs, q, dq, 0, 0)
             com_frames[i] = self.ref_skel.com()
             quat_frames[i] = self.quaternion_angles(self.ref_skel)
-
             # TODO Parse actual end positions
             ee_frames[i] = [self.ref_skel.bodynodes[ii].to_world(END_OFFSET)
                             for ii in self._end_effector_indices]
 
-        return num_frames, (pos_frames, vel_framelist, quat_frames, com_frames,
+        return num_frames, (pos_frames, vel_frames, quat_frames, com_frames,
                             ee_frames)
 
 
-    def sync_skel_to_frame(self, skel, frame_index, pos_stdv, vel_stdv,
-                           pos_frame=None, vel_frame=None):
+    def sync_skel_to_frame(self, skel, frame_index, pos_stdv, vel_stdv):
         """
         Given a skeleton and mocap frame index, use self.metadict to sync all
         the dofs. Will work on different skeleton objects as long as they're
@@ -338,50 +347,15 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         If noise is true, then positions and velocities will have random normal
         noise added to them
         """
-        if frame_index is not None:
-            pos_frame = self.ref_euler_posframes[frame_index]
-            vel_frame = self.ref_euler_velframes[frame_index]
-
-        def map_dofs(dof_list, pos_list, vel_list, pstdv, vstdv):
-            """
-            Given a list of dof objects, set their positions and velocities
-            accordingly
-            """
-            if not(len(dof_list) == len(pos_list) == len(vel_list)):
-                raise RuntimeError("Zip got tattered lists")
-            for dof, pos, vel in zip(dof_list, pos_list, vel_list):
-                pos = np.random.normal(pos, pstdv)
-                vel = np.random.normal(vel, vstdv)
-
-                dof.set_position(float(pos))
-                dof.set_velocity(float(vel))
-
-        # World to root joint is a bit special so we handle it here...
-        root_pos_data = pos_frame[0][1]
-        root_vel_data = vel_frame[0][1]
         # Set the root position
-        # The root position data is dofs 1-3 BUT it is actually the first
-        # component of pos_frame[0], so the following calculation should be
-        # correct
-        # The root pos is never fuzzed (mostly to prevent clipping into the
+        # The root pos is never fuzzed (prevent clipping into the
         # ground)
-        map_dofs(skel.dofs[3:6], root_pos_data[:3], root_vel_data[:3],
-                 0, vel_stdv)
-        # Set the root orientation
-        map_dofs(skel.dofs[0:3], root_pos_data[3:], root_vel_data[3:],
-                 pos_stdv, vel_stdv)
+        q = self.ref_q_frames[frame_index]
+        dq = self.ref_dq_frames[frame_index]
 
-        joint_index = 0
-        # And handle the rest of the dofs normally
-        for joint_name, joint_angles in pos_frame[1:]:
-            joint_index += 1
-            dof_indices, _ = self.metadict[joint_name]
-            start_index, end_index = dof_indices[0], dof_indices[-1]
-
-            joint_velocities = vel_frame[joint_index][1]
-
-            map_dofs(skel.dofs[start_index : end_index + 1],
-                     joint_angles, joint_velocities, pos_stdv, vel_stdv)
+        map_dofs(skel.dofs[3:6], q[3:6], dq[3:6], 0, vel_stdv)
+        map_dofs(skel.dofs[0:3], q[:3], dq[:3], 0, vel_stdv)
+        map_dofs(skel.dofs[6:], q[6:], dq[6:], pos_stdv, vel_stdv)
 
 
     def _get_obs(self, skel=None):
@@ -413,12 +387,15 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             indices, body = self.metadict[dof_name]
 
             if dof_name != ROOT_KEY:
-                euler_angle = pad2length(skel.q[indices[0]:indices[-1]+1],
-                                         3)
+                if len(indices) > 1:
+                    euler_angle = pad2length(skel.q[indices[0]:indices[-1]+1],
+                                            3)
+                    converted_angle = angle_tform(euler_angle)
+                else:
+                    converted_angle = skel.q[indices[0]:indices[0]+1]
             else:
-                euler_angle = skel.q[0:3]
+                converted_angle = skel.q[0:3]
 
-            converted_angle = angle_tform(euler_angle)
             relpos = body.com() - skel.com()
             linvel = body.dC
             # TODO Need to convert dq into an angular velocity
@@ -735,7 +712,7 @@ if __name__ == "__main__":
     i = 0
     while True:
         env.render()
-        obs = env.reset(i, 0, 0)
+        env.sync_skel_to_frame(env.control_skel, i, 0, 0)
         # a = env.action_space.sample()
         # state, reward, done, info = env.step(a)
         i += 1
