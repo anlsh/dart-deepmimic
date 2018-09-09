@@ -445,10 +445,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # VELOCITY REWARD #
         ###################
 
-        velocity_quats = zip(dangles, drefangles)
-        velocity_error = [new - old for new, old in velocity_quats]
-
-        veldiffmag = sum([norm(v)**2 for v in velocity_error])
+        ref_dq = self.ref_dq_frames[framenum]
+        veldiffmag = norm(skel.q - ref_dq)
 
         #######################
         # END EFFECTOR REWARD #
