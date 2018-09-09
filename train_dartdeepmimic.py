@@ -9,24 +9,6 @@ from baselines import logger
 from dartdeepmimic import DartDeepMimicEnv
 from ddm_argparse import DartDeepMimicArgParse
 
-
-# class PolicyLoaderAgent(object):
-#     """The world's simplest agent!"""
-#     def __init__(self, param_path, obs_space, action_space):
-#         self.action_space = action_space
-
-#         # TODO These parameters are COUPLED: should match up with those in
-#         # run_dart.py which is over in baselines
-#         self.actor = mlp_policy.MlpPolicy("pi", obs_space, action_space,
-#                                           hid_size = 64, num_hid_layers=2)
-#         U.initialize()
-#         U.load_state(param_path)
-
-#     def act(self, observation, reward, done):
-#         # action1 = self.action_space.sample()
-#         action2, unknown = self.actor.act(False, observation)
-#         return action2
-
 def train(env, initial_params_path,
           save_interval, out_prefix, num_timesteps, num_cpus):
     from baselines.ppo1 import mlp_policy, pposgd_simple
