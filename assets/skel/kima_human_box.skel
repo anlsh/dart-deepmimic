@@ -37,7 +37,7 @@
 
         <skeleton name="human">
             <transformation>0 0 0 0 -1.570796 0</transformation>
-            <body name="pelvis_body">
+            <body name="root_body">
                 <transformation>0.0 0.0 0.0 0 1.570796 0</transformation>
                 <inertia>
                     <mass>11.3316</mass>
@@ -458,13 +458,13 @@
             <!-- JOINT: Pelvis -->
             <joint type="free" name="root">
                 <parent>world</parent>
-                <child>pelvis_body</child>
+                <child>root_body</child>
             </joint>
 
             <joint name="l-upperleg" type="euler">
                 <transformation>0.0 0.0 0.0 0.0 0. 0</transformation>
                 <!-- the above is a workaround since DART don't have Euler in zxy order -->
-                <parent>pelvis_body</parent>
+                <parent>root_body</parent>
                 <child>l-upperleg_body</child>
                 <axis_order>xyz</axis_order>
                 <!-- actually being zxy, see transformation above-->
@@ -553,7 +553,7 @@
 
             <joint name="r-upperleg" type="euler">
                 <transformation>0.0 0.0 0.0 0.0 0.0 0</transformation>
-                <parent>pelvis_body</parent>
+                <parent>root_body</parent>
                 <child>r-upperleg_body</child>
                 <axis_order>xyz</axis_order>
                 <axis>
@@ -640,7 +640,7 @@
 
             <joint name="abdomen" type="euler">
                 <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
-                <parent>pelvis_body</parent>
+                <parent>root_body</parent>
                 <child>abdomen_body</child>
                 <axis_order>xyz</axis_order>
                 <axis>
