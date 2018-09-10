@@ -16,9 +16,9 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         raw_framelist = None
 
-        with open("visak-stuff/JustJumpPositions_corrected.txt","rb") as fp:
+        with open("assets/mocap/JustJumpPositions_corrected.txt","rb") as fp:
             WalkPositions = np.loadtxt(fp)
-        with open("visak-stuff/JustJumpVelocities_corrected.txt","rb") as fp:
+        with open("assets/mocap/JustJumpVelocities_corrected.txt","rb") as fp:
             WalkVelocities = np.loadtxt(fp)
 
         num_frames = len(WalkPositions)
