@@ -247,15 +247,15 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         action_limits = self.max_angle * pi * np.ones(self.action_dim)
         action_limits = [-action_limits, action_limits]
 
-        super(DartDeepMimicEnv, self).__init__([self._control_skeleton_path],
-                                               1,
-                                               len(self._get_obs()),
-                                               action_limits,
-                                               self.refmotion_dt / self.simsteps_per_dataframe,
-                                               "parameter",
-                                               "continuous",
-                                               self.__visualize,
-                                               not self.__visualize)
+        super(DartDeepMimicEnv,
+              self).__init__(model_paths=[self._control_skeleton_path],
+                             frame_skip=1,
+                             observation_size=len(self._get_obs()),
+                             action_bounds=action_limits,
+                             dt=self.refmotion_dt / self.simsteps_per_dataframe,
+                             visualize=self.__visualize,
+                             disableViewer=not self.__visualize)
+
         self.dart_world.set_gravity(int(self.gravity) * GRAVITY_VECTOR)
         self.control_skel = self.dart_world.skeletons[-1]
 
