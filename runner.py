@@ -12,6 +12,10 @@ class EnvPlayer:
             self.env.reset(i, 0, 0)
             self.env.render()
 
+    def take_single_step_zero_pos(self, init_frame=0):
+        obs = self.env.reset(init_frame, 0, 0)
+        self.env.step(np.zeros(self.env.action_dim))
+
 if __name__ == "__main__":
 
     # Don't run this as main, there's really not too much point
