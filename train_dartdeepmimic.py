@@ -10,20 +10,23 @@ from dartdeepmimic import DartDeepMimicEnv
 from ddm_argparse import DartDeepMimicArgParse
 
 def train(env, initial_params_path,
-          save_interval, out_prefix, num_timesteps, num_cpus):
+          save_interval, out_prefix, num_timesteps, num_cpus,
+          hidden_dimensions):
     from baselines.ppo1 import mlp_policy, pposgd_simple
     #with tf.variable_scope('inclined'):
-    U.make_session(num_cpu=num_cpus).__enter__()
+    sess = U.make_session(num_cpu=num_cpus).__enter__()
 
     U.initialize()
 
     #set_global_seeds(seed)
     def policy_fn(name, ob_space, ac_space):
         print("Policy with name: ", name)
-        policy = mlp_policy.MlpPolicy(name=name, ob_space=ob_space, ac_space=ac_space,
-            hid_size=64, num_hid_layers=2)
+        policy = mlp_policy.MlpPolicy(name=name, ob_space=ob_space,
+                                      ac_space=ac_space,
+                                      hidden_dimension_list=hidden_dimensions)
+        saver = tf.train.Saver()
         if initial_params_path is not None:
-            U.load_state(initial_params_path)
+            saver.restore(sess, initial_params_path)
         return policy
 
     #env = bench.Monitor(env, "results.json")
@@ -31,11 +34,14 @@ def train(env, initial_params_path,
     gym.logger.setLevel(logging.WARN)
 
     def callback_fn(local_vars, global_vars):
-        # TODO Implement proper handling of writing to files and stuff
-        # TODO also probably dont save on every single iteration...
         iters = local_vars["iters_so_far"]
+        if iters == 0 and initial_params_path is not None:
+            print("Restoring from " + initial_params_path)
+            tf.train.Saver().restore(tf.get_default_session(),
+                                     initial_params_path)
+        saver = tf.train.Saver()
         if iters % save_interval == 0:
-            U.save_state(out_prefix + str(iters))
+            saver.save(sess, out_prefix + str(iters))
 
     pposgd_simple.learn(env, policy_fn,
             max_timesteps=num_timesteps,
@@ -60,9 +66,13 @@ if __name__ == '__main__':
                         help="Number of CPU cores to use? Idk...")
     parser.add_argument('--train-num-timesteps', type=int, default=7e8,
                         help="No idea what this does")
+    parser.add_argument('--hidden-dims', type=str, default="64,64",
+                        help="Within quotes, sizes of each hidden layer "
+                        + "seperated by commas [also, no whitespace]")
 
     args = parser.parse_args()
     env = parser.get_env()
+    hidden_dimensions = [int(i) for i in args.hidden_dims.split(",")]
     #####################################
     # END COPY-PASTE FROM DARTDEEPMIMIC #
     #####################################
@@ -72,4 +82,5 @@ if __name__ == '__main__':
           save_interval=args.train_save_interval,
           out_prefix=args.output_params_prefix,
           num_timesteps=args.train_num_timesteps,
-          num_cpus=args.num_cpus)
+          num_cpus=args.num_cpus,
+          hidden_dimensions=hidden_dimensions)
