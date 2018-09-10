@@ -236,7 +236,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.action_dim = 0
         for name in self._actuated_dof_names:
             indices, _ = self.metadict[name]
-            self.action_dim += 0 if len(indices) == 1 \
+            self.action_dim += 1 if len(indices) == 1 \
                           else ActionMode.lengths[self.actionmode]
 
         # Setting of control_skel to ref_skel is just temporary so that
@@ -517,7 +517,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         if netvector_index != len(netvector):
             raise RuntimeError("Not all net outputs used")
 
-        return q
+        return np.concatenate([np.zeros(6), q])
 
 
     def step(self, action_vector):
