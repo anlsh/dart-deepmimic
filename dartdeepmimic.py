@@ -212,7 +212,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.ref_skel = pydart.World(self.refmotion_dt / self.simsteps_per_dataframe,
                                      control_skeleton_path).skeletons[-1]
 
-        raw_framelist = AMC(reference_motion_path).frames
         self.metadict = get_metadict(self.ref_skel)
 
         # The sorting is critical
@@ -226,7 +225,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                                      if len(node.child_bodynodes) == 0]
 
         self.framenum = 0
-        self.num_frames, frames = self.construct_frames(raw_framelist)
+        self.num_frames, frames = self.construct_frames(reference_motion_path)
         self.ref_q_frames, self.ref_dq_frames, \
             self.ref_quat_frames, self.ref_com_frames, self.ref_ee_frames \
             = frames
@@ -270,12 +269,14 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                 joint.set_spring_stiffness(index, self.default_spring)
 
 
-    def construct_frames(self, raw_framelist):
+    def construct_frames(self, ref_motion_path):
         """
         AMC data is given in sequential degrees, while dart specifies angles
         in rotating radians. The conversion is quite expensive, so we precomute
         all positions and velocities and store the results
         """
+
+        raw_framelist = AMC(ref_motion_path).frames
 
         num_frames = len(raw_framelist)
         elements_per_frame = len(raw_framelist[0])
