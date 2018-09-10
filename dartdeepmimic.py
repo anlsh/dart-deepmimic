@@ -14,7 +14,6 @@ import pydart2 as pydart
 import random
 import warnings
 from copy import deepcopy
-from ddm_argparse import DartDeepMimicArgParse
 from euclideanSpace import angle_axis2euler
 
 # Customizable parameters
@@ -580,55 +579,3 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         elif mode == 'human':
             self._get_viewer().runSingleStep()
 
-
-
-if __name__ == "__main__":
-
-    # Don't run this as main, there's really not too much point
-
-    parser = DartDeepMimicArgParse()
-    args = parser.parse_args()
-    env = parser.get_env()
-
-    env.reset(0, 0, 0)
-    done = False
-    i = 0
-    while True:
-        env.render()
-        env.sync_skel_to_frame(env.control_skel, i, 0, 0)
-        # a = env.action_space.sample()
-        # state, reward, done, info = env.step(a)
-        i += 1
-        if done:
-            env.reset()
-
-    # for i in range(env.num_frames):
-    #     env.reset(i, False)
-    #     env.render()
-    #     env.reward(env.control_skel, i)
-    # env.reset(0, False)
-    # env.reward(env.control_skel, 0)
-
-    # PID Test stuff
-    # start_frame = 0
-    # target_frame = 200
-    # env.sync_skel_to_frame(env.control_skel, target_frame, 0, 0)
-
-    # # print("Provided Target Q: \n", env.control_skel.q[6:])
-    # target_state = env.posveltuple_as_trans_plus_eulerlist(env.control_skel)
-    # pos, vel = target_state
-    # target_angles = pos[1][1:]
-    # # print("Provided Target Angles\n", target_angles)
-
-    # obs = env.sync_skel_to_frame(env.control_skel, start_frame, 0, 0)
-    # print(env.control_skel.dq)
-
-    # while True:
-    #     env.framenum = target_frame
-    #     s, r, done, info = env.step(np.concatenate(target_angles))
-    #     env.render()
-
-    # frame = 0
-    # env.sync_skel_to_frame(env.control_skel, 0, 0, 0)
-    # while True:
-    #     env.render()

@@ -1,4 +1,5 @@
 import argparse
+from dartdeepmimic import DartDeepMimicEnv
 
 class DartDeepMimicArgParse(argparse.ArgumentParser):
 
