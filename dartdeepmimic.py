@@ -236,7 +236,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.action_dim = 0
         for name in self._actuated_dof_names:
             indices, _ = self.metadict[name]
-            self.action_dim += 0 if len(indices) == 1 \
+            self.action_dim += 1 if len(indices) == 1 \
                           else ActionMode.lengths[self.actionmode]
 
         # Setting of control_skel to ref_skel is just temporary so that
@@ -412,7 +412,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         if skel is None:
             skel = self.control_skel
 
-        angles = np.array([])
+        angles = []
 
         for dof_name in self._dof_names:
 
@@ -426,7 +426,9 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
             converted_angle = quaternion_from_euler(*euler_angle,
                                                     axes="rxyz")
-            angles = np.append(angles, converted_angle)
+            angles.append(converted_angle)
+
+        return np.array(angles)
 
 
     def reward(self, skel, framenum):
@@ -435,7 +437,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         ref_angles = self.ref_quat_frames[framenum]
         ref_com = self.ref_com_frames[framenum]
-        ref_ee_positions = self.ref_ee_pos_frames[framenum]
+        ref_ee_positions = self.ref_ee_frames[framenum]
 
         #####################
         # POSITIONAL REWARD #
@@ -450,15 +452,15 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         ###################
 
         ref_dq = self.ref_dq_frames[framenum]
-        veldiffmag = norm(skel.q - ref_dq)
+        veldiffmag = norm(skel.dq - ref_dq)
 
         #######################
         # END EFFECTOR REWARD #
         #######################
 
-        eediffmag = sum([norm(self.control_skel.bodynodes[i].to_world(END_OFFSET)
+        eediffmag = sum([norm(self.control_skel.bodynodes[j].to_world(END_OFFSET)
                               - ref_ee_positions[i])**2
-                         for i in self._end_effector_indices])
+                         for i, j in enumerate(self._end_effector_indices)])
 
         #########################
         # CENTER OF MASS REWARD #
@@ -484,8 +486,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         if self.statemode == StateMode.GEN_EULER:
             angle_tform = lambda x: x
         elif self.statemode == StateMode.GEN_QUAT:
-            angle_tform = lambda x: euler_from_quaternion(*(np.divide(x,
-                                                                      np.linalg.norm(x))),
+            angle_tform = lambda x: euler_from_quaternion(np.divide(x,
+                                                                      np.linalg.norm(x)),
                                                           axes="rxyz")
         elif self.statemode == StateMode.GEN_AXIS:
             angle_tform = lambda x: angle_axis2euler(x[0], x[1:])
@@ -526,7 +528,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         """
         dof_targets = self.q_from_netvector(action_vector)
 
-        tau = self.p_gain * (dof_targets - self.control_skel.q[6:]) \
+        tau = self.p_gain * (dof_targets[6:] - self.control_skel.q[6:]) \
               - self.d_gain * (self.control_skel.dq[6:])
         tau = np.clip(tau, -self.max_torque, self.max_torque)
 
