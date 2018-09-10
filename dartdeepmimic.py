@@ -452,7 +452,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         ###################
 
         ref_dq = self.ref_dq_frames[framenum]
-        veldiffmag = norm(skel.q - ref_dq)
+        veldiffmag = norm(skel.dq - ref_dq)
 
         #######################
         # END EFFECTOR REWARD #
