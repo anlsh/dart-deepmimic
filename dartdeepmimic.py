@@ -72,9 +72,8 @@ def quaternion_rotation_angle(a):
     return 2 * atan2(norm(a[1:]), a[0])
 
 
-def get_metadict(amc_frame, skel):
+def get_metadict(skel):
     """
-    @type amc_frame: A list of (joint-name, joint-data) tuples
     @type skel_dofs: The array of skeleton dofs, as given by skel.dofs
     @type asf: An instance of the ASFSkeleton class
 
@@ -88,12 +87,15 @@ def get_metadict(amc_frame, skel):
     # actuated dofs is no longer given by (size of output dict - 1), then
     # the setting of action_dim in DartDeepMimic will need to be updated
 
+    joint_names = [joint.name for joint in skel.joints]
     skel_dofs = skel.dofs
 
     metadict = {}
-    for dof_name, _ in amc_frame:
+    for dof_name in joint_names:
         indices = [i for i, dof in enumerate(skel_dofs)
                    if dof.name.startswith(dof_name)]
+        if len(indices) == 0:
+            continue
         child_body = [body for body in skel.bodynodes
                       if body.name.startswith(dof_name)][0]
         metadict[dof_name] = (indices, child_body)
@@ -214,8 +216,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                                      control_skeleton_path).skeletons[-1]
 
         raw_framelist = AMC(reference_motion_path).frames
-        self.metadict = get_metadict(raw_framelist[0],
-                                     self.ref_skel)
+        self.metadict = get_metadict(self.ref_skel)
 
         # The sorting is critical
         self._dof_names = [key for key in self.metadict]
