@@ -183,8 +183,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         if self.p_gain < 0 or self.d_gain < 0:
             raise RuntimeError("All PID gains should be positive")
 
-        self.framenum = 0
-
         # This parameter doesn't actually does anything
         self.__visualize = visualize
 
@@ -227,6 +225,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                                        in enumerate(self.ref_skel.bodynodes)
                                      if len(node.child_bodynodes) == 0]
 
+        self.framenum = 0
         self.num_frames, frames = self.construct_frames(raw_framelist)
         self.ref_q_frames, self.ref_dq_frames, \
             self.ref_quat_frames, self.ref_com_frames, self.ref_ee_frames \
@@ -386,7 +385,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                                + str(self.statemode))
 
         # TODO Make this part more efficient
-        state = np.array([])
+        state = np.array([self.framenum / self.num_frames])
         for dof_name in self._dof_names:
             indices, body = self.metadict[dof_name]
 
