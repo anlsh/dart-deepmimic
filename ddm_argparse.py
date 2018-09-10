@@ -9,6 +9,9 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
                           help='Path to the control skeleton')
         self.add_argument('--ref-motion-path', required=True,
                           help='Path to the reference motion AMC')
+        self.add_argument('--ref-motion-dt', required=False,
+                          type=float, default= 1 / 120,
+                          help="Timestep of the motion frames")
         self.add_argument('--state-mode', default=0, type=int,
                           help="Code for the state representation")
         self.add_argument('--action-mode', type=int, required=True,
@@ -94,6 +97,7 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
 
         return DartDeepMimicEnv(control_skeleton_path=self.args.control_skel_path,
                                 reference_motion_path=self.args.ref_motion_path,
+                                refmotion_dt=self.args.ref_motion_dt,
                                 statemode=self.args.state_mode,
                                 actionmode=self.args.action_mode,
                                 p_gain=self.args.p_gain,

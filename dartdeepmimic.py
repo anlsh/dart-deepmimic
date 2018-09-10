@@ -18,12 +18,10 @@ from euclideanSpace import angle_axis2euler
 
 # Customizable parameters
 ROOT_THETA_KEY = "root"
-REFMOTION_DT = 1 / 120
 
 # ROOT_KEY isn't customizeable. It should correspond
 # to the name of the root node in the amc (which is usually "root")
 ROOT_KEY = "root"
-ROOT_THETA_ORDER = "xyz"
 GRAVITY_VECTOR = np.array([0, -9.8, 0])
 
 END_OFFSET = np.array([1, 1, 1])
@@ -141,7 +139,7 @@ def euler_velocity(final, initial, dt):
 class DartDeepMimicEnv(dart_env.DartEnv):
 
     def __init__(self, control_skeleton_path,
-                 reference_motion_path,
+                 reference_motion_path, refmotion_dt,
                  statemode,
                  actionmode,
                  p_gain, d_gain,
@@ -165,6 +163,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         self.statemode = statemode
         self.actionmode = actionmode
+        self.refmotion_dt = refmotion_dt
         self.simsteps_per_dataframe = simsteps_per_dataframe
         self.pos_init_noise = pos_init_noise
         self.vel_init_noise = vel_init_noise
@@ -212,7 +211,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # Extract dof info so that states can be converted easily #
         ###########################################################
 
-        self.ref_skel = pydart.World(REFMOTION_DT / self.simsteps_per_dataframe,
+        self.ref_skel = pydart.World(self.refmotion_dt / self.simsteps_per_dataframe,
                                      control_skeleton_path).skeletons[-1]
 
         raw_framelist = AMC(reference_motion_path).frames
@@ -254,7 +253,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                                                1,
                                                len(self._get_obs()),
                                                action_limits,
-                                               REFMOTION_DT / self.simsteps_per_dataframe,
+                                               self.refmotion_dt / self.simsteps_per_dataframe,
                                                "parameter",
                                                "continuous",
                                                self.__visualize,
@@ -305,9 +304,9 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             old_root_pos, old_root_theta = old_root_data[:3], old_root_data[3:]
             q[3:6] = curr_root_pos
             q[0:3] = sd2rr(curr_root_theta)
-            dq[3:6] = np.subtract(curr_root_pos, old_root_pos) / REFMOTION_DT
+            dq[3:6] = np.subtract(curr_root_pos, old_root_pos) / self.refmotion_dt
             dq[0:3] = euler_velocity(curr_root_theta, old_root_theta,
-                                     REFMOTION_DT)
+                                     self.refmotion_dt)
 
             # Deal with the non-root joints in full generality
             joint_index = 0
@@ -323,7 +322,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                 # TODO This is not angular velocity at all..
                 vel_theta = euler_velocity(curr_theta,
                                            old_theta,
-                                           REFMOTION_DT)[:length]
+                                           self.refmotion_dt)[:length]
                 curr_theta = sd2rr(curr_theta)[:length]
 
                 q[dof_indices[0]:dof_indices[-1] + 1] = curr_theta
