@@ -15,6 +15,7 @@ import random
 import warnings
 from copy import deepcopy
 from ddm_argparse import DartDeepMimicArgParse
+from euclideanSpace import angle_axis2euler
 
 # Customizable parameters
 ROOT_THETA_KEY = "root"
@@ -484,9 +485,11 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         if self.statemode == StateMode.GEN_EULER:
             angle_tform = lambda x: x
         elif self.statemode == StateMode.GEN_QUAT:
-            angle_tform = lambda x: euler_from_quaternion(*x, axes="rxyz")
+            angle_tform = lambda x: euler_from_quaternion(*(np.divide(x,
+                                                                      np.linalg.norm(x))),
+                                                          axes="rxyz")
         elif self.statemode == StateMode.GEN_AXIS:
-            angle_tform = lambda x: euler_from_axisangle(*x, axes="rxyz")
+            angle_tform = lambda x: angle_axis2euler(x[0], x[1:])
         else:
             raise RuntimeError("Unimplemented state code: "
                                + str(self.statemode))
