@@ -1,0 +1,838 @@
+<?xml version="1.0" ?>
+<skel version="1.0">
+    <world name="world 1">
+        <physics>
+            <time_step>0.002</time_step>
+            <gravity>0 -9.81 0</gravity>
+            <collision_detector>bullet</collision_detector>
+        </physics>
+
+        <skeleton name="ground skeleton">
+            <mobile>false</mobile>
+            <body name="ground">
+                <transformation>0 -1.1025 0 0 0 0</transformation>
+                <visualization_shape>
+                    <transformation>0 0 0 0 0 0</transformation>
+                    <geometry>
+                        <box>
+                            <size>500.0 0.4 2.0</size>
+                        </box>
+                    </geometry>
+                    <color>0.8 0.8 0.8</color>
+                </visualization_shape>
+                <collision_shape>
+                    <transformation>0 0 0 0 0 0</transformation>
+                    <geometry>
+                        <box>
+                            <size>500.0 0.4 2.0</size>
+                        </box>
+                    </geometry>
+                </collision_shape>
+            </body>
+            <joint name="joint_1" type="free">
+                <parent>world</parent>
+                <child>ground</child>
+            </joint>
+        </skeleton>
+
+        <skeleton name="human">
+            <transformation>0 0 0 0 -1.570796 0</transformation>
+            <body name="pelvis_body">
+                <transformation>0.0 0.0 0.0 0 1.570796 0</transformation>
+                <inertia>
+                    <mass>11.3316</mass>
+                    <offset>0 0.0 0</offset>
+                </inertia>
+                <visualization_shape>
+                    <transformation>0.0 0.0 0.0 0 0 0</transformation>
+                    <geometry>
+                        <ellipsoid>
+                            <size>0.175 0.1855 0.35</size>
+                        </ellipsoid>
+                        <!-- <mesh>
+                            <file_name>pelvis.dae</file_name>
+                            <scale>1.4 1.4 1.4</scale>
+                        </mesh> -->
+                    </geometry>
+
+                </visualization_shape>
+                <collision_shape>
+                    <transformation>0.0 0.0 0.0 0 0 0</transformation>
+                    <geometry>
+                        <ellipsoid>
+                            <size>0.175 0.1855 0.35</size>
+                        </ellipsoid>
+                    </geometry>
+                </collision_shape>
+            </body>
+
+            <body name="l-upperleg_body">
+
+                <transformation>-0.1225 -0.035 0.0 0 0.0 0</transformation>
+                <inertia>
+                    <mass>7.6</mass>
+                    <offset>0 -0.24310125 0</offset>
+                </inertia>
+                <visualization_shape>
+                    <transformation>0.0 -0.214375 0.0 0 0 0</transformation>
+                    <geometry>
+                        <box>
+                        <size>0.124 0.42875 0.124</size>
+                        </box>
+                    </geometry>
+                    <color>1.0 0. 0.</color>
+                </visualization_shape>
+                <collision_shape>
+                    <transformation>0.0 -0.214375 0.0 0 0 0</transformation>
+                    <geometry>
+                        <box>
+                        <size>0.124 0.42875 0.124</size>
+                        </box>
+                    </geometry>
+                </collision_shape>
+            </body>
+            <body name="l-lowerleg_body">
+                <transformation>-0.1225 -0.46375 0.0 0 0.0 0</transformation>
+                <inertia>
+                    <mass>3.534</mass>
+                    <offset>0 -0.22722525 0</offset>
+                </inertia>
+                <visualization_shape>
+                    <transformation>0.0 -0.200375 0.0 0 0 0</transformation>
+                    <geometry>
+                        <box>
+                        <size>0.0955 0.400875 0.0955</size>
+                        </box>
+                    </geometry>
+                </visualization_shape>
+                <collision_shape>
+                    <transformation>0.0 -0.200375 0.0 0 0 0</transformation>
+                    <geometry>
+                        <box>
+                        <size>0.0955 0.400875 0.0955</size>
+                        </box>
+                    </geometry>
+                </collision_shape>
+            </body>
+            <body name="l-foot_body">
+                <transformation>-0.1225 -0.8645 0.0 0 0 0</transformation>
+                <inertia>
+                    <mass>1.684</mass>
+                    <offset>0 0.0 -0.0525</offset>
+                </inertia>
+                <visualization_shape>
+                    <transformation>-0.0 0.0 -0.0525 0 0 0</transformation>
+                    <geometry>
+                        <box>
+                            <size>0.09625 0.058 0.21</size>
+                        </box>
+                    </geometry>
+                </visualization_shape>
+                <collision_shape>
+                    <transformation>-0.0 0.0 -0.0525 0 0 0</transformation>
+                    <geometry>
+                        <box>
+                            <size>0.09625 0.058 0.21</size>
+                        </box>
+                    </geometry>
+                </collision_shape>
+            </body>
+
+            <body name="r-upperleg_body">
+                <transformation>0.1225 -0.035 0.0 0 0.0 0</transformation>
+                <inertia>
+                    <mass>7.6</mass>
+                    <offset>0 -0.24310125 0</offset>
+                </inertia>
+                <visualization_shape>
+                    <transformation>0.0 -0.214375 0.0 0 0 0</transformation>
+                    <geometry>
+                        <box>
+                        <size>0.124 0.42875 0.124</size>
+                        </box>
+                    </geometry>
+                </visualization_shape>
+                <collision_shape>
+                    <transformation>0.0 -0.214375 0.0 0 0 0</transformation>
+                    <geometry>
+                        <box>
+                        <size>0.124 0.42875 0.124</size>
+                        </box>
+                    </geometry>
+                </collision_shape>
+            </body>
+            <body name="r-lowerleg_body">
+                <transformation>0.1225 -0.46375 0.0 0 0.0 0</transformation>
+                <inertia>
+                    <mass>3.534</mass>
+                    <offset>0 -0.22722525 0</offset>
+                </inertia>
+                <visualization_shape>
+                    <transformation>0.0 -0.200375 0.0 0 0 0</transformation>
+                    <geometry>
+                        <box>
+                        <size>0.0955 0.400875 0.0955</size>
+                        </box>
+                    </geometry>
+                </visualization_shape>
+                <collision_shape>
+                    <transformation>0.0 -0.200375 0.0 0 0 0</transformation>
+                    <geometry>
+                        <box>
+                        <size>0.0955 0.400875 0.0955</size>
+                        </box>
+                    </geometry>
+                </collision_shape>
+            </body>
+            <body name="r-foot_body">
+                <transformation>0.1225 -0.8645 0.0 0 0 0</transformation>
+                <inertia>
+                    <mass>1.684</mass>
+                    <offset>0 0.0 -0.0525</offset>
+                </inertia>
+                <visualization_shape>
+                    <transformation>-0.0 0.0 -0.0525 0 0 0</transformation>
+                    <geometry>
+                        <box>
+                            <size>0.09625 0.058 0.21</size>
+                        </box>
+                    </geometry>
+                </visualization_shape>
+                <collision_shape>
+                    <transformation>-0.0 0.0 -0.0525 0 0 0</transformation>
+                    <geometry>
+                        <box>
+                            <size>0.09625 0.058 0.21</size>
+                        </box>
+                    </geometry>
+                </collision_shape>
+            </body>
+
+            <body name="abdomen_body">
+                <transformation>0.0 0.09275 0.0 0 1.570796 0</transformation>
+                <inertia>
+                    <mass>11.3316</mass>
+                    <offset>0 0.0735 0</offset>
+                </inertia>
+                <visualization_shape>
+                    <transformation>0.0 0.0735 0.0 0 0 0</transformation>
+                    <geometry>
+                        <ellipsoid>
+                            <size>0.175 0.1855 0.315</size>
+                        </ellipsoid>
+                        <!-- <mesh>
+                            <file_name>abdomen.dae</file_name>
+                            <scale>1.4 1.4 1.4</scale>
+                        </mesh> -->
+                    </geometry>
+                </visualization_shape>
+                <collision_shape>
+                    <transformation>0.0 0.0735 0.0 0 0 0</transformation>
+                    <geometry>
+                        <ellipsoid>
+                            <size>0.175 0.1855 0.315</size>
+                        </ellipsoid>
+                    </geometry>
+                </collision_shape>
+            </body>
+            <body name="thorax_body">
+                <transformation>0.0 0.27825 0.0 0 1.570796 0</transformation>
+                <inertia>
+                    <mass>13.5888</mass>
+                    <offset>0 0.097125 0</offset>
+                </inertia>
+                <visualization_shape>
+                    <transformation>0.0 0.097125 0.0 0 0 0</transformation>
+                    <geometry>
+                        <ellipsoid>
+                            <size>0.175 0.238 0.28</size>
+                        </ellipsoid>
+                        <!-- <mesh>
+                            <file_name>thorax.dae</file_name>
+                            <scale>1.4 1.4 1.4</scale>
+                        </mesh> -->
+                    </geometry>
+                </visualization_shape>
+                <collision_shape>
+                    <transformation>0.0 0.097125 0.0 0 0 0</transformation>
+                    <geometry>
+                        <ellipsoid>
+                            <size>0.175 0.238 0.28</size>
+                        </ellipsoid>
+                    </geometry>
+                </collision_shape>
+            </body>
+            <body name="neck_body">
+                <transformation>0.0 0.47825 0.0 0 1.570796 0</transformation>
+                <inertia>
+                    <mass>0.05888</mass>
+                    <offset>0 0.097125 0</offset>
+                </inertia>
+                <visualization_shape>
+                    <transformation>0.0 0.097125 0.0 1.57 0 0</transformation>
+                    <geometry>
+                        <cylinder>
+                            <radius>0.06</radius>
+                            <height>0.3</height>
+                        </cylinder>
+                        <!-- <mesh>
+                            <file_name>thorax.dae</file_name>
+                            <scale>1.4 1.4 1.4</scale>
+                        </mesh> -->
+                    </geometry>
+                </visualization_shape>
+                <collision_shape>
+                    <transformation>0.0 0.097125 0.0 1.57 0 0</transformation>
+                    <geometry>
+                        <cylinder>
+                            <radius>0.06</radius>
+                            <height>0.3</height>
+                        </cylinder>
+                    </geometry>
+                </collision_shape>
+            </body>
+            <body name="head_body">
+                <transformation>0.0 0.58975 0.0 0 1.570796 0</transformation>
+                <inertia>
+                    <mass>6.156</mass>
+                    <offset>0 0.098875 0</offset>
+                </inertia>
+                <visualization_shape>
+                    <transformation>0.0 0.098875 0.0 0 0 0</transformation>
+                    <geometry>
+                        <!-- <mesh> -->
+                        <!--     <file_name>head.dae</file_name> -->
+                        <!--     <scale>1.3 1.3 1.3</scale> -->
+                        <!-- </mesh> -->
+                        <box>
+                            <size>0.175 0.19775 0.175</size>
+                        </box>
+                        <color>1.0 0.0 0.0</color>
+                    </geometry>
+                </visualization_shape>
+                <collision_shape>
+                    <transformation>0.0 0.098875 0.0 0 0 0</transformation>
+                    <geometry>
+                        <box>
+                            <size>0.175 0.19775 0.175</size>
+                        </box>
+                    </geometry>
+                </collision_shape>
+            </body>
+
+            <body name="l-clavicle_body">
+                <transformation>-0.03 0.47075 0.0 0 1.570796 0</transformation>
+                <inertia>
+                    <mass>0.76</mass>
+                    <offset>0 0.0 -0.07</offset>
+                </inertia>
+                <visualization_shape>
+                    <transformation>0.0 0.0 -0.07 0 0 0</transformation>
+                    <geometry>
+                        <!-- <mesh> -->
+                        <!--     <file_name>l-clavicle.dae</file_name> -->
+                        <!--     <scale>1.5 1.5 1.5</scale> -->
+                        <!-- </mesh> -->
+                        <box>
+                            <size>0.1 0.1 0.1</size>
+                        </box>
+                    </geometry>
+                </visualization_shape>
+
+                
+            </body>
+            <body name="l-upperarm_body">
+                <transformation>-0.205 0.455 0.0 0 0 0</transformation>
+                <inertia>
+                    <mass>2.128</mass>
+                    <offset>0 -0.17766 0</offset>
+                </inertia>
+                <visualization_shape>
+                    <transformation>0.0 -0.1575 0.0 0 0 0</transformation>
+                    <geometry>
+                        <box>
+                            <size>0.1 0.415 0.1</size>
+                        </box>
+                    </geometry>
+                </visualization_shape>
+                <collision_shape>
+                    <transformation>0.0 -0.1575 0.0 0 0 0</transformation>
+                    <geometry>
+                        <box>
+                            <size>0.1 0.415 0.1</size>
+                        </box>
+                    </geometry>
+                </collision_shape>
+            </body>
+            <body name="l-lowerarm_body">
+                <transformation>-0.205 0.14 0.0 0 0 0</transformation>
+                <inertia>
+                    <mass>1.416</mass>
+                    <offset>0 -0.1646375 0</offset>
+                </inertia>
+                <visualization_shape>
+                    <transformation>0.0 -0.126875 0.0 0 0 0</transformation>
+                    <geometry>
+                        <box>
+                            <size>0.1 0.35375 0.1</size>
+                        </box>
+                    </geometry>
+                </visualization_shape>
+                <collision_shape>
+                    <transformation>0.0 -0.126875 0.0 0 0 0</transformation>
+                    <geometry>
+                        <box>
+                            <size>0.1 0.35375 0.1</size>
+                        </box>
+                    </geometry>
+                </collision_shape>
+            </body>
+
+            <body name="r-clavicle_body">
+                <transformation>0.18 0.47075 0.0 0 1.570796 0</transformation>
+                <inertia>
+                    <mass>0.76</mass>
+                    <offset>0 0.0 -0.07</offset>
+                </inertia>
+                <visualization_shape>
+                    <transformation>0.0 0.0 -0.07 0 0 0</transformation>
+                    <geometry>
+                        <!-- <mesh> -->
+                        <!--     <file_name>r-clavicle.dae</file_name> -->
+                        <!--     <scale>1.5 1.5 1.5</scale> -->
+                        <!-- </mesh> -->
+                        <box>
+                            <size>0.1 0.1 0.1</size>
+                        </box>
+                    </geometry>
+                </visualization_shape>
+                
+            </body>
+            <body name="r-upperarm_body">
+                <transformation>0.205 0.455 0.0 0 0 0</transformation>
+                <inertia>
+                    <mass>2.128</mass>
+                    <offset>0 -0.17766 0</offset>
+                </inertia>
+                <visualization_shape>
+                    <transformation>0.0 -0.1575 0.0 0 0 0</transformation>
+                    <geometry>
+                        <box>
+                            <size>0.1 0.415 0.1</size>
+                        </box>
+                    </geometry>
+                </visualization_shape>
+                <collision_shape>
+                    <transformation>0.0 -0.1575 0.0 0 0 0</transformation>
+                    <geometry>
+                        <box>
+                            <size>0.1 0.415 0.1</size>
+                        </box>
+                    </geometry>
+                </collision_shape>
+            </body>
+            <body name="r-lowerarm_body">
+                <transformation>0.205 0.14 0.0 0 0 0</transformation>
+                <inertia>
+                    <mass>1.416</mass>
+                    <offset>0 -0.1646375 0</offset>
+                </inertia>
+                <visualization_shape>
+                    <transformation>0.0 -0.126875 0.0 0 0 0</transformation>
+                    <geometry>
+                        <box>
+                            <size>0.1 0.35375 0.1</size>
+                        </box>
+                    </geometry>
+                </visualization_shape>
+                <collision_shape>
+                    <transformation>0.0 -0.126875 0.0 0 0 0</transformation>
+                    <geometry>
+                        <box>
+                            <size>0.1 0.35375 0.1</size>
+                        </box>
+                    </geometry>
+                </collision_shape>
+            </body>
+
+            <!-- JOINT: Pelvis -->
+            <joint type="free" name="root">
+                <parent>world</parent>
+                <child>pelvis_body</child>
+            </joint>
+
+            <joint name="l-upperleg" type="euler">
+                <transformation>0.0 0.0 0.0 0.0 0. 0</transformation>
+                <!-- the above is a workaround since DART don't have Euler in zxy order -->
+                <parent>pelvis_body</parent>
+                <child>l-upperleg_body</child>
+                <axis_order>xyz</axis_order>
+                <!-- actually being zxy, see transformation above-->
+                <axis>
+                    <limit>
+                        <lower>-1.2570796</lower>
+                        <upper>3.14</upper>
+                    </limit>
+                    <dynamics>
+                        <damping>5.0</damping>
+                        <stiffness>0.0</stiffness>
+                    </dynamics>
+                </axis>
+                <axis2>
+                    <limit>
+                        <!-- <lower>-1.8</lower>
+                        <upper>0.6</upper> -->
+                        <lower>-0.08</lower>
+                        <upper>0.06</upper>
+                    </limit>
+                    <dynamics>
+                        <damping>2.0</damping>
+                        <stiffness>0.0</stiffness>
+                    </dynamics>
+                </axis2>
+                <axis3>
+                    <limit>
+                        <lower>-0.06</lower>
+                        <upper>0.06</upper>
+                    </limit>
+                    <dynamics>
+                        <damping>5.0</damping>
+                        <stiffness>0.0</stiffness>
+                    </dynamics>
+                </axis3>
+                <init_pos>1.0 0.0 0.0</init_pos>
+                <init_vel>0 0.0 0.0</init_vel>
+            </joint>
+            <joint name="l-lowerleg" type="revolute">
+                <transformation>0.0 0.0 0.0 0.0 0.0 0</transformation>
+                <parent>l-upperleg_body</parent>
+                <child>l-lowerleg_body</child>
+                <axis>
+                    <xyz>-1.0 0.0 0.0</xyz>
+                    <limit>
+                        <lower>0.0</lower>
+                        <upper>3.0</upper>
+                    </limit>
+                    <dynamics>
+                        <damping>2.0</damping>
+                        <stiffness>0.0</stiffness>
+                    </dynamics>
+                </axis>
+                <init_pos>0.0</init_pos>
+                <init_vel>0</init_vel>
+            </joint>
+            <joint name="l-foot" type="universal">
+                <transformation>0.0 0.0 0.0 0 0 0</transformation>
+                <parent>l-lowerleg_body</parent>
+                <child>l-foot_body</child>
+                <axis>
+                    <xyz>1.0 0.0 0.0</xyz>
+                    <limit>
+                        <lower>-0.8</lower>
+                        <upper>0.8</upper>
+                    </limit>
+                    <dynamics>
+                        <damping>5.0</damping>
+                        <stiffness>0.0</stiffness>
+                    </dynamics>
+                </axis>
+                <axis2>
+                    <xyz>0.0 0.0 1.0</xyz>
+                    <limit>
+                        <lower>-0.05</lower>
+                        <upper>0.05</upper>
+                    </limit>
+                    <dynamics>
+                        <damping>5.0</damping>
+                        <stiffness>0.0</stiffness>
+                    </dynamics>
+                </axis2>
+                <init_pos>0.0 0.0</init_pos>
+                <init_vel>0 0</init_vel>
+            </joint>
+
+            <joint name="r-upperleg" type="euler">
+                <transformation>0.0 0.0 0.0 0.0 0.0 0</transformation>
+                <parent>pelvis_body</parent>
+                <child>r-upperleg_body</child>
+                <axis_order>xyz</axis_order>
+                <axis>
+                    <limit>
+                        <lower>-1.2570796</lower>
+                        <upper>3.14</upper>
+                    </limit>
+                    <dynamics>
+                        <damping>5.0</damping>
+                        <stiffness>0.0</stiffness>
+                    </dynamics>
+                </axis>
+                <axis2>
+                    <limit>
+                        <lower>-0.08</lower>
+                        <upper>0.06</upper>
+                    </limit>
+                    <dynamics>
+                        <damping>2.0</damping>
+                        <stiffness>0.0</stiffness>
+                    </dynamics>
+                </axis2>
+                <axis3>
+                    <limit>
+                        <lower>-0.06</lower>
+                        <upper>0.06</upper>
+                    </limit>
+                    <dynamics>
+                        <damping>5.0</damping>
+                        <stiffness>0.0</stiffness>
+                    </dynamics>
+                </axis3>
+                <init_pos>1.57 0.0 0.0</init_pos>
+                <init_vel>0 0.0 0.0</init_vel>
+            </joint>
+            <joint name="r-lowerleg" type="revolute">
+                <transformation>0.0 0.0 0.0 0.0 0.0 0</transformation>
+                <parent>r-upperleg_body</parent>
+                <child>r-lowerleg_body</child>
+                <axis>
+                    <xyz>-1.0 0.0 0.0</xyz>
+                    <limit>
+                        <lower>0.0</lower>
+                        <upper>3.0</upper>
+                    </limit>
+                    <dynamics>
+                        <damping>2.0</damping>
+                        <stiffness>0.0</stiffness>
+                    </dynamics>
+                </axis>
+                <init_pos>0.0</init_pos>
+                <init_vel>0</init_vel>
+            </joint>
+            <joint name="r-foot" type="universal">
+                <transformation>0.0 0.0 0.0 0 0 0</transformation>
+                <parent>r-lowerleg_body</parent>
+                <child>r-foot_body</child>
+                <axis>
+                    <xyz>1.0 0.0 0.0</xyz>
+                    <limit>
+                        <lower>-0.8</lower>
+                        <upper>0.8</upper>
+                    </limit>
+                    <dynamics>
+                        <damping>5.0</damping>
+                        <stiffness>0.0</stiffness>
+                    </dynamics>
+                </axis>
+                <axis2>
+                    <xyz>0.0 0.0 -1.0</xyz>
+                    <limit>
+                        <lower>-0.05</lower>
+                        <upper>0.05</upper>
+                    </limit>
+                    <dynamics>
+                        <damping>5.0</damping>
+                        <stiffness>0.0</stiffness>
+                    </dynamics>
+                </axis2>
+                
+                <init_pos>0.0 0.0</init_pos>
+                <init_vel>0 0</init_vel>
+            </joint>
+
+            <joint name="abdomen" type="euler">
+                <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
+                <parent>pelvis_body</parent>
+                <child>abdomen_body</child>
+                <axis_order>xyz</axis_order>
+                <axis>
+                    <xyz>1.0 0.0 0.0</xyz>
+                    <limit>
+                        <lower>-0.00523</lower>
+                        <upper>0.00523</upper>
+                    </limit>
+                    <dynamics>
+                        <damping>5.0</damping>
+                        <stiffness>0.0</stiffness>
+                    </dynamics>
+                </axis>
+                <axis2>
+                    <xyz>0.0 0.0 1.0</xyz>
+                    <limit>
+                        <lower>-0.00523</lower>
+                        <upper>0.001</upper>
+                    </limit>
+                    <dynamics>
+                        <damping>5.0</damping>
+                        <stiffness>0.0</stiffness>
+                    </dynamics>
+                </axis2>
+                <axis3>
+                    <xyz>0.0 1.0 0.0</xyz>
+                    <limit>
+                        <lower>-0.006</lower>
+                        <upper>0.000</upper>
+                    </limit>
+                    <dynamics>
+                        <damping>5.0</damping>
+                        <stiffness>0.0</stiffness>
+                    </dynamics>
+                </axis3>
+                <init_pos>0 0 0</init_pos>
+                <init_vel>0 0 0</init_vel>
+            </joint>
+            <joint name="thorax" type="weld">
+                <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
+                <parent>abdomen_body</parent>
+                <child>thorax_body</child>
+                <!-- <axis>
+                    <xyz>0.0 1.0 0.0</xyz>
+                    <limit>
+                        <lower>-0.523</lower>
+                        <upper>0.523</upper>
+                    </limit>
+                    <dynamics>
+                        <damping>5.0</damping>
+                        <stiffness>0.0</stiffness>
+                    </dynamics>
+                </axis>
+                <init_pos>0</init_pos>
+                <init_vel>0</init_vel> -->
+            </joint>
+            <joint name="neck" type="weld">
+                <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
+                <parent>thorax_body</parent>
+                <child>neck_body</child>
+            </joint>
+            <joint name="head" type="weld">
+                <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
+                <parent>neck_body</parent>
+                <child>head_body</child>
+            </joint>
+            <joint name="l-clavicle" type="weld">
+                <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
+                <parent>thorax_body</parent>
+                <child>l-clavicle_body</child>
+            </joint>
+            <joint name="l-upperarm" type="euler">
+                <transformation>0.0 0.0 0.0 -3.142 -0.523599 -1.570796</transformation>
+                <parent>l-clavicle_body</parent>
+                <child>l-upperarm_body</child>
+                <axis_order>xyz</axis_order>
+                <!-- de facto zxy -->
+                <axis>
+                    <limit>
+                        <lower>-2.09</lower>
+                        <upper>0.0</upper>
+                    </limit>
+                    <dynamics>
+                        <damping>2.0</damping>
+                        <stiffness>0.0</stiffness>
+                    </dynamics>
+                </axis>
+                <axis2>
+                    <limit>
+                        <lower>-2.4</lower>
+                        <upper>1.0</upper>
+                    </limit>
+                    <dynamics>
+                        <damping>2.0</damping>
+                        <stiffness>0.0</stiffness>
+                    </dynamics>
+                </axis2>
+                <axis3>
+                    <limit>
+                        <lower>-0.4</lower>
+                        <upper>0.4</upper>
+                    </limit>
+                    <dynamics>
+                        <damping>2.0</damping>
+                        <stiffness>0.0</stiffness>
+                    </dynamics>
+                </axis3>
+                <init_pos>0.0 0.0 0.0</init_pos>
+                <init_vel>0 0.0 0.0</init_vel>
+            </joint>
+            <joint name="l-lowerarm" type="revolute">
+                <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
+                <parent>l-upperarm_body</parent>
+                <child>l-lowerarm_body</child>
+                <axis>
+                    <xyz>1.0 0.0 0.0</xyz>
+                    <limit>
+                        <lower>0.0</lower>
+                        <upper>2.61</upper>
+                    </limit>
+                    <dynamics>
+                        <damping>2.0</damping>
+                        <stiffness>0.0</stiffness>
+                    </dynamics>
+                </axis>
+                <init_pos>1.5</init_pos>
+                <init_vel>0</init_vel>
+            </joint>
+
+            <joint name="r-clavicle" type="weld">
+                <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
+                <parent>thorax_body</parent>
+                <child>r-clavicle_body</child>
+            </joint>
+            <joint name="r-upperarm" type="euler">
+                <transformation>0.0 0.0 0.0 3.142 0.523599 1.570796</transformation>
+                <parent>r-clavicle_body</parent>
+                <child>r-upperarm_body</child>
+                <axis_order>xyz</axis_order>
+                <axis>
+                    <limit>
+                        <lower>0.0</lower>
+                        <!--<upper>2.09</upper>-->
+                        <upper>2.09</upper>
+                    </limit>
+                    <dynamics>
+                        <damping>2.0</damping>
+                        <stiffness>0.0</stiffness>
+                    </dynamics>
+                </axis>
+                <axis2>
+                    <limit>
+                        <lower>-2.4</lower>
+                        <upper>1.0</upper>
+                    </limit>
+                    <dynamics>
+                        <damping>2.0</damping>
+                        <stiffness>0.0</stiffness>
+                    </dynamics>
+                </axis2>
+                <axis3>
+                    <limit>
+                        <lower>-0.4</lower>
+                        <upper>0.4</upper>
+                    </limit>
+                    <dynamics>
+                        <damping>2.0</damping>
+                        <stiffness>0.0</stiffness>
+                    </dynamics>
+                </axis3>
+                <init_pos>0.0 0.0 0.0</init_pos>
+                <init_vel>0 0.0 0.0</init_vel>
+            </joint>
+            <joint name="r-lowerarm" type="revolute">
+                <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
+                <parent>r-upperarm_body</parent>
+                <child>r-lowerarm_body</child>
+                <axis>
+                    <xyz>1.0 0.0 0.0</xyz>
+                    <limit>
+                        <lower>0.0</lower>
+                        <upper>2.61</upper>
+                    </limit>
+                    <dynamics>
+                        <damping>2.0</damping>
+                        <stiffness>0.0</stiffness>
+                    </dynamics>
+                </axis>
+                <init_pos>1.5</init_pos>
+                <init_vel>0</init_vel>
+            </joint>
+        </skeleton>
+    </world>
+</skel>
+
