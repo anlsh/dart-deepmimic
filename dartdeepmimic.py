@@ -486,8 +486,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         if self.statemode == StateMode.GEN_EULER:
             angle_tform = lambda x: x
         elif self.statemode == StateMode.GEN_QUAT:
-            angle_tform = lambda x: euler_from_quaternion(*(np.divide(x,
-                                                                      np.linalg.norm(x))),
+            angle_tform = lambda x: euler_from_quaternion(np.divide(x,
+                                                                      np.linalg.norm(x)),
                                                           axes="rxyz")
         elif self.statemode == StateMode.GEN_AXIS:
             angle_tform = lambda x: angle_axis2euler(x[0], x[1:])
