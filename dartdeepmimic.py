@@ -412,7 +412,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         if skel is None:
             skel = self.control_skel
 
-        angles = np.array([])
+        angles = []
 
         for dof_name in self._dof_names:
 
@@ -426,9 +426,9 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
             converted_angle = quaternion_from_euler(*euler_angle,
                                                     axes="rxyz")
-            angles = np.append(angles, converted_angle)
+            angles.append(converted_angle)
 
-        return angles
+        return np.array(angles)
 
 
     def reward(self, skel, framenum):
@@ -458,9 +458,9 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # END EFFECTOR REWARD #
         #######################
 
-        eediffmag = sum([norm(self.control_skel.bodynodes[i].to_world(END_OFFSET)
+        eediffmag = sum([norm(self.control_skel.bodynodes[j].to_world(END_OFFSET)
                               - ref_ee_positions[i])**2
-                         for i in self._end_effector_indices])
+                         for i, j in enumerate(self._end_effector_indices)])
 
         #########################
         # CENTER OF MASS REWARD #
