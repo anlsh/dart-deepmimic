@@ -37,8 +37,15 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
             updated_pos = WalkPositions[i,:].copy()
             updated_pos[3:6] = updated_pos[3:6][::-1]
+            temp = updated_pos[3:6].copy()
+            updated_pos[3:6] = updated_pos[0:3]
+            updated_pos[0:3] = temp
+
             updated_vel = WalkVelocities[i,:].copy()
             updated_vel[3:6] = updated_vel[3:6][::-1]
+            temp = updated_vel[3:6].copy()
+            updated_vel[3:6] = updated_pos[0:3]
+            updated_vel[0:3] = temp
 
             map_dofs(self.ref_skel.dofs, updated_pos,
                      updated_vel, 0, 0)
