@@ -7,7 +7,7 @@ from copy import copy
 
 class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
-    def construct_frames(self, raw_framelist):
+    def construct_frames(self, ref_motion_path):
         """
         AMC data is given in sequential degrees, while dart specifies angles
         in rotating radians. The conversion is quite expensive, so we precomute
@@ -31,9 +31,6 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
 
         for i in range(len(WalkPositions)):
-
-            # TODO EMERGENCY Remember to the change the root angles to
-            # zyx order
 
             updated_pos = WalkPositions[i,:].copy()
             updated_pos[3:6] = updated_pos[3:6][::-1]
