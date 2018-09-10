@@ -237,7 +237,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.action_dim = 0
         for name in self._actuated_dof_names:
             indices, _ = self.metadict[name]
-            action_dim += 0 if len(indices) == 1 \
+            self.action_dim += 0 if len(indices) == 1 \
                           else ActionMode.lengths[self.actionmode]
 
         # Setting of control_skel to ref_skel is just temporary so that
