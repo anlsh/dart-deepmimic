@@ -428,6 +428,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                                                     axes="rxyz")
             angles = np.append(angles, converted_angle)
 
+        return angles
+
 
     def reward(self, skel, framenum):
 
@@ -435,7 +437,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         ref_angles = self.ref_quat_frames[framenum]
         ref_com = self.ref_com_frames[framenum]
-        ref_ee_positions = self.ref_ee_pos_frames[framenum]
+        ref_ee_positions = self.ref_ee_frames[framenum]
 
         #####################
         # POSITIONAL REWARD #
@@ -517,7 +519,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         if netvector_index != len(netvector):
             raise RuntimeError("Not all net outputs used")
 
-        return np.concatenate([np.zeros(6), q])
+        return q
 
 
     def step(self, action_vector):
@@ -526,7 +528,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         """
         dof_targets = self.q_from_netvector(action_vector)
 
-        tau = self.p_gain * (dof_targets - self.control_skel.q[6:]) \
+        tau = self.p_gain * (dof_targets[6:] - self.control_skel.q[6:]) \
               - self.d_gain * (self.control_skel.dq[6:])
         tau = np.clip(tau, -self.max_torque, self.max_torque)
 
