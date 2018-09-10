@@ -22,7 +22,7 @@ def train(env, initial_params_path,
     def policy_fn(name, ob_space, ac_space):
         print("Policy with name: ", name)
         policy = mlp_policy.MlpPolicy(name=name, ob_space=ob_space, ac_space=ac_space,
-                                      hid_size=64, num_hid_layers=3)
+                                      hid_size=64, num_hid_layers=2)
         if initial_params_path is not None:
             U.load_state(initial_params_path)
         return policy
