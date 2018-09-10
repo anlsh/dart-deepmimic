@@ -209,8 +209,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # Extract dof info so that states can be converted easily #
         ###########################################################
 
-        self.ref_skel = pydart.World(self.refmotion_dt / self.simsteps_per_dataframe,
-                                     control_skeleton_path).skeletons[-1]
+        self.ref_skel = pydart.World(.00001, control_skeleton_path).skeletons[-1]
 
         self.metadict = get_metadict(self.ref_skel)
 
