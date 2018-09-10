@@ -69,6 +69,16 @@ def quaternion_rotation_angle(a):
     # Section: Recovering_the_axis-angle_representation
     return 2 * atan2(norm(a[1:]), a[0])
 
+def normalize(vector, identity=None):
+
+    if np.linalg.norm(vector) == 0:
+        if identity is None:
+            raise RuntimeError("Tried to normalize a 0 vector")
+        else:
+            return identity
+    else:
+        return np.divide(vector, np.linalg.norm(vector))
+
 
 def get_metadict(skel):
     """
@@ -485,11 +495,10 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         if self.statemode == StateMode.GEN_EULER:
             angle_tform = lambda x: x
         elif self.statemode == StateMode.GEN_QUAT:
-            angle_tform = lambda x: euler_from_quaternion(np.divide(x,
-                                                                      np.linalg.norm(x)),
+            angle_tform = lambda x: euler_from_quaternion(normalize(x, np.array([1.0, 0, 0, 0])),
                                                           axes="rxyz")
         elif self.statemode == StateMode.GEN_AXIS:
-            angle_tform = lambda x: angle_axis2euler(x[0], x[1:])
+            angle_tform = lambda x: angle_axis2euler(x[0], normalize(x[1:])) if np.linalg.norm(x[1:]) != 0 else np.array([0.0, 1.0, 0.0, 0.0])
         else:
             raise RuntimeError("Unimplemented state code: "
                                + str(self.statemode))
