@@ -405,13 +405,13 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                 else:
                     converted_angle = skel.q[indices[0]:indices[0]+1]
             else:
-                converted_angle = skel.q[0:3]
+                converted_angle = angle_tform(skel.q[0:3])
 
             relpos = body.com() - skel.com()
             linvel = body.dC
             # TODO Need to convert dq into an angular velocity
             dq = skel.dq[indices[0]:indices[-1]+1]
-            state = np.concatenate([state, converted_angle, relpos, linvel, dq])
+            state = np.concatenate([state, relpos, converted_angle, linvel, dq])
 
         return state
 
