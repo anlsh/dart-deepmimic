@@ -15,16 +15,13 @@ def train(env, initial_params_path,
         print("Policy with name: ", name)
         policy = mlp_policy.MlpPolicy(name=name, ob_space=ob_space, ac_space=ac_space,
             hid_size=64, num_hid_layers=2)
-        saver = tf.train.Saver()
-        if initial_params_path is not None:
-            print("Tried to restore from ", initial_params_path)
-            saver.restore(sess, initial_params_path)
         return policy
-
-    gym.logger.setLevel(logging.WARN)
 
     def callback_fn(local_vars, global_vars):
         iters = local_vars["iters_so_far"]
+        if iters == 0 and initial_params_path is not None:
+            print("Restoring from " + initial_params_path)
+            tf.train.Saver().restore(tf.get_default_session(), initial_params_path)
         saver = tf.train.Saver()
         if iters % save_interval == 0:
             saver.save(sess, out_prefix + str(iters))

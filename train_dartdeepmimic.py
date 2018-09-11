@@ -32,9 +32,10 @@ def train(env, initial_params_path,
     gym.logger.setLevel(logging.WARN)
 
     def callback_fn(local_vars, global_vars):
-        # TODO Implement proper handling of writing to files and stuff
-        # TODO also probably dont save on every single iteration...
         iters = local_vars["iters_so_far"]
+        if iters == 0 and initial_params_path is not None:
+            print("Restoring from " + initial_params_path)
+            tf.train.Saver().restore(tf.get_default_session(), initial_params_path)
         saver = tf.train.Saver()
         if iters % save_interval == 0:
             saver.save(sess, out_prefix + str(iters))
