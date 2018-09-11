@@ -1,24 +1,16 @@
-from baselines.common import set_global_seeds, tf_util as U
+from baselines.common import tf_util as U
 import tensorflow as tf
-from baselines import bench
-import os.path as osp
 import gym, logging
-from baselines.bench import Monitor
-from baselines import logger
 
-from dartdeepmimic import DartDeepMimicEnv
 from visak_dartdeepmimic import VisakDartDeepMimicArgParse
-# from ddm_argparse import DartDeepMimicArgParse
 
 def train(env, initial_params_path,
           save_interval, out_prefix, num_timesteps, num_cpus):
     from baselines.ppo1 import mlp_policy, pposgd_simple
-    #with tf.variable_scope('inclined'):
     sess = U.make_session(num_cpu=num_cpus).__enter__()
 
     U.initialize()
 
-    #set_global_seeds(seed)
     def policy_fn(name, ob_space, ac_space):
         print("Policy with name: ", name)
         policy = mlp_policy.MlpPolicy(name=name, ob_space=ob_space, ac_space=ac_space,
@@ -29,13 +21,9 @@ def train(env, initial_params_path,
             saver.restore(sess, initial_params_path)
         return policy
 
-    #env = bench.Monitor(env, "results.json")
-    #env.seed(seed)
     gym.logger.setLevel(logging.WARN)
 
     def callback_fn(local_vars, global_vars):
-        # TODO Implement proper handling of writing to files and stuff
-        # TODO also probably dont save on every single iteration...
         iters = local_vars["iters_so_far"]
         saver = tf.train.Saver()
         if iters % save_interval == 0:
