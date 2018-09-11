@@ -59,7 +59,7 @@ def pad2length(vector, length):
 
 
 def quaternion_difference(a, b):
-    return quaternion_multiply(b, quaternion_inverse(a))
+    return quaternion_multiply(quaternion_inverse(a), b)
 
 
 def quaternion_rotation_angle(a):
@@ -561,6 +561,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             pos_stdv = self.pos_init_noise
         if vel_stdv is None:
             vel_stdv = self.vel_init_noise
+
+        self.dart_world.reset()
 
         if framenum is None:
             framenum = random.randint(0, self.num_frames - 1)
