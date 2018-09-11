@@ -13,7 +13,7 @@ def train(env, initial_params_path,
           save_interval, out_prefix, num_timesteps, num_cpus):
     from baselines.ppo1 import mlp_policy, pposgd_simple
     #with tf.variable_scope('inclined'):
-    U.make_session(num_cpu=num_cpus).__enter__()
+    sess = U.make_session(num_cpu=num_cpus).__enter__()
 
     U.initialize()
 
@@ -22,8 +22,9 @@ def train(env, initial_params_path,
         print("Policy with name: ", name)
         policy = mlp_policy.MlpPolicy(name=name, ob_space=ob_space, ac_space=ac_space,
             hid_size=64, num_hid_layers=2)
+        saver = tf.train.Saver()
         if initial_params_path is not None:
-            U.load_state(initial_params_path)
+            saver.restore(sess, initial_params_path)
         return policy
 
     #env = bench.Monitor(env, "results.json")
@@ -34,8 +35,9 @@ def train(env, initial_params_path,
         # TODO Implement proper handling of writing to files and stuff
         # TODO also probably dont save on every single iteration...
         iters = local_vars["iters_so_far"]
+        saver = tf.train.Saver()
         if iters % save_interval == 0:
-            U.save_state(out_prefix + str(iters))
+            saver.save(sess, out_prefix + str(iters))
 
     pposgd_simple.learn(env, policy_fn,
             max_timesteps=num_timesteps,
