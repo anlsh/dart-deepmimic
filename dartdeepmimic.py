@@ -52,6 +52,7 @@ class ActionMode:
     # type. For instance euler is 3 numbers, a quaternion is 4
     lengths = [3, 4, 4]
 
+
 def pad2length(vector, length):
     padded = np.zeros(length)
     padded[:len(vector)] = deepcopy(vector)
@@ -67,6 +68,9 @@ def quaternion_rotation_angle(a):
     # Lifted from wikipedia
     # https://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation
     # Section: Recovering_the_axis-angle_representation
+
+    # TODO Visak just does 2 arccos of a[0]?
+
     return 2 * atan2(norm(a[1:]), a[0])
 
 def normalize(vector, identity=None):
@@ -82,19 +86,9 @@ def normalize(vector, identity=None):
 
 def get_metadict(skel):
     """
-    @type skel_dofs: The array of skeleton dofs, as given by skel.dofs
-    @type asf: An instance of the ASFSkeleton class
-
-    @return: A dictionary which maps dof names APPEARING IN MOCAP DATA to
-    tuples where: - the first element is the list of indices the dof occupies
-    in skel_dofs - the second element is the joint's angle order (a string such
-    as "xz" or "zyx")
+    Given a skeleton object, create a dictionary mapping each (actuated)
+    joint name to (list of indices it occupies in skel.q, child body)
     """
-    # README EMERGENCY!!!
-    # If the output of this function is ever changed so that the number of
-    # actuated dofs is no longer given by (size of output dict - 1), then
-    # the setting of action_dim in DartDeepMimic will need to be updated
-
     joint_names = [joint.name for joint in skel.joints]
     skel_dofs = skel.dofs
 
@@ -103,6 +97,8 @@ def get_metadict(skel):
         indices = [i for i, dof in enumerate(skel_dofs)
                    if dof.name.startswith(dof_name)]
         if len(indices) == 0:
+            # Some joints (like welds) dont have dofs and so won't appear
+            # we avoid adding those to the dict entirely
             continue
         child_body = [body for body in skel.bodynodes
                       if body.name.startswith(dof_name)][0]
@@ -124,6 +120,7 @@ def map_dofs(dof_list, pos_list, vel_list, pstdv, vstdv):
 
         dof.set_position(float(pos))
         dof.set_velocity(float(vel))
+
 
 def sd2rr(rvector):
     """
