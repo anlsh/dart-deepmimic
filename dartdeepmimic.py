@@ -365,7 +365,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         q = self.ref_q_frames[frame_index]
         dq = self.ref_dq_frames[frame_index]
 
-        map_dofs(skel.dofs[3:6], q[3:6], dq[3:6], 0, vel_stdv)
+        map_dofs(skel.dofs[3:6], q[3:6], dq[3:6], 0, 0)
         map_dofs(skel.dofs[0:3], q[:3], dq[:3], 0, vel_stdv)
         map_dofs(skel.dofs[6:], q[6:], dq[6:], pos_stdv, vel_stdv)
 
