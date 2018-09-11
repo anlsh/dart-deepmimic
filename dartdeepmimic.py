@@ -528,6 +528,12 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         return q
 
 
+    def should_terminate(self, reward, newstate):
+        done = self.framenum == self.num_frames - 1
+        done = done or reward < self.reward_cutoff
+        return done
+
+
     def step(self, action_vector):
         """
         action_vector is of length (anglemodelength) * (num_actuated_joints)
@@ -542,13 +548,11 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                            self.simsteps_per_dataframe)
 
         newstate = self._get_obs()
-        reward = self.reward(self.control_skel, self.framenum)
-        extrainfo = {"dof_targets": dof_targets}
-        done = self.framenum == self.num_frames - 1 \
-               or (reward < self.reward_cutoff)
         if not np.isfinite(newstate).all():
             raise RuntimeError("Ran into an infinite state, terminating")
-
+        reward = self.reward(self.control_skel, self.framenum)
+        extrainfo = {"dof_targets": dof_targets}
+        done = self.should_terminate(reward, newstate)
         self.framenum += 1
 
         return newstate, reward, done, extrainfo
