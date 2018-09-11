@@ -1,10 +1,17 @@
 import argparse
 from dartdeepmimic import DartDeepMimicEnv
+import visak_dartdeepmimic
 
 class DartDeepMimicArgParse(argparse.ArgumentParser):
 
+    classes = {"ddm": DartDeepMimicEnv,
+               "vdmm": visak_dartdeepmimic.VisakDartDeepMimicEnv}
+
     def __init__(self):
         super().__init__()
+        self.add_argument('--environment-mode', type=str, default="ddm",
+                          help='One of "ddm" or "vdmm", specifies which env'
+                          + ' to instantiate')
         self.add_argument('--control-skel-path', required=True,
                           help='Path to the control skeleton')
         self.add_argument('--ref-motion-path', required=True,
@@ -95,31 +102,32 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
 
     def get_env(self):
 
-        return DartDeepMimicEnv(control_skeleton_path=self.args.control_skel_path,
-                                reference_motion_path=self.args.ref_motion_path,
-                                refmotion_dt=self.args.ref_motion_dt,
-                                statemode=self.args.state_mode,
-                                actionmode=self.args.action_mode,
-                                p_gain=self.args.p_gain,
-                                d_gain=self.args.d_gain,
-                                pos_init_noise=self.args.pos_init_noise,
-                                vel_init_noise=self.args.vel_init_noise,
-                                reward_cutoff=self.args.reward_cutoff,
-                                pos_weight=self.args.pos_weight,
-                                pos_inner_weight=self.args.pos_inner_weight,
-                                vel_weight=self.args.vel_weight,
-                                vel_inner_weight=self.args.vel_inner_weight,
-                                ee_weight=self.args.ee_weight,
-                                ee_inner_weight=self.args.ee_inner_weight,
-                                com_weight=self.args.com_weight,
-                                com_inner_weight=self.args.com_inner_weight,
-                                max_torque=self.args.max_torque,
-                                max_angle=self.args.max_angle,
-                                default_damping=self.args.default_damping,
-                                default_spring=self.args.default_spring,
-                                visualize=self.args.visualize,
-                                simsteps_per_dataframe=self.args.simsteps_per_dataframe,
-                                screen_width=self.args.window_width,
-                                screen_height=self.args.window_height,
-                                gravity=self.args.gravity,
-                                self_collide=self.args.selfcollide)
+        return DartDeepMimicArgParse.classes[self.args.environment_mode](
+            control_skeleton_path=self.args.control_skel_path,
+            reference_motion_path=self.args.ref_motion_path,
+            refmotion_dt=self.args.ref_motion_dt,
+            statemode=self.args.state_mode,
+            actionmode=self.args.action_mode,
+            p_gain=self.args.p_gain,
+            d_gain=self.args.d_gain,
+            pos_init_noise=self.args.pos_init_noise,
+            vel_init_noise=self.args.vel_init_noise,
+            reward_cutoff=self.args.reward_cutoff,
+            pos_weight=self.args.pos_weight,
+            pos_inner_weight=self.args.pos_inner_weight,
+            vel_weight=self.args.vel_weight,
+            vel_inner_weight=self.args.vel_inner_weight,
+            ee_weight=self.args.ee_weight,
+            ee_inner_weight=self.args.ee_inner_weight,
+            com_weight=self.args.com_weight,
+            com_inner_weight=self.args.com_inner_weight,
+            max_torque=self.args.max_torque,
+            max_angle=self.args.max_angle,
+            default_damping=self.args.default_damping,
+            default_spring=self.args.default_spring,
+            visualize=self.args.visualize,
+            simsteps_per_dataframe=self.args.simsteps_per_dataframe,
+            screen_width=self.args.window_width,
+            screen_height=self.args.window_height,
+            gravity=self.args.gravity,
+            self_collide=self.args.selfcollide)

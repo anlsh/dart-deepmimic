@@ -1,4 +1,4 @@
-from ddm_argparse import DartDeepMimicArgParse
+import ddm_argparse
 import numpy as np
 
 class EnvPlayer:
@@ -20,7 +20,7 @@ if __name__ == "__main__":
 
     # Don't run this as main, there's really not too much point
 
-    parser = DartDeepMimicArgParse()
+    parser = ddm_argparse.DartDeepMimicArgParse()
     args = parser.parse_args()
     env = parser.get_env()
 

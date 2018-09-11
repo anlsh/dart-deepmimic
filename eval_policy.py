@@ -1,5 +1,5 @@
 import argparse
-from visak_dartdeepmimic import VisakDartDeepMimicArgParse
+import ddm_argparse
 from baselines.common import tf_util as U
 from baselines.ppo1 import mlp_policy, pposgd_simple
 import numpy as np
@@ -7,11 +7,11 @@ import tensorflow as tf
 
 class PolicyLoaderAgent(object):
     """The world's simplest agent!"""
-    def __init__(self, param_path, obs_space, action_space):
+    def __init__(self, param_path, obs_space, action_space, hidden_dims):
         self.action_space = action_space
 
         self.actor = mlp_policy.MlpPolicy("pi", obs_space, action_space,
-                                          hid_size = 64, num_hid_layers=2)
+                                          hidden_dims_list=hidden_dims)
         U.initialize()
         saver = tf.train.Saver()
         saver.restore(tf.get_default_session(), param_path)
@@ -23,8 +23,12 @@ class PolicyLoaderAgent(object):
 
 if __name__ == "__main__":
 
-    parser = VisakDartDeepMimicArgParse()
+    parser = ddm_argparse.DartDeepMimicArgParse()
     parser.add_argument("--params-prefix", required=True, type=str)
+    parser.add_argument('--hidden-dims', type=str, default="64,64",
+                        help="Within quotes, sizes of each hidden layer "
+                        + "seperated by commas [also, no whitespace]")
+    hidden_dims = [int(i) for i in args.hidden_dims.split(",")]
     args = parser.parse_args()
     env = parser.get_env()
 
@@ -32,7 +36,7 @@ if __name__ == "__main__":
 
     U.initialize()
 
-    agent = PolicyLoaderAgent(args.params_prefix, env.observation_space, env.action_space)
+    agent = PolicyLoaderAgent(args.params_prefix, env.observation_space, env.action_space, hidden_dims=hidden_dims)
 
     episode_count = 100
     reward = 0
