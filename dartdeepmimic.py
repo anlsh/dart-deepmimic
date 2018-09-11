@@ -197,7 +197,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
            (ee_weight < 0) or (com_weight) < 0:
             raise RuntimeError("Inner weights should always be >= 0")
 
-        # This parameter doesn't actually does anything
         self.__visualize = visualize
 
         self.pos_weight = pos_weight
@@ -218,11 +217,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                               self.com_inner_weight]
 
         self._control_skeleton_path = control_skeleton_path
-
-        ###########################################################
-        # Extract dof info so that states can be converted easily #
-        ###########################################################
-
         self.ref_skel = pydart.World(.00001, control_skeleton_path).skeletons[-1]
 
         self.metadict = get_metadict(self.ref_skel)
