@@ -237,16 +237,17 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             self.ref_quat_frames, self.ref_com_frames, self.ref_ee_frames \
             = frames
 
-        # Calculate the size of the neural network output vector
+        # Setting of control_skel to ref_skel is just temporary so that
+        # load_world can call self._get_obs() and set it correctly afterwards
+        self.control_skel = self.ref_skel
+
+        self.obs_dim = len(self._get_obs())
         self.action_dim = 0
         for name in self._actuated_dof_names:
             indices, _ = self.metadict[name]
             self.action_dim += 1 if len(indices) == 1 \
                           else ActionMode.lengths[self.actionmode]
 
-        # Setting of control_skel to ref_skel is just temporary so that
-        # load_world can call self._get_obs() and set it correctly afterwards
-        self.control_skel = self.ref_skel
         self.load_world()
 
     def load_world(self):
@@ -257,7 +258,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         super(DartDeepMimicEnv,
               self).__init__(model_paths=[self._control_skeleton_path],
                              frame_skip=1,
-                             observation_size=len(self._get_obs()),
+                             observation_size=self.obs_dim,
                              action_bounds=action_limits,
                              dt=self.refmotion_dt / self.simsteps_per_dataframe,
                              visualize=self.__visualize,
