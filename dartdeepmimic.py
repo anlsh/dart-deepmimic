@@ -187,7 +187,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             warnings.warn("Self collisions are disabled, be sure you meant to do this!", RuntimeWarning)
         self.p_gain = p_gain
         self.d_gain = d_gain
-        if self.p_gain < 0 or self.d_gain < 0:
+        if (self.p_gain < 0) or (self.d_gain < 0):
             raise RuntimeError("All PID gains should be positive")
 
         if (pos_inner_weight > 0) or (vel_inner_weight > 0) or \
