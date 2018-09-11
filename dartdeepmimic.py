@@ -393,7 +393,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             raise RuntimeError("Unimplemented state code: "
                                + str(self.statemode))
 
-        # TODO Make this part more efficient
         state = np.array([self.framenum / self.num_frames])
         for dof_name in self._dof_names:
             indices, body = self.metadict[dof_name]
