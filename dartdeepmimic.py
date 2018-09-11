@@ -190,6 +190,13 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         if self.p_gain < 0 or self.d_gain < 0:
             raise RuntimeError("All PID gains should be positive")
 
+        if (pos_inner_weight > 0) or (vel_inner_weight > 0) or \
+           (ee_inner_weight > 0) or (com_inner_weight) > 0:
+            raise RuntimeError("Inner weights should always be <= 0")
+        if (pos_weight < 0) or (vel_weight < 0) or \
+           (ee_weight < 0) or (com_weight) < 0:
+            raise RuntimeError("Inner weights should always be >= 0")
+
         # This parameter doesn't actually does anything
         self.__visualize = visualize
 
