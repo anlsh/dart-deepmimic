@@ -105,7 +105,7 @@ if __name__ == "__main__":
     env = parser.get_env()
 
     player = EnvPlayer(env)
-    player.play_motion_no_noise()
+    player.take_single_step_zero_pos()
 
 
     # env.reset(0, pos_stdv=args.pos_init_noise, vel_stdv=args.vel_init_noise)
