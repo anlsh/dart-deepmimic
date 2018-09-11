@@ -25,6 +25,7 @@ def train(env, initial_params_path,
             hid_size=64, num_hid_layers=2)
         saver = tf.train.Saver()
         if initial_params_path is not None:
+            print("Tried to restore from ", initial_params_path)
             saver.restore(sess, initial_params_path)
         return policy
 
