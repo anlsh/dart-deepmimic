@@ -24,15 +24,16 @@ if __name__ == "__main__":
     # print(args.typed)
     # plt.plot(data[0], data[1 if args.typed else 2])
     # plt.show()
-
     plt.subplot(2, 1, 1)
     plt.plot(data[3], data[1])
     plt.title('A tale of 2 subplots')
     plt.ylabel('Avg Episode Length')
+    plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
 
     plt.subplot(2, 1, 2)
     plt.plot(data[3], data[2])
     plt.ylabel('Avg Episode Reward')
-    plt.xlabel('Number of "iterations"')
+    plt.xlabel('Timesteps of experience collected"')
+    plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
 
     plt.show()
