@@ -490,16 +490,16 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
     def q_from_netvector(self, netvector):
 
-        if self.statemode == StateMode.GEN_EULER:
+        if self.actionmode == ActionMode.GEN_EULER:
             angle_tform = lambda x: x
-        elif self.statemode == StateMode.GEN_QUAT:
+        elif self.actionmode == ActionMode.GEN_QUAT:
             angle_tform = lambda x: euler_from_quaternion(normalize(x, np.array([1.0, 0, 0, 0])),
                                                           axes="rxyz")
-        elif self.statemode == StateMode.GEN_AXIS:
+        elif self.actionmode == ActionMode.GEN_AXIS:
             angle_tform = lambda x: angle_axis2euler(x[0], normalize(x[1:])) if np.linalg.norm(x[1:]) != 0 else np.array([0.0, 1.0, 0.0, 0.0])
         else:
-            raise RuntimeError("Unimplemented state code: "
-                               + str(self.statemode))
+            raise RuntimeError("Unimplemented action code: "
+                               + str(self.actionmode))
 
         q = np.zeros(len(self.control_skel.q))
         q_index = 6
