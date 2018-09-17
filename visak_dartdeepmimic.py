@@ -25,9 +25,9 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         raw_framelist = None
 
-        with open("assets/mocap/JustJumpPositions_corrected.txt","rb") as fp:
+        with open("assets/mocap/WalkPositions_corrected.txt","rb") as fp:
             self.WalkPositions = np.loadtxt(fp)
-        with open("assets/mocap/JustJumpVelocities_corrected.txt","rb") as fp:
+        with open("assets/mocap/WalkVelocities_corrected.txt","rb") as fp:
             self.WalkVelocities = np.loadtxt(fp)
 
         num_frames = len(self.WalkPositions)
@@ -44,13 +44,13 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
             updated_pos = self.WalkPositions[i,:].copy()
             updated_pos[3:6] = updated_pos[3:6][::-1]
             temp = updated_pos[3:6].copy()
-            updated_pos[3:6] = updated_pos[0:3]
+            updated_pos[3:6] = updated_pos[0:3][::-1]
             updated_pos[0:3] = temp
 
             updated_vel = self.WalkVelocities[i,:].copy()
             updated_vel[3:6] = updated_vel[3:6][::-1]
             temp = updated_vel[3:6].copy()
-            updated_vel[3:6] = updated_pos[0:3]
+            updated_vel[3:6] = updated_pos[0:3][::-1]
             updated_vel[0:3] = temp
 
             map_dofs(self.ref_skel.dofs, updated_pos,
@@ -72,7 +72,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         done = done or not ((np.abs(newstate[2:]) < 200).all()
                             and (self.robot_skeleton.bodynodes[0].com()[1] > -0.7)
                             and (self.control_skel.q[3] > -0.4)
-                            and (self.control_skel.q[3] < 0.3)
+                            # and (self.control_skel.q[3] < 0.3)
                             and (abs(self.control_skel.q[4]) < 0.30)
                             and (abs(self.control_skel.q[5]) < 0.30))
         return done
