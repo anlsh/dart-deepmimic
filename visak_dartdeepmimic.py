@@ -79,7 +79,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
     def viewer_setup(self):
         if not self.disableViewer:
-            self._get_viewer().scene.tb.trans[0] = 5.0
+            self._get_viewer().scene.tb.trans[0] = 0.0
             self._get_viewer().scene.tb.trans[2] = -7.5
             self._get_viewer().scene.tb.trans[1] = 0.0
 
