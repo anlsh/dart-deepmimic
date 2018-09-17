@@ -28,6 +28,16 @@ if __name__ == "__main__":
     parser.add_argument('--hidden-dims', type=str, default="64,64",
                         help="Within quotes, sizes of each hidden layer "
                         + "seperated by commas [also, no whitespace]")
+    terminate_group = parser.add_mutually_exclusive_group()
+    terminate_group.add_argument('--use-env-done',
+                                dest='terminate',
+                                action='store_true')
+    terminate_group.add_argument('--no-use-env-done',
+                                dest='terminate',
+                                action='store_false')
+    parser.set_defaults(terminate=True,
+                        help="Whether to enable gravity in the world")
+
     args = parser.parse_args()
     hidden_dims = [int(i) for i in args.hidden_dims.split(",")]
     env = parser.get_env()
@@ -48,7 +58,9 @@ if __name__ == "__main__":
     while True:
         ob = env.reset(0, pos_stdv=0, vel_stdv=0)
         done = False
-        while not done:
+        while (not done) if args.terminate else True:
+            if env.framenum == env.num_frames - 1:
+                env.framenum = 0
             action = agent.act(ob, reward, done)
             ob, reward, done, _ = env.step(action)
             env.render()
