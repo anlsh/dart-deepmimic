@@ -16,6 +16,13 @@ class EnvPlayer:
         obs = self.env.reset(init_frame, 0, 0)
         self.env.step(np.zeros(self.env.action_dim))
 
+    def init_to_frame_passive(self, init_frame=0):
+        obs = self.env.reset(init_frame, 0, 0)
+        while True:
+            env.do_simulation(np.zeros(len(env.control_skel.q)),
+                              env.simsteps_per_dataframe)
+            env.render()
+
 if __name__ == "__main__":
 
     # Don't run this as main, there's really not too much point
