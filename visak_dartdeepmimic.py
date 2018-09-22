@@ -4,16 +4,24 @@ import numpy as np
 import argparse
 import runner
 from copy import copy
+from euclideanSpace import euler2quat
+from quaternions import mult, inverse
 
 
 class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
     def __init__(self, *args, **kwargs):
 
+
         self.WalkPositions = None
         self.WalkVelocities = None
 
         super(VisakDartDeepMimicEnv, self).__init__(*args, **kwargs)
+
+    def reward(self, *args, **kwargs):
+
+        self.vsk_quatreward()
+        return super(VisakDartDeepMimicEnv, self).reward(*args, **kwargs)
 
 
     def construct_frames(self, ref_motion_path):
@@ -174,98 +182,123 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
     def vsk_quatreward(self, ):
         quaternion_difference = []
+
         #### lthigh
-        lthigh_euler = self.robot_skeleton.q[6:9]
-        lthigh_mocap = self.WalkPositions[self.count, 6:9]
+        lthigh_euler = self.control_skel.q[6:9]
+        lthigh_mocap = self.WalkPositions[self.framenum, 6:9]
         quat_lthigh = euler2quat(z=lthigh_euler[2], y=lthigh_euler[1], x=lthigh_euler[0])
         quat_lthigh_mocap = euler2quat(z=lthigh_mocap[2], y=lthigh_mocap[1], x=lthigh_mocap[0])
         lthigh_diff = mult(inverse(quat_lthigh_mocap), quat_lthigh)
         scalar_lthigh = 2 * np.arccos(lthigh_diff[0])
         quaternion_difference.append(scalar_lthigh)
-        # print("scaler",scalar_lthigh)
+
         ##### lknee
-        lknee_euler = self.robot_skeleton.q[9]
-        lknee_mocap = self.WalkPositions[self.count, 9]
+        lknee_euler = self.control_skel.q[9]
+        lknee_mocap = self.WalkPositions[self.framenum, 9]
         quat_lknee = euler2quat(z=0., y=0., x=lknee_euler)
         quat_lknee_mocap = euler2quat(z=0., y=0., x=lknee_mocap)
         lknee_diff = mult(inverse(quat_lknee_mocap), quat_lknee)
         scalar_lknee = 2 * np.arccos(lknee_diff[0])
         quaternion_difference.append(scalar_lknee)
+
         #### lfoot
-        lfoot_euler = self.robot_skeleton.q[10:12]
-        lfoot_mocap = self.WalkPositions[self.count, 10:12]
+        lfoot_euler = self.control_skel.q[10:12]
+        lfoot_mocap = self.WalkPositions[self.framenum, 10:12]
         quat_lfoot = euler2quat(z=lfoot_euler[1], y=0., x=lfoot_euler[0])
         quat_lfoot_mocap = euler2quat(z=lfoot_mocap[1], y=0., x=lfoot_mocap[0])
         lfoot_diff = mult(inverse(quat_lfoot_mocap), quat_lfoot)
         scalar_lfoot = 2 * np.arccos(lfoot_diff[0])
         quaternion_difference.append(scalar_lfoot)
+
         #### rthigh
-        rthigh_euler = self.robot_skeleton.q[12:15]
-        rthigh_mocap = self.WalkPositions[self.count, 12:15]
+        rthigh_euler = self.control_skel.q[12:15]
+        rthigh_mocap = self.WalkPositions[self.framenum, 12:15]
         quat_rthigh = euler2quat(z=rthigh_euler[2], y=rthigh_euler[1], x=rthigh_euler[0])
         quat_rthigh_mocap = euler2quat(z=rthigh_mocap[2], y=rthigh_mocap[1], x=rthigh_mocap[0])
         rthigh_diff = mult(inverse(quat_rthigh_mocap), quat_rthigh)
         scalar_rthigh = 2 * np.arccos(rthigh_diff[0])
         quaternion_difference.append(scalar_rthigh)
         # print("scaler",scalar_lthigh)
+
         ##### rknee
-        rknee_euler = self.robot_skeleton.q[15]
-        rknee_mocap = self.WalkPositions[self.count, 15]
+        rknee_euler = self.control_skel.q[15]
+        rknee_mocap = self.WalkPositions[self.framenum, 15]
         quat_rknee = euler2quat(z=0., y=0., x=rknee_euler)
         quat_rknee_mocap = euler2quat(z=0., y=0., x=rknee_mocap)
         rknee_diff = mult(inverse(quat_rknee_mocap), quat_rknee)
         scalar_rknee = 2 * np.arccos(rknee_diff[0])
         quaternion_difference.append(scalar_rknee)
+
         #### rfoot
-        rfoot_euler = self.robot_skeleton.q[16:18]
-        rfoot_mocap = self.WalkPositions[self.count, 16:18]
+        rfoot_euler = self.control_skel.q[16:18]
+        rfoot_mocap = self.WalkPositions[self.framenum, 16:18]
         quat_rfoot = euler2quat(z=rfoot_euler[1], y=0., x=rfoot_euler[0])
         quat_rfoot_mocap = euler2quat(z=rfoot_mocap[1], y=0., x=rfoot_mocap[0])
         rfoot_diff = mult(inverse(quat_rfoot_mocap), quat_rfoot)
         scalar_rfoot = 2 * np.arccos(rfoot_diff[0])
         quaternion_difference.append(scalar_rfoot)
 
-        scalar_thoraxx = self.robot_skeleton.q[18] - self.WalkPositions[self.count, 18]
-        quaternion_difference.append(scalar_thoraxx)
-        scalar_thoraxy = self.robot_skeleton.q[19] - self.WalkPositions[self.count, 19]
-        quaternion_difference.append(scalar_thoraxy)
-        scalar_thoraxz = self.robot_skeleton.q[20] - self.WalkPositions[self.count, 20]
-        quaternion_difference.append(scalar_thoraxz)
+        # Abdoemn/thorax
+
+        ###############################################
+        # ALERT ALERT CHANGING THE GOOD AND HOLY CODE #
+        ###############################################
+
+        # scalar_thoraxx = self.control_skel.q[18] - self.WalkPositions[self.framenum, 18]
+        # quaternion_difference.append(scalar_thoraxx)
+        # scalar_thoraxy = self.control_skel.q[19] - self.WalkPositions[self.framenum, 19]
+        # quaternion_difference.append(scalar_thoraxy)
+        # scalar_thoraxz = self.control_skel.q[20] - self.WalkPositions[self.framenum, 20]
+        # quaternion_difference.append(scalar_thoraxz)
+
+        ##################################################
+        # THE DEFILED CODE (although the above is weird) #
+        ##################################################
+        thorax_euler  = self.control_skel.q[18:21]
+        thorax_mocap  = self.WalkPositions[self.framenum, 18:21]
+        quat_thorax = euler2quat(*thorax_euler)
+        quat_thorax_mc = euler2quat(*thorax_mocap)
+        thing_diff = mult(inverse(quat_thorax_mc), quat_thorax)
+        scalar_thorax = 2 * np.arccos(thing_diff[0])
+        quaternion_difference.append(scalar_thorax)
+
         #### l upper arm
-        larm_euler = self.robot_skeleton.q[21:24]
-        larm_mocap = self.WalkPositions[self.count, 21:24]
+        larm_euler = self.control_skel.q[21:24]
+        larm_mocap = self.WalkPositions[self.framenum, 21:24]
         quat_larm = euler2quat(z=larm_euler[2], y=larm_euler[1], x=larm_euler[0])
         quat_larm_mocap = euler2quat(z=larm_mocap[2], y=larm_mocap[1], x=larm_mocap[0])
         larm_diff = mult(inverse(quat_larm_mocap), quat_larm)
         scalar_larm = 2 * np.arccos(larm_diff[0])
         quaternion_difference.append(scalar_larm)
-        # print("scaler",scalar_lthigh)
+
         ##### l elbow
-        lelbow_euler = self.robot_skeleton.q[24]
-        lelbow_mocap = self.WalkPositions[self.count, 24]
+        lelbow_euler = self.control_skel.q[24]
+        lelbow_mocap = self.WalkPositions[self.framenum, 24]
         quat_lelbow = euler2quat(z=0., y=0., x=lelbow_euler)
         quat_lelbow_mocap = euler2quat(z=0., y=0., x=lelbow_mocap)
         lelbow_diff = mult(inverse(quat_lelbow_mocap), quat_lelbow)
         scalar_lelbow = 2 * np.arccos(lelbow_diff[0])
         quaternion_difference.append(scalar_lelbow)
+
         #### r upper arm
-        rarm_euler = self.robot_skeleton.q[25:28]
-        rarm_mocap = self.WalkPositions[self.count, 25:28]
+        rarm_euler = self.control_skel.q[25:28]
+        rarm_mocap = self.WalkPositions[self.framenum, 25:28]
         quat_rarm = euler2quat(z=rarm_euler[2], y=rarm_euler[1], x=rarm_euler[0])
         quat_rarm_mocap = euler2quat(z=rarm_mocap[2], y=rarm_mocap[1], x=rarm_mocap[0])
         rarm_diff = mult(inverse(quat_rarm_mocap), quat_rarm)
         scalar_rarm = 2 * np.arccos(rarm_diff[0])
         quaternion_difference.append(scalar_rarm)
-        # print("scaler",scalar_lthigh)
+
         ##### r elbow
-        relbow_euler = self.robot_skeleton.q[28]
-        relbow_mocap = self.WalkPositions[self.count, 28]
+        relbow_euler = self.control_skel.q[28]
+        relbow_mocap = self.WalkPositions[self.framenum, 28]
         quat_relbow = euler2quat(z=0., y=0., x=relbow_euler)
         quat_relbow_mocap = euler2quat(z=0., y=0., x=relbow_mocap)
         relbow_diff = mult(inverse(quat_relbow_mocap), quat_relbow)
         scalar_relbow = 2 * np.arccos(relbow_diff[0])
         quaternion_difference.append(scalar_relbow)
 
+        print("Visak's posdiffmag: ", np.sum(np.square(quaternion_difference)))
         quat_reward = np.exp(-2 * np.sum(np.square(quaternion_difference)))
 
         return quat_reward

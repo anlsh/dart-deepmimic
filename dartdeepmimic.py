@@ -1,19 +1,16 @@
 import pdb
 from gym.envs.dart import dart_env
-from joint import expand_angle, compress_angle
-from math import exp, pi, atan2
+from math import exp, pi
 from numpy.linalg import norm
 from transformations import compose_matrix, euler_from_matrix
-from transformations import quaternion_from_euler, euler_from_quaternion
-from transformations import quaternion_multiply, quaternion_conjugate, \
-    quaternion_inverse
 import argparse
 import numpy as np
 import pydart2 as pydart
 import random
 import warnings
 from copy import deepcopy
-from euclideanSpace import angle_axis2euler
+from euclideanSpace import angle_axis2euler, euler2quat, quat2euler
+from quaternions import mult, inverse
 
 # Customizable parameters
 ROOT_THETA_KEY = "root"
@@ -56,21 +53,6 @@ def pad2length(vector, length):
     padded = np.zeros(length)
     padded[:len(vector)] = deepcopy(vector)
     return padded
-
-
-def quaternion_difference(a, b):
-    return quaternion_multiply(quaternion_inverse(a), b)
-
-
-def quaternion_rotation_angle(a):
-    # Returns the rotation of a quaternion about its axis in radians
-    # Lifted from wikipedia
-    # https://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation
-    # Section: Recovering_the_axis-angle_representation
-
-    # TODO Visak just does 2 arccos of a[0]?
-
-    return 2 * atan2(norm(a[1:]), a[0])
 
 def normalize(vector, identity=None):
 
@@ -316,7 +298,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         if self.statemode == StateMode.GEN_EULER:
             angle_tform = lambda x: x
         elif self.statemode == StateMode.GEN_QUAT:
-            angle_tform = lambda x: quaternion_from_euler(*x, axes="rxyz")
+            angle_tform = lambda x: euler2quat(*(x[::-1]))
         elif self.statemode == StateMode.GEN_AXIS:
             angle_tform = lambda x: axisangle_from_euler(*x, axes="rxyz")
         else:
@@ -361,8 +343,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             else:
                 euler_angle = skel.q[0:3]
 
-            converted_angle = quaternion_from_euler(*euler_angle,
-                                                    axes="rxyz")
+            converted_angle = euler2quat(*(euler_angle[::-1]))
             angles.append(converted_angle)
 
         return np.array(angles)
@@ -380,9 +361,9 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # POSITIONAL REWARD #
         #####################
 
-        posdiff = [quaternion_difference(ra, a)
+        posdiff = [2 * np.arccos(mult(inverse(ra), a)[0])
                    for a, ra in zip(angles, ref_angles)]
-        posdiffmag = sum([quaternion_rotation_angle(d)**2 for d in posdiff])
+        posdiffmag = np.sum(np.square(posdiff))
 
         ###################
         # VELOCITY REWARD #
@@ -423,8 +404,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         if self.actionmode == ActionMode.GEN_EULER:
             angle_tform = lambda x: x
         elif self.actionmode == ActionMode.GEN_QUAT:
-            angle_tform = lambda x: euler_from_quaternion(normalize(x, np.array([1.0, 0, 0, 0])),
-                                                          axes="rxyz")
+            raise NotImplementedError()
         elif self.actionmode == ActionMode.GEN_AXIS:
             angle_tform = lambda x: angle_axis2euler(x[0], normalize(x[1:])) if np.linalg.norm(x[1:]) != 0 else np.array([0.0, 1.0, 0.0, 0.0])
         else:
