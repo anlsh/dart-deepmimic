@@ -414,8 +414,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                 angle = angleaxis[0]
                 axis = angleaxis[1:]
                 if norm(axis) != 0:
-                    # Technically the order of the axis/output is swapped
-                    # but I think it comes out in the wash
                     return angle_axis2euler(angle, axis)[::-1]
                 else:
                     return np.array([0, 0, 0])

@@ -4,9 +4,70 @@ import numpy as np
 import argparse
 import runner
 from copy import copy
-from euclideanSpace import euler2quat
+from euclideanSpace import euler2quat, angle_axis2euler
 from quaternions import mult, inverse
 
+
+def transformActions(actions):
+    joint_targets = np.zeros(23, )
+        # Left thigh
+    lthigh = actions[:4]
+    euler_lthigh = angle_axis2euler(theta=lthigh[0], vector=lthigh[1:])
+    joint_targets[0] = euler_lthigh[2]
+    joint_targets[1] = euler_lthigh[1]
+    joint_targets[2] = euler_lthigh[0]
+    ###### Left Knee
+    joint_targets[3] = actions[4]
+    ### left foot
+    lfoot = actions[5:9]
+    euler_lfoot = angle_axis2euler(theta=lfoot[0], vector=lfoot[1:])
+    joint_targets[4] = euler_lfoot[2]
+    joint_targets[5] = euler_lfoot[0]
+
+    # right thigh
+    rthigh = actions[9:13]
+    euler_rthigh = angle_axis2euler(theta=rthigh[0], vector=rthigh[1:])
+    joint_targets[6] = euler_rthigh[2]
+    joint_targets[7] = euler_rthigh[1]
+    joint_targets[8] = euler_rthigh[0]
+    ###### right Knee
+    joint_targets[9] = actions[13]
+    ### right foot
+    rfoot = actions[14:18]
+    euler_rfoot = angle_axis2euler(theta=rfoot[0], vector=rfoot[1:])
+    joint_targets[10] = euler_rfoot[2]
+    joint_targets[11] = euler_rfoot[0]
+
+    ###thorax
+
+    thorax = actions[18:22]
+    euler_thorax = angle_axis2euler(theta=thorax[0], vector=thorax[1:])
+    joint_targets[12] = euler_thorax[2]
+    joint_targets[13] = euler_thorax[1]
+    joint_targets[14] = euler_thorax[0]
+
+    #### l upper arm
+    l_arm = actions[22:26]
+    euler_larm = angle_axis2euler(theta=l_arm[0], vector=l_arm[1:])
+    joint_targets[15] = euler_larm[2]
+    joint_targets[16] = euler_larm[1]
+    joint_targets[17] = euler_larm[0]
+
+    ## l elbow
+
+    joint_targets[18] = actions[25]
+
+    ## r upper arm
+    r_arm = actions[27:31]
+    euler_rarm = angle_axis2euler(theta=r_arm[0], vector=r_arm[1:])
+    joint_targets[19] = euler_rarm[2]
+    joint_targets[20] = euler_rarm[1]
+    joint_targets[21] = euler_rarm[0]
+
+    ###r elbow
+
+    joint_targets[22] = actions[30]
+    return joint_targets
 
 class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
@@ -18,10 +79,20 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         super(VisakDartDeepMimicEnv, self).__init__(*args, **kwargs)
 
-    def reward(self, *args, **kwargs):
+    # def reward(self, *args, **kwargs):
 
-        self.vsk_quatreward()
-        return super(VisakDartDeepMimicEnv, self).reward(*args, **kwargs)
+    #     self.vsk_quatreward()
+    #     return super(VisakDartDeepMimicEnv, self).reward(*args, **kwargs)
+
+    # def q_from_netvector(self, netvector):
+
+    #     myaction = super(VisakDartDeepMimicEnv,
+    #                      self).q_from_netvector(netvector)
+
+    #     vsk_action = transformActions(netvector)
+    #     print("actiondiff: ", np.subtract(myaction[6:], vsk_action))
+
+    #     return myaction
 
 
     def construct_frames(self, ref_motion_path):
@@ -218,7 +289,6 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         rthigh_diff = mult(inverse(quat_rthigh_mocap), quat_rthigh)
         scalar_rthigh = 2 * np.arccos(rthigh_diff[0])
         quaternion_difference.append(scalar_rthigh)
-        # print("scaler",scalar_lthigh)
 
         ##### rknee
         rknee_euler = self.control_skel.q[15]
@@ -298,7 +368,6 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         scalar_relbow = 2 * np.arccos(relbow_diff[0])
         quaternion_difference.append(scalar_relbow)
 
-        print("Visak's posdiffmag: ", np.sum(np.square(quaternion_difference)))
         quat_reward = np.exp(-2 * np.sum(np.square(quaternion_difference)))
 
         return quat_reward
