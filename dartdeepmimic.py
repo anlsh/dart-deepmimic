@@ -178,7 +178,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             raise RuntimeError("Inner weights should always be <= 0")
         if (pos_weight < 0) or (vel_weight < 0) or \
            (ee_weight < 0) or (com_weight) < 0:
-            raise RuntimeError("Inner weights should always be >= 0")
+            raise RuntimeError("Outer weights should always be >= 0")
 
         self.__visualize = visualize
 
@@ -373,22 +373,21 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         ###################
 
         ref_dq = self.ref_dq_frames[framenum]
-        veldiffmag = norm(skel.dq - ref_dq)
+        veldiffmag = np.sum(np.square(skel.dq - ref_dq))
 
         #######################
         # END EFFECTOR REWARD #
         #######################
 
-        eediffmag = \
-                sum([norm(self.control_skel.bodynodes[j].to_world(END_OFFSET)
-                          - ref_ee_positions[i])**2
-                     for i, j in enumerate(self._end_effector_indices)])
+        eediffmag = np.sum(np.square([norm(self.control_skel.bodynodes[j].to_world(END_OFFSET)
+                          - ref_ee_positions[i])
+                     for i, j in enumerate(self._end_effector_indices)]))
 
         #########################
         # CENTER OF MASS REWARD #
         #########################
 
-        comdiffmag = norm(self.control_skel.com() - ref_com)**2
+        comdiffmag = np.sum(np.square(self.control_skel.com() - ref_com))
 
         ################
         # TOTAL REWARD #
