@@ -410,9 +410,16 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         elif self.actionmode == ActionMode.GEN_QUAT:
             raise NotImplementedError()
         elif self.actionmode == ActionMode.GEN_AXIS:
-            angle_tform = lambda x: angle_axis2euler(x[0], normalize(x[1:])) \
-                          if np.linalg.norm(x[1:]) != 0 \
-                             else np.array([0.0, 1.0, 0.0, 0.0])
+            def tform_from_angleaxis(angleaxis):
+                angle = angleaxis[0]
+                axis = angleaxis[1:]
+                if norm(axis) != 0:
+                    # Technically the order of the axis/output is swapped
+                    # but I think it comes out in the wash
+                    return angle_axis2euler(angle, axis)[::-1]
+                else:
+                    return np.array([0, 0, 0])
+            angle_tform = tform_from_angleaxis
         else:
             raise RuntimeError("Unimplemented action code: "
                                + str(self.actionmode))
