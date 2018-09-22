@@ -162,10 +162,12 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.reward_cutoff = reward_cutoff
         self.gravity = gravity
         if not self.gravity:
-            warnings.warn("Gravity is disabled, be sure you meant to do this!", RuntimeWarning)
+            warnings.warn("Gravity is disabled, be sure you meant to do this!",
+                          RuntimeWarning)
         self.self_collide = self_collide
         if not self.self_collide:
-            warnings.warn("Self collisions are disabled, be sure you meant to do this!", RuntimeWarning)
+            warnings.warn("Self collisions are disabled, be sure you meant"
+                          + " to do this!", RuntimeWarning)
         self.p_gain = p_gain
         self.d_gain = d_gain
         if (self.p_gain < 0) or (self.d_gain < 0):
@@ -198,7 +200,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                               self.com_inner_weight]
 
         self._control_skeleton_path = control_skeleton_path
-        self.ref_skel = pydart.World(.00001, control_skeleton_path).skeletons[-1]
+        self.ref_skel = pydart.World(.00001,
+                                     control_skeleton_path).skeletons[-1]
 
         self.metadict = get_metadict(self.ref_skel)
 
@@ -376,9 +379,10 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # END EFFECTOR REWARD #
         #######################
 
-        eediffmag = sum([norm(self.control_skel.bodynodes[j].to_world(END_OFFSET)
-                              - ref_ee_positions[i])**2
-                         for i, j in enumerate(self._end_effector_indices)])
+        eediffmag = \
+                sum([norm(self.control_skel.bodynodes[j].to_world(END_OFFSET)
+                          - ref_ee_positions[i])**2
+                     for i, j in enumerate(self._end_effector_indices)])
 
         #########################
         # CENTER OF MASS REWARD #
@@ -406,7 +410,9 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         elif self.actionmode == ActionMode.GEN_QUAT:
             raise NotImplementedError()
         elif self.actionmode == ActionMode.GEN_AXIS:
-            angle_tform = lambda x: angle_axis2euler(x[0], normalize(x[1:])) if np.linalg.norm(x[1:]) != 0 else np.array([0.0, 1.0, 0.0, 0.0])
+            angle_tform = lambda x: angle_axis2euler(x[0], normalize(x[1:])) \
+                          if np.linalg.norm(x[1:]) != 0 \
+                             else np.array([0.0, 1.0, 0.0, 0.0])
         else:
             raise RuntimeError("Unimplemented action code: "
                                + str(self.actionmode))
