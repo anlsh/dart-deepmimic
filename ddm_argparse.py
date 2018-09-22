@@ -1,11 +1,12 @@
 import argparse
 from dartdeepmimic import DartDeepMimicEnv
 import visak_dartdeepmimic
+import amc_dartdeepmimic
 
 class DartDeepMimicArgParse(argparse.ArgumentParser):
 
-    classes = {"ddm": DartDeepMimicEnv,
-               "vdmm": visak_dartdeepmimic.VisakDartDeepMimicEnv}
+    classes = {"amc": amc_dartdeepmimic.AMCDartDeepMimicEnv,
+               "rawqdq": visak_dartdeepmimic.VisakDartDeepMimicEnv}
 
     def __init__(self):
         super().__init__()
