@@ -104,10 +104,20 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         raw_framelist = None
 
-        with open("assets/mocap/JogPositions_corrected.txt","rb") as fp:
+        with open("assets/mocap/WalkPositions_corrected.txt","rb") as fp:
             self.WalkPositions = np.loadtxt(fp)
-        with open("assets/mocap/JogVelocities_corrected.txt","rb") as fp:
+        with open("assets/mocap/WalkPositions_corrected.txt","rb") as fp:
             self.WalkVelocities = np.loadtxt(fp)
+        with open(prefix + "assets/mocap/walk/rarm_endeffector.txt", "rb") as fp:
+            self.rarm_endeffector = np.loadtxt(fp)
+        with open(prefix + "assets/mocap/walk/larm_endeffector.txt", "rb") as fp:
+            self.larm_endeffector = np.loadtxt(fp)
+        with open(prefix + "assets/mocap/walk/lfoot_endeffector.txt", "rb") as fp:
+            self.lfoot_endeffector = np.loadtxt(fp)
+        with open(prefix + "assets/mocap/walk/rfoot_endeffector.txt", 'rb') as fp:
+            self.rfoot_endeffector = np.loadtxt(fp)
+        with open(prefix + "assets/mocap/walk/com.txt", 'rb') as fp:
+            self.com = np.loadtxt(fp)
 
         num_frames = len(self.WalkPositions)
 
@@ -162,93 +172,40 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
             self._get_viewer().scene.tb.trans[2] = -7.5
             self._get_viewer().scene.tb.trans[1] = 0.0
 
-    def vsk_obs(self):
+    def vsk_reward():
 
-        phi = np.array([self.framenum / 322.])
-        # observation for left leg thigh##################################################
-        RelPos_lthigh = self.control_skel.bodynodes[2].com() - self.control_skel.bodynodes[0].com()
-        state = copy.deepcopy(RelPos_lthigh)
-        quat_lthigh = euler2quat(z=self.control_skel.q[8], y=self.control_skel.q[7], x=self.control_skel.q[6])
-        state = np.concatenate((state, quat_lthigh))
-        LinVel_lthigh = self.control_skel.bodynodes[2].dC
-        state = np.concatenate((state, LinVel_lthigh))
-        state = np.concatenate((state, self.control_skel.dq[6:9]))
-        ################################################################3
-        RelPos_lknee = self.control_skel.bodynodes[3].com() - self.control_skel.bodynodes[0].com()
-        state = np.concatenate((state, RelPos_lknee))
-        quat_lknee = euler2quat(z=0., y=0., x=self.control_skel.q[9])
-        state = np.concatenate((state, quat_lknee))
-        LinVel_lknee = self.control_skel.bodynodes[3].dC
-        state = np.concatenate((state, LinVel_lknee))
-        state = np.concatenate((state, np.array([self.control_skel.dq[9]])))
-        #######################################################################3
-        RelPos_lfoot = self.control_skel.bodynodes[4].com() - self.control_skel.bodynodes[0].com()
-        state = np.concatenate((state, RelPos_lfoot))
-        quat_lfoot = euler2quat(z=self.control_skel.q[11], y=0., x=self.control_skel.q[10])
-        state = np.concatenate((state, quat_lfoot))
-        LinVel_lfoot = self.control_skel.bodynodes[4].dC
-        state = np.concatenate((state, LinVel_lfoot))
-        state = np.concatenate((state, self.control_skel.dq[10:12]))
-        #######################################################################3
-        RelPos_rthigh = self.control_skel.bodynodes[5].com() - self.control_skel.bodynodes[0].com()
-        state = np.concatenate((state, RelPos_rthigh))
-        quat_rthigh = euler2quat(z=self.control_skel.q[14], y=self.control_skel.q[13], x=self.control_skel.q[12])
-        state = np.concatenate((state, quat_rthigh))
-        LinVel_rthigh = self.control_skel.bodynodes[5].dC
-        state = np.concatenate((state, LinVel_rthigh))
-        state = np.concatenate((state, self.control_skel.dq[12:15]))
-        ###############################################################################3
-        RelPos_rknee = self.control_skel.bodynodes[6].com() - self.control_skel.bodynodes[0].com()
-        state = np.concatenate((state, RelPos_rknee))
-        quat_rknee = euler2quat(z=0., y=0., x=self.control_skel.q[15])
-        state = np.concatenate((state, quat_rknee))
-        LinVel_rknee = self.control_skel.bodynodes[6].dC
-        state = np.concatenate((state, LinVel_rknee))
-        state = np.concatenate((state, np.array([self.control_skel.dq[15]])))
-        ################################################################################3
-        RelPos_rfoot = self.control_skel.bodynodes[7].com() - self.control_skel.bodynodes[0].com()
-        state = np.concatenate((state, RelPos_rfoot))
-        quat_rfoot = euler2quat(z=self.control_skel.q[17], y=0., x=self.control_skel.q[16])
-        state = np.concatenate((state, quat_rfoot))
-        LinVel_rfoot = self.control_skel.bodynodes[7].dC
-        state = np.concatenate((state, LinVel_rfoot))
-        state = np.concatenate((state, self.control_skel.dq[16:18]))
-        ###########################################################
-        RelPos_larm = self.control_skel.bodynodes[12].com() - self.control_skel.bodynodes[0].com()
-        state = np.concatenate((state, RelPos_larm))
-        quat_larm = euler2quat(z=self.control_skel.q[23], y=self.control_skel.q[22], x=self.control_skel.q[21])
-        state = np.concatenate((state, quat_larm))
-        LinVel_larm = self.control_skel.bodynodes[12].dC
-        state = np.concatenate((state, LinVel_larm))
-        state = np.concatenate((state, self.control_skel.dq[21:24]))
-        ##############################################################
-        RelPos_lelbow = self.control_skel.bodynodes[13].com() - self.control_skel.bodynodes[0].com()
-        state = np.concatenate((state, RelPos_lelbow))
-        quat_lelbow = euler2quat(z=0., y=0., x=self.control_skel.q[24])
-        state = np.concatenate((state, quat_lelbow))
-        LinVel_lelbow = self.control_skel.bodynodes[13].dC
-        state = np.concatenate((state, LinVel_lelbow))
-        state = np.concatenate((state, np.array([self.control_skel.dq[24]])))
-        ################################################################
-        RelPos_rarm = self.control_skel.bodynodes[15].com() - self.control_skel.bodynodes[0].com()
-        state = np.concatenate((state, RelPos_rarm))
-        quat_rarm = euler2quat(z=self.control_skel.q[27], y=self.control_skel.q[26], x=self.control_skel.q[25])
-        state = np.concatenate((state, quat_rarm))
-        LinVel_rarm = self.control_skel.bodynodes[15].dC
-        state = np.concatenate((state, LinVel_rarm))
-        state = np.concatenate((state, self.control_skel.dq[25:28]))
-        #################################################################3
-        RelPos_relbow = self.control_skel.bodynodes[16].com() - self.control_skel.bodynodes[0].com()
-        state = np.concatenate((state, RelPos_relbow))
-        quat_relbow = euler2quat(z=0., y=0., x=self.control_skel.q[28])
-        state = np.concatenate((state, quat_relbow))
-        LinVel_relbow = self.control_skel.bodynodes[16].dC
-        state = np.concatenate((state, LinVel_relbow))
-        state = np.concatenate((state, np.array([self.control_skel.dq[28]])))
-        state = np.concatenate((state, self.control_skel.q[18:21], self.control_skel.dq[18:21], phi))
-        ##################################################################
+        point_rarm = [0., -0.60, -0.15]
+        point_larm = [0., -0.60, -0.15]
+        point_rfoot = [0., 0., -0.20]
+        point_lfoot = [0., 0., -0.20]
 
-        return state
+        global_rarm = self.control_skel.bodynodes[16].to_world(point_rarm)
+        global_larm = self.control_skel.bodynodes[13].to_world(point_larm)
+        global_lfoot = self.control_skel.bodynodes[4].to_world(point_lfoot)
+        global_rfoot = self.control_skel.bodynodes[7].to_world(point_rfoot)
+
+        height = self.control_skel.bodynodes[0].com()[1]
+
+        Joint_weights = np.ones(23, )
+        Joint_weights[[0, 3, 6, 9, 16, 20, 10, 16]] = 10
+
+        Weight_matrix = np.diag(Joint_weights)
+
+        rarm_term = np.sum(np.square(self.rarm_endeffector[self.framenum, :] - global_rarm))
+        larm_term = np.sum(np.square(self.larm_endeffector[self.framenum, :] - global_larm))
+        rfoot_term = np.sum(np.square(self.rfoot_endeffector[self.framenum, :] - global_rfoot))
+        lfoot_term = np.sum(np.square(self.lfoot_endeffector[self.framenum, :] - global_lfoot))
+
+        end_effector_reward = np.exp(-40 * (rarm_term + larm_term + rfoot_term + lfoot_term))
+        com_reward = np.exp(-40 * np.sum(np.square(self.com[self.framenum, :] - self.control_skel.bodynodes[0].com())))
+
+        vel_diff = self.WalkVelocities[self.framenum, 6:] - self.control_skel.dq[6:]
+        vel_pen = np.sum(vel_diff.T * Weight_matrix * vel_diff)
+        joint_vel_term = 1 * np.asarray(np.exp(-1e-1 * vel_pen))
+
+        quat_term = self.vsk_quatreward()
+        reward = 0.1 * end_effector_reward + 0.1 * joint_vel_term + 0.25 * com_reward + 1.65 * quat_term
+        return reward
 
 
     def vsk_quatreward(self, ):
