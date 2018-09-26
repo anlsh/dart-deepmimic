@@ -12,9 +12,6 @@ from copy import deepcopy
 from euclideanSpace import angle_axis2euler, euler2quat, quat2euler
 from quaternions import mult, inverse
 
-# Customizable parameters
-ROOT_THETA_KEY = "root"
-
 # ROOT_KEY isn't customizeable. It should correspond
 # to the name of the root node in the amc (which is usually "root")
 ROOT_KEY = "root"
@@ -101,27 +98,6 @@ def map_dofs(dof_list, pos_list, vel_list, pstdv, vstdv):
 
         dof.set_position(float(pos))
         dof.set_velocity(float(vel))
-
-
-def sd2rr(rvector):
-    """
-    Takes a vector of sequential degrees and returns the rotation it
-    describes in rotating radians (the format DART expects angles in)
-    """
-
-    rvector = np.multiply(rvector, pi / 180)
-
-    rmatrix = compose_matrix(angles=rvector, angle_order="sxyz")
-    return euler_from_matrix(rmatrix[:3, :3], axes="rxyz")
-
-
-def euler_velocity(final, initial, dt):
-    """
-    Given two xyz euler angles (sequentian degrees)
-    Return the euler angle velocity (in rotating radians i think)
-    """
-    # TODO IT'S NOT RIGHT AAAAHHHH
-    return np.divide(sd2rr(np.subtract(final, initial)), dt)
 
 
 class DartDeepMimicEnv(dart_env.DartEnv):
@@ -294,9 +270,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         if skel is None:
             skel = self.control_skel
-        else:
-            warnings.warn("_get_obs used w/ non-control skeleton, you sure"
-                          + "you know what you're doing?", RuntimeWarning)
 
         if self.statemode == StateMode.GEN_EULER:
             angle_tform = lambda x: x
@@ -330,9 +303,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         return state
 
-    def quaternion_angles(self, skel=None):
-        if skel is None:
-            skel = self.control_skel
+    def quaternion_angles(self, skel):
 
         angles = []
 
@@ -440,7 +411,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                 q_index += len(indices)
                 netvector_index += ActionMode.lengths[self.actionmode]
 
-        if q_index != len(self.ref_skel.q):
+        if q_index != len(self.control_skel.q):
             raise RuntimeError("Not all dofs mapped over")
         if netvector_index != len(netvector):
             raise RuntimeError("Not all net outputs used")
@@ -455,9 +426,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
 
     def step(self, action_vector):
-        """
-        action_vector is of length (anglemodelength) * (num_actuated_joints)
-        """
+
         dof_targets = self.q_from_netvector(action_vector)
 
         tau = self.p_gain * (dof_targets[6:] - self.control_skel.q[6:]) \
@@ -469,7 +438,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         newstate = self._get_obs()
         if not np.isfinite(newstate).all():
-            raise RuntimeError("Ran into an infinite state, terminating")
+            raise RuntimeError("Ran into an infinite state")
+
         reward = self.reward(self.control_skel, self.framenum)
         extrainfo = {"dof_targets": dof_targets}
         done = self.should_terminate(reward, newstate)

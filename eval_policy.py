@@ -4,6 +4,7 @@ from baselines.common import tf_util as U
 from baselines.ppo1 import mlp_policy, pposgd_simple
 import numpy as np
 import tensorflow as tf
+import random
 
 class PolicyLoaderAgent(object):
     """The world's simplest agent!"""
@@ -37,6 +38,15 @@ if __name__ == "__main__":
                                 action='store_false')
     parser.set_defaults(terminate=True,
                         help="Whether to enable gravity in the world")
+    init_group = parser.add_mutually_exclusive_group()
+    init_group.add_argument('--init-from-start',
+                            dest='randinit',
+                            action='store_false')
+    init_group.add_argument('--no-init-from-start',
+                            dest='randinit',
+                            action='store_true')
+    parser.set_defaults(randinit=True,
+                        help="Whether to initialize from start or randomly")
 
     args = parser.parse_args()
     hidden_dims = [int(i) for i in args.hidden_dims.split(",")]
@@ -56,7 +66,12 @@ if __name__ == "__main__":
     done = False
 
     while True:
-        ob = env.reset(0, pos_stdv=0, vel_stdv=0)
+        if not args.randinit:
+            ob = env.reset(0, pos_stdv=0, vel_stdv=0)
+        else:
+            ob = env.reset(random.randint(0, env.num_frames - 1),
+                           pos_stdv=0, vel_stdv=0)
+
         done = False
         while (not done) if args.terminate else True:
             if env.framenum == env.num_frames - 1:

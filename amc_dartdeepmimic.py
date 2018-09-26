@@ -1,6 +1,27 @@
 from dartdeepmimic import DartDeepMimicEnv
 from amc import AMC
 
+
+def sd2rr(rvector):
+    """
+    Takes a vector of sequential degrees and returns the rotation it
+    describes in rotating radians (the format DART expects angles in)
+    """
+
+    rvector = np.multiply(rvector, pi / 180)
+
+    rmatrix = compose_matrix(angles=rvector, angle_order="sxyz")
+    return euler_from_matrix(rmatrix[:3, :3], axes="rxyz")
+
+def euler_velocity(final, initial, dt):
+    """
+    Given two xyz euler angles (sequentian degrees)
+    Return the euler angle velocity (in rotating radians i think)
+    """
+    # TODO IT'S NOT RIGHT AAAAHHHH
+    return np.divide(sd2rr(np.subtract(final, initial)), dt)
+
+
 class AMCDartDeepMimicEnv(DartDeepMimicEnv):
 
     def __init__(self, *args, **kwargs):
