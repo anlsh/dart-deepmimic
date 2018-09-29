@@ -115,7 +115,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                  com_weight, com_inner_weight,
                  max_torque,
                  max_angle, default_damping,
-                 default_spring,
+                 default_spring, default_friction,
                  visualize, simsteps_per_dataframe,
                  screen_width,
                  screen_height,
@@ -135,6 +135,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.max_angle = max_angle
         self.default_damping = default_damping
         self.default_spring = default_spring
+        self.default_friction = default_friction
         self.reward_cutoff = reward_cutoff
         self.gravity = gravity
         if not self.gravity:
@@ -235,6 +236,9 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             for index in range(joint.num_dofs()):
                 joint.set_damping_coefficient(index, self.default_damping)
                 joint.set_spring_stiffness(index, self.default_spring)
+
+        for body in self.control_skel.bodynodes + self.dart_world.skeletons[0].bodynodes:
+           body.set_friction_coeff(self.default_friction)
 
 
     def construct_frames(self, ref_motion_path):

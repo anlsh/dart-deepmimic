@@ -36,6 +36,8 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
                           help="Default damping coefficient for joints")
         self.add_argument('--default-spring', type=float, default=0,
                           help="Default spring stiffness for joints")
+        self.add_argument('--default-friction', type=float, default=20,
+                          help="Default friction coefficient for bodies")
         self.add_argument('--simsteps-per-dataframe', type=int, default=10,
                           help="Number of simulation steps per frame of mocap" +
                           " data")
@@ -126,6 +128,7 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
             max_angle=self.args.max_angle,
             default_damping=self.args.default_damping,
             default_spring=self.args.default_spring,
+            default_friction=self.args.default_friction,
             visualize=self.args.visualize,
             simsteps_per_dataframe=self.args.simsteps_per_dataframe,
             screen_width=self.args.window_width,
