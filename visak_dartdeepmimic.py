@@ -79,11 +79,6 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         super(VisakDartDeepMimicEnv, self).__init__(*args, **kwargs)
 
-    # def reward(self, *args, **kwargs):
-
-    #     self.vsk_quatreward()
-    #     return super(VisakDartDeepMimicEnv, self).reward(*args, **kwargs)
-
     # def q_from_netvector(self, netvector):
 
     #     myaction = super(VisakDartDeepMimicEnv,
@@ -104,19 +99,19 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         raw_framelist = None
 
-        with open("assets/mocap/WalkPositions_corrected.txt","rb") as fp:
+        with open("assets/mocap/walk/WalkPositions_corrected.txt","rb") as fp:
             self.WalkPositions = np.loadtxt(fp)
-        with open("assets/mocap/WalkPositions_corrected.txt","rb") as fp:
+        with open("assets/mocap/walk/WalkPositions_corrected.txt","rb") as fp:
             self.WalkVelocities = np.loadtxt(fp)
-        with open(prefix + "assets/mocap/walk/rarm_endeffector.txt", "rb") as fp:
+        with open("assets/mocap/walk/rarm_endeffector.txt", "rb") as fp:
             self.rarm_endeffector = np.loadtxt(fp)
-        with open(prefix + "assets/mocap/walk/larm_endeffector.txt", "rb") as fp:
+        with open("assets/mocap/walk/larm_endeffector.txt", "rb") as fp:
             self.larm_endeffector = np.loadtxt(fp)
-        with open(prefix + "assets/mocap/walk/lfoot_endeffector.txt", "rb") as fp:
+        with open("assets/mocap/walk/lfoot_endeffector.txt", "rb") as fp:
             self.lfoot_endeffector = np.loadtxt(fp)
-        with open(prefix + "assets/mocap/walk/rfoot_endeffector.txt", 'rb') as fp:
+        with open("assets/mocap/walk/rfoot_endeffector.txt", 'rb') as fp:
             self.rfoot_endeffector = np.loadtxt(fp)
-        with open(prefix + "assets/mocap/walk/com.txt", 'rb') as fp:
+        with open("assets/mocap/walk/com.txt", 'rb') as fp:
             self.com = np.loadtxt(fp)
 
         num_frames = len(self.WalkPositions)
@@ -146,11 +141,12 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
                      updated_vel, 0, 0)
             pos_frames[i] = updated_pos
             vel_frames[i] = updated_vel
-            com_frames[i] = self.ref_skel.com()
-            quat_frames[i] = self.quaternion_angles(self.ref_skel)
+            # com_frames[i] = self.ref_skel.com()
+            # com_frames[i] = self.com[i][::-1]
+            # quat_frames[i] = self.quaternion_angles(self.ref_skel)
             # TODO Parse actual end positions
-            ee_frames[i] = [self.ref_skel.bodynodes[ii].to_world(END_OFFSET)
-                            for ii in self._end_effector_indices]
+            # ee_frames[i] = [self.ref_skel.bodynodes[ii].to_world(END_OFFSET)
+            #                 for ii in self._end_effector_indices]
 
         return num_frames, (pos_frames, vel_frames, quat_frames, com_frames,
                             ee_frames)
@@ -172,34 +168,38 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
             self._get_viewer().scene.tb.trans[2] = -7.5
             self._get_viewer().scene.tb.trans[1] = 0.0
 
-    def vsk_reward():
+    def reward(self, skel, framenum):
+
+        return self.vsk_reward(skel, framenum)
+
+    def vsk_reward(self, skel, framenum):
 
         point_rarm = [0., -0.60, -0.15]
         point_larm = [0., -0.60, -0.15]
         point_rfoot = [0., 0., -0.20]
         point_lfoot = [0., 0., -0.20]
 
-        global_rarm = self.control_skel.bodynodes[16].to_world(point_rarm)
-        global_larm = self.control_skel.bodynodes[13].to_world(point_larm)
-        global_lfoot = self.control_skel.bodynodes[4].to_world(point_lfoot)
-        global_rfoot = self.control_skel.bodynodes[7].to_world(point_rfoot)
+        global_rarm = skel.bodynodes[16].to_world(point_rarm)
+        global_larm = skel.bodynodes[13].to_world(point_larm)
+        global_lfoot = skel.bodynodes[4].to_world(point_lfoot)
+        global_rfoot = skel.bodynodes[7].to_world(point_rfoot)
 
-        height = self.control_skel.bodynodes[0].com()[1]
+        height = skel.bodynodes[0].com()[1]
 
         Joint_weights = np.ones(23, )
         Joint_weights[[0, 3, 6, 9, 16, 20, 10, 16]] = 10
 
         Weight_matrix = np.diag(Joint_weights)
 
-        rarm_term = np.sum(np.square(self.rarm_endeffector[self.framenum, :] - global_rarm))
-        larm_term = np.sum(np.square(self.larm_endeffector[self.framenum, :] - global_larm))
-        rfoot_term = np.sum(np.square(self.rfoot_endeffector[self.framenum, :] - global_rfoot))
-        lfoot_term = np.sum(np.square(self.lfoot_endeffector[self.framenum, :] - global_lfoot))
+        rarm_term = np.sum(np.square(self.rarm_endeffector[framenum, :] - global_rarm))
+        larm_term = np.sum(np.square(self.larm_endeffector[framenum, :] - global_larm))
+        rfoot_term = np.sum(np.square(self.rfoot_endeffector[framenum, :] - global_rfoot))
+        lfoot_term = np.sum(np.square(self.lfoot_endeffector[framenum, :] - global_lfoot))
 
         end_effector_reward = np.exp(-40 * (rarm_term + larm_term + rfoot_term + lfoot_term))
-        com_reward = np.exp(-40 * np.sum(np.square(self.com[self.framenum, :] - self.control_skel.bodynodes[0].com())))
+        com_reward = np.exp(-40 * np.sum(np.square(self.com[framenum, :] - skel.bodynodes[0].com())))
 
-        vel_diff = self.WalkVelocities[self.framenum, 6:] - self.control_skel.dq[6:]
+        vel_diff = self.WalkVelocities[framenum, 6:] - skel.dq[6:]
         vel_pen = np.sum(vel_diff.T * Weight_matrix * vel_diff)
         joint_vel_term = 1 * np.asarray(np.exp(-1e-1 * vel_pen))
 
