@@ -1,4 +1,4 @@
-from dartdeepmimic import DartDeepMimicEnv, map_dofs, END_OFFSET
+from dartdeepmimic import DartDeepMimicEnv, set_dofs, END_OFFSET
 import ddm_argparse
 import numpy as np
 import argparse
@@ -90,7 +90,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
     #     return myaction
 
 
-    def construct_frames(self, ref_motion_path):
+    def construct_frames(self, ref_skel, ref_motion_path):
         """
         AMC data is given in sequential degrees, while dart specifies angles
         in rotating radians. The conversion is quite expensive, so we precomute
@@ -137,16 +137,15 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
             updated_vel[3:6] = updated_vel[0:3][::-1]
             updated_vel[0:3] = temp
 
-            map_dofs(self.ref_skel.dofs, updated_pos,
-                     updated_vel, 0, 0)
+            set_dofs(ref_skel.dofs, updated_pos, updated_vel, 0, 0)
             pos_frames[i] = updated_pos
             vel_frames[i] = updated_vel
-            # com_frames[i] = self.ref_skel.com()
-            # com_frames[i] = self.com[i][::-1]
-            # quat_frames[i] = self.quaternion_angles(self.ref_skel)
+            com_frames[i] = ref_skel.com()
+            com_frames[i] = self.com[i][::-1]
+            quat_frames[i] = self.quaternion_angles(ref_skel)
             # TODO Parse actual end positions
-            # ee_frames[i] = [self.ref_skel.bodynodes[ii].to_world(END_OFFSET)
-            #                 for ii in self._end_effector_indices]
+            ee_frames[i] = [ref_skel.bodynodes[ii].to_world(END_OFFSET)
+                            for ii in self._end_effector_indices]
 
         return num_frames, (pos_frames, vel_frames, quat_frames, com_frames,
                             ee_frames)

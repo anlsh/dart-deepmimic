@@ -27,7 +27,7 @@ class AMCDartDeepMimicEnv(DartDeepMimicEnv):
     def __init__(self, *args, **kwargs):
         super(AMCDartDeepMimicEnv, self).__init__(*args, **kwargs)
 
-    def construct_frames(self, ref_motion_path):
+    def construct_frames(self, ref_skel, ref_motion_path):
         """
         AMC data is given in sequential degrees, while dart specifies angles
         in rotating radians. The conversion is quite expensive, so we precomute
@@ -51,8 +51,8 @@ class AMCDartDeepMimicEnv(DartDeepMimicEnv):
             current_frame = raw_framelist[i]
             old_frame = raw_framelist[old_i]
 
-            q = np.zeros(len(self.ref_skel.q))
-            dq = np.zeros(len(self.ref_skel.dq))
+            q = np.zeros(len(ref_skel.q))
+            dq = np.zeros(len(ref_skel.dq))
 
             # Root data is a little bit special, so we handle it here
             curr_root_data = np.array(current_frame[0][1])
@@ -89,12 +89,18 @@ class AMCDartDeepMimicEnv(DartDeepMimicEnv):
             pos_frames[i] = q
             vel_frames[i] = dq
 
-            map_dofs(self.ref_skel.dofs, q, dq, 0, 0)
-            com_frames[i] = self.ref_skel.com()
-            quat_frames[i] = self.quaternion_angles(self.ref_skel)
+            map_dofs(ref_skel.dofs, q, dq, 0, 0)
+            com_frames[i] = ref_skel.com()
+            quat_frames[i] = self.quaternion_angles(ref_skel)
             # TODO Parse actual end positions
-            ee_frames[i] = [self.ref_skel.bodynodes[ii].to_world(END_OFFSET)
+            ee_frames[i] = [ref_skel.bodynodes[ii].to_world(END_OFFSET)
                             for ii in self._end_effector_indices]
 
         return num_frames, (pos_frames, vel_frames, quat_frames, com_frames,
                             ee_frames)
+
+
+    def viewer_setup(self):
+        self._get_viewer().scene.tb.trans[2] = -80
+        self._get_viewer().scene.tb.trans[1] = -40
+        self._get_viewer().scene.tb.trans[0] = 0

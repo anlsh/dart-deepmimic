@@ -106,8 +106,8 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
     def get_env(self):
 
         return DartDeepMimicArgParse.classes[self.args.environment_mode](
-            control_skeleton_path=self.args.control_skel_path,
-            reference_motion_path=self.args.ref_motion_path,
+            skeleton_path=self.args.control_skel_path,
+            refmotion_path=self.args.ref_motion_path,
             refmotion_dt=self.args.ref_motion_dt,
             statemode=self.args.state_mode,
             actionmode=self.args.action_mode,

@@ -1,4 +1,3 @@
-import pdb
 from gym.envs.dart import dart_env
 from math import exp, pi
 from numpy.linalg import norm
@@ -11,6 +10,7 @@ import warnings
 from copy import deepcopy
 from euclideanSpace import angle_axis2euler, euler2quat, quat2euler
 from quaternions import mult, inverse
+from math import atan2
 
 # ROOT_KEY isn't customizeable. It should correspond
 # to the name of the root node in the amc (which is usually "root")
@@ -27,11 +27,6 @@ class StateMode:
     GEN_EULER = 0
     GEN_QUAT = 1
     GEN_AXIS = 2
-
-    MIX_EULER = 3
-    MIX_QUAT = 4
-    MIX_AXIS = 5
-
 
 class ActionMode:
     """
@@ -51,21 +46,10 @@ def pad2length(vector, length):
     padded[:len(vector)] = deepcopy(vector)
     return padded
 
-def normalize(vector, identity=None):
-
-    if np.linalg.norm(vector) == 0:
-        if identity is None:
-            raise RuntimeError("Tried to normalize a 0 vector")
-        else:
-            return identity
-    else:
-        return np.divide(vector, np.linalg.norm(vector))
-
-
 def get_metadict(skel):
     """
-    Given a skeleton object, create a dictionary mapping each (actuated)
-    joint name to (list of indices it occupies in skel.q, child body)
+    Creating a dictionary mapping joint names to list of indices oocupied in
+    dof array
     """
     joint_names = [joint.name for joint in skel.joints]
     skel_dofs = skel.dofs
@@ -75,8 +59,7 @@ def get_metadict(skel):
         indices = [i for i, dof in enumerate(skel_dofs)
                    if dof.name.startswith(dof_name)]
         if len(indices) == 0:
-            # Some joints (like welds) dont have dofs and so won't appear
-            # we avoid adding those to the dict entirely
+            # Weld joints dont have dofs so skip adding them entirely
             continue
         child_body = [body for body in skel.bodynodes
                       if body.name.startswith(dof_name)][0]
@@ -85,7 +68,7 @@ def get_metadict(skel):
     return metadict
 
 
-def map_dofs(dof_list, pos_list, vel_list, pstdv, vstdv):
+def set_dofs(dof_list, pos_list, vel_list, pstdv, vstdv):
     """
     Given a list of dof objects, set their positions and velocities
     accordingly
@@ -93,17 +76,14 @@ def map_dofs(dof_list, pos_list, vel_list, pstdv, vstdv):
     if not(len(dof_list) == len(pos_list) == len(vel_list)):
         raise RuntimeError("Zip got tattered lists")
     for dof, pos, vel in zip(dof_list, pos_list, vel_list):
-        pos = np.random.normal(pos, pstdv)
-        vel = np.random.normal(vel, vstdv)
-
-        dof.set_position(float(pos))
-        dof.set_velocity(float(vel))
+        dof.set_position(np.random.normal(pos, pstdv))
+        dof.set_velocity(np.random.normal(vel, vstdv))
 
 
 class DartDeepMimicEnv(dart_env.DartEnv):
 
-    def __init__(self, control_skeleton_path,
-                 reference_motion_path, refmotion_dt,
+    def __init__(self, skeleton_path,
+                 refmotion_path, refmotion_dt,
                  statemode,
                  actionmode,
                  p_gain, d_gain,
@@ -114,8 +94,10 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                  ee_weight, ee_inner_weight,
                  com_weight, com_inner_weight,
                  max_torque,
-                 max_angle, default_damping,
-                 default_spring, default_friction,
+                 max_angle,
+                 default_damping,
+                 default_spring,
+                 default_friction,
                  visualize, simsteps_per_dataframe,
                  screen_width,
                  screen_height,
@@ -138,15 +120,97 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.default_friction = default_friction
         self.reward_cutoff = reward_cutoff
         self.gravity = gravity
+        self.self_collide = self_collide
+        self.p_gain = p_gain
+        self.d_gain = d_gain
+        self.pos_weight = pos_weight
+        self.pos_inner_weight = pos_inner_weight
+        self.vel_weight = vel_weight
+        self.vel_inner_weight = vel_inner_weight
+        self.ee_weight = ee_weight
+        self.ee_inner_weight = ee_inner_weight
+        self.com_weight = com_weight
+        self.com_inner_weight = com_inner_weight
+
+        self.framenum = 0
+
+        # Set later, simply declaring up front
+        self.control_skel = None
+        self.obs_dim = None
+        self.action_dim = None
+        self.metadict = None
+        self._end_effector_indices = None
+        self.obs_dim = None
+        self.action_dim = None
+        self._dof_names = None
+        self._actuated_dof_names = None
+
+        self.num_frames = -1
+        self.ref_q_frames = None
+        self.ref_dq_frames = None
+        self.ref_quat_frames = None
+        self.ref_com_frames = None
+        self.ref_ee_frames = None
+
+        ####################################
+        # Self.parameters for internal use #
+        ####################################
+
+        self.__visualize = visualize
+        self._skeleton_path = skeleton_path
+        self._outerweights = [self.pos_weight, self.vel_weight,
+                              self.ee_weight, self.com_weight]
+
+        self._innerweights = [self.pos_inner_weight,
+                              self.vel_inner_weight,
+                              self.ee_inner_weight,
+                              self.com_inner_weight]
+
+        ##############################################
+        # Set angle conversion methods appropriately #
+        ##############################################
+
+        # Type of angles in state space
+
+        if self.statemode == StateMode.GEN_EULER:
+            angle_to_rep = lambda x: x
+
+        elif self.statemode == StateMode.GEN_QUAT:
+            angle_to_rep = lambda x: euler2quat(*(x[::-1]))
+
+        elif self.statemode == StateMode.GEN_AXIS:
+            angle_to_rep = lambda x: axisangle_from_euler(*x, axes="rxyz")
+
+        # Type of angles in action space
+
+        if self.actionmode == ActionMode.GEN_EULER:
+            self.angle_from_rep = lambda x: x
+
+        elif self.actionmode == ActionMode.GEN_QUAT:
+            raise NotImplementedError()
+
+        elif self.actionmode == ActionMode.GEN_AXIS:
+
+            def tform_from_angleaxis(angleaxis):
+                angle = angleaxis[0]
+                axis = angleaxis[1:]
+                if norm(axis) != 0:
+                    return angle_axis2euler(angle, axis)[::-1]
+                else:
+                    return np.array([0, 0, 0])
+
+            self.angle_from_rep = tform_from_angleaxis
+
+        #################################################
+        # Sanity check the values of certain parameters #
+        #################################################
+
         if not self.gravity:
             warnings.warn("Gravity is disabled, be sure you meant to do this!",
                           RuntimeWarning)
-        self.self_collide = self_collide
         if not self.self_collide:
             warnings.warn("Self collisions are disabled, be sure you meant"
                           + " to do this!", RuntimeWarning)
-        self.p_gain = p_gain
-        self.d_gain = d_gain
         if (self.p_gain < 0) or (self.d_gain < 0):
             raise RuntimeError("All PID gains should be positive")
 
@@ -157,57 +221,37 @@ class DartDeepMimicEnv(dart_env.DartEnv):
            (ee_weight < 0) or (com_weight) < 0:
             raise RuntimeError("Outer weights should always be >= 0")
 
-        self.__visualize = visualize
 
-        self.pos_weight = pos_weight
-        self.pos_inner_weight = pos_inner_weight
-        self.vel_weight = vel_weight
-        self.vel_inner_weight = vel_inner_weight
-        self.ee_weight = ee_weight
-        self.ee_inner_weight = ee_inner_weight
-        self.com_weight = com_weight
-        self.com_inner_weight = com_inner_weight
+        #################################################################
+        # Extract dof data from skeleton and construct reference frames #
+        #################################################################
 
-        self._outerweights = [self.pos_weight, self.vel_weight,
-                              self.ee_weight, self.com_weight]
+        ref_skel = pydart.World(.00001,
+                                self._skeleton_path).skeletons[-1]
 
-        self._innerweights = [self.pos_inner_weight,
-                              self.vel_inner_weight,
-                              self.ee_inner_weight,
-                              self.com_inner_weight]
+        self.metadict = get_metadict(ref_skel)
 
-        self._control_skeleton_path = control_skeleton_path
-        self.ref_skel = pydart.World(.00001,
-                                     control_skeleton_path).skeletons[-1]
-
-        self.metadict = get_metadict(self.ref_skel)
-
-        # The sorting is critical
         self._dof_names = [key for key in self.metadict]
         self._dof_names.sort(key=lambda x:self.metadict[x][0][0])
-        # The first degree of freedom is always the root
         self._actuated_dof_names = self._dof_names[1:]
 
         self._end_effector_indices = [i for i, node
-                                       in enumerate(self.ref_skel.bodynodes)
+                                       in enumerate(ref_skel.bodynodes)
                                      if len(node.child_bodynodes) == 0]
 
-        self.framenum = 0
-        self.num_frames, frames = self.construct_frames(reference_motion_path)
-        self.ref_q_frames, self.ref_dq_frames, \
-            self.ref_quat_frames, self.ref_com_frames, self.ref_ee_frames \
-            = frames
+        self.obs_dim = len(self._get_obs(ref_skel))
+        self.action_dim = sum([ActionMode.lengths[self.actionmode]
+                               if len(self.metadict[name][0]) > 1 else 1
+                               for name in self._actuated_dof_names])
 
-        # Setting of control_skel to ref_skel is just temporary so that
-        # load_world can call self._get_obs() and set it correctly afterwards
-        self.control_skel = self.ref_skel
 
-        self.obs_dim = len(self._get_obs())
-        self.action_dim = 0
-        for name in self._actuated_dof_names:
-            indices, _ = self.metadict[name]
-            self.action_dim += 1 if len(indices) == 1 \
-                          else ActionMode.lengths[self.actionmode]
+        self.num_frames, (self.ref_q_frames,
+                          self.ref_dq_frames,
+                          self.ref_quat_frames,
+                          self.ref_com_frames,
+                          self.ref_ee_frames) = self.construct_frames(ref_skel,
+                                                                      refmotion_path)
+
 
         self.load_world()
 
@@ -217,17 +261,20 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         action_limits = [-action_limits, action_limits]
 
         super(DartDeepMimicEnv,
-              self).__init__(model_paths=[self._control_skeleton_path],
+              self).__init__(model_paths=[self._skeleton_path],
                              frame_skip=1,
                              observation_size=self.obs_dim,
                              action_bounds=action_limits,
                              dt=self.refmotion_dt / self.simsteps_per_dataframe,
                              visualize=self.__visualize,
                              disableViewer=not self.__visualize)
-
-        self.dart_world.set_gravity(int(self.gravity) * GRAVITY_VECTOR)
         self.control_skel = self.dart_world.skeletons[-1]
 
+        #########################################################
+        # Set various per joint/body parameters based on inputs #
+        #########################################################
+
+        self.dart_world.set_gravity(int(self.gravity) * GRAVITY_VECTOR)
         self.control_skel.set_self_collision_check(self.self_collide)
 
         for joint in self.control_skel.joints:
@@ -242,78 +289,96 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
 
     def construct_frames(self, ref_motion_path):
-
+        """
+        Abstract method to be specified depending on where data is being parsed
+        from
+        """
         raise NotImplementedError()
+
 
     def sync_skel_to_frame(self, skel, frame_index, pos_stdv, vel_stdv):
         """
-        Given a skeleton and mocap frame index, use self.metadict to sync all
-        the dofs. Will work on different skeleton objects as long as they're
-        created from the same file (like self.control_skel and self.ref_skel)
+        Given a skeleton, mocap frame index, and numbers specifying pos and
+        velocity, sync the skeleton to the frame
 
-        If noise is true, then positions and velocities will have random normal
-        noise added to them
+        # TODO Is this the right thing to do?
+        Root position (angle and position) is never fuzzed to prevent clipping
         """
-        # Set the root position
-        # The root pos is never fuzzed (prevent clipping into the
-        # ground)
         q = self.ref_q_frames[frame_index]
         dq = self.ref_dq_frames[frame_index]
 
-        map_dofs(skel.dofs[3:6], q[3:6], dq[3:6], 0, 0)
-        map_dofs(skel.dofs[0:3], q[:3], dq[:3], 0, vel_stdv)
-        map_dofs(skel.dofs[6:], q[6:], dq[6:], pos_stdv, vel_stdv)
+        set_dofs(skel.dofs[3:6], q[3:6], dq[3:6], 0, 0)
+        set_dofs(skel.dofs[0:3], q[:3], dq[:3], 0, vel_stdv)
+        set_dofs(skel.dofs[6:], q[6:], dq[6:], pos_stdv, vel_stdv)
+
+
+    def reset(self, framenum=None, pos_stdv=None, vel_stdv=None):
+        """
+        Unfortunately, I have to provide default arguments for pos, vel_stdv
+        since this is the same method called by the learn function and it
+        doesn't expect those
+        """
+
+        # I dont actually know what this line of code
+        self.dart_world.reset()
+
+        pos_stdv = pos_stdv if pos_stdv is not None else self.pos_init_noise
+        vel_stdv = vel_stdv if vel_stdv is not None else self.pos_init_noise
+        self.framenum = framenum if framenum is not None \
+                                 else random.randint(0, self.num_frames-1)
+
+        self.sync_skel_to_frame(self.control_skel, self.framenum,
+                                pos_stdv, vel_stdv)
+
+        return self._get_obs()
 
 
     def _get_obs(self, skel=None):
         """
         Return a 1-dimensional vector of the skeleton's state, as defined by
-        the state code. When skeleton is not specified, the
-        control_skel is used
+        the state code. When skeleton is not specified, control_skel is used
         """
 
         if skel is None:
             skel = self.control_skel
 
-        if self.statemode == StateMode.GEN_EULER:
-            angle_tform = lambda x: x
-        elif self.statemode == StateMode.GEN_QUAT:
-            angle_tform = lambda x: euler2quat(*(x[::-1]))
-        elif self.statemode == StateMode.GEN_AXIS:
-            angle_tform = lambda x: axisangle_from_euler(*x, axes="rxyz")
-        else:
-            raise RuntimeError("Unimplemented state code: "
-                               + str(self.statemode))
-
         state = np.array([self.framenum / self.num_frames])
+
         for dof_name in self._dof_names:
+
             indices, body = self.metadict[dof_name]
+            fi, li = indices[0], indices[-1] + 1
+
+            converted_angle = None
 
             if dof_name != ROOT_KEY:
                 if len(indices) > 1:
-                    euler_angle = pad2length(skel.q[indices[0]:indices[-1]+1],
-                                            3)
-                    converted_angle = angle_tform(euler_angle)
+                    converted_angle = angle_to_rep(pad2length(skel.q[fi:li],
+                                                             3))
                 else:
-                    converted_angle = skel.q[indices[0]:indices[0]+1]
+                    converted_angle = skel.q[fi:fi+1]
             else:
-                converted_angle = angle_tform(skel.q[0:3])
+                converted_angle = angle_to_rep(skel.q[0:3])
 
-            relpos = body.com() - skel.com()
-            linvel = body.dC
-            # TODO Need to convert dq into an angular velocity
-            dq = skel.dq[indices[0]:indices[-1]+1]
-            state = np.concatenate([state, relpos, converted_angle, linvel, dq])
+            # TODO Pass in an actual angular velocity instead of dq
+            state = np.concatenate([state,
+                                    body.com() - skel.com(),
+                                    converted_angle,
+                                    body.dC,
+                                    skel.dq[fi:li]])
 
         return state
 
+
     def quaternion_angles(self, skel):
 
-        angles = []
+        angles = np.array([])
 
         for dof_name in self._dof_names:
 
             indices, _ = self.metadict[dof_name]
+
+            quat_angle = None
 
             if dof_name != ROOT_KEY:
                 euler_angle = pad2length(skel.q[indices[0]:indices[-1]+1],
@@ -321,10 +386,10 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             else:
                 euler_angle = skel.q[0:3]
 
-            converted_angle = euler2quat(*(euler_angle[::-1]))
-            angles.append(converted_angle)
+            quat_angle = euler2quat(*(euler_angle[::-1]))
+            angles = np.concatenate([angles, quat_angle])
 
-        return np.array(angles)
+        return angles
 
 
     def reward(self, skel, framenum):
@@ -339,30 +404,33 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # POSITIONAL REWARD #
         #####################
 
-        posdiff = [2 * np.arccos(mult(inverse(ra), a)[0])
-                   for a, ra in zip(angles, ref_angles)]
-        posdiffmag = np.sum(np.square(posdiff))
+        quatdiffs = [mult(inverse(ra), a) for a, ra in zip(angles, ref_angles)]
+        # old_posdiffs = [2 * np.arccos(mult(inverse(ra), a)[0])
+        #                 for a, ra in zip(angles, ref_angles)]
+        posdiffs = [2 * atan2(norm(quat[1:]), quat[0]) for quat in quatdiffs]
+
+        posdiffmag = norm(posdiffs)**2
 
         ###################
         # VELOCITY REWARD #
         ###################
 
         ref_dq = self.ref_dq_frames[framenum]
-        veldiffmag = np.sum(np.square(skel.dq - ref_dq))
+        veldiffmag = norm(skel.dq - ref_dq)**2
 
         #######################
         # END EFFECTOR REWARD #
         #######################
 
-        eediffmag = np.sum(np.square([norm(self.control_skel.bodynodes[j].to_world(END_OFFSET)
-                          - ref_ee_positions[i])
-                     for i, j in enumerate(self._end_effector_indices)]))
+        eediffmag = norm([self.control_skel.bodynodes[j].to_world(END_OFFSET)
+                          - ref_ee_positions[i]
+                          for i, j in enumerate(self._end_effector_indices)])**2
 
         #########################
         # CENTER OF MASS REWARD #
         #########################
 
-        comdiffmag = np.sum(np.square(self.control_skel.com() - ref_com))
+        comdiffmag = norm(self.control_skel.com() - ref_com)**2
 
         ################
         # TOTAL REWARD #
@@ -377,50 +445,36 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         return reward
 
-    def q_from_netvector(self, netvector):
+    def targets_from_netvector(self, netvector):
 
-        if self.actionmode == ActionMode.GEN_EULER:
-            angle_tform = lambda x: x
-        elif self.actionmode == ActionMode.GEN_QUAT:
-            raise NotImplementedError()
-        elif self.actionmode == ActionMode.GEN_AXIS:
-            def tform_from_angleaxis(angleaxis):
-                angle = angleaxis[0]
-                axis = angleaxis[1:]
-                if norm(axis) != 0:
-                    return angle_axis2euler(angle, axis)[::-1]
-                else:
-                    return np.array([0, 0, 0])
-            angle_tform = tform_from_angleaxis
-        else:
-            raise RuntimeError("Unimplemented action code: "
-                               + str(self.actionmode))
-
-        q = np.zeros(len(self.control_skel.q))
+        target_q = np.zeros(len(self.control_skel.q))
         q_index = 6
-        netvector_index = 0
+        nv_index = 0
+
         for dof_name in self._actuated_dof_names:
             indices, _ = self.metadict[dof_name]
 
             if len(indices) == 1:
-                q[q_index] = netvector[netvector_index:netvector_index+1]
+                target_q[q_index] = netvector[nv_index:nv_index+1]
                 q_index += 1
-                netvector_index += 1
+                nv_index += 1
 
             else:
-                raw_angle = netvector[netvector_index:netvector_index \
+                raw_angle = netvector[nv_index:nv_index \
                                       + ActionMode.lengths[self.actionmode]]
-                euler_angle = angle_tform(raw_angle)
-                q[q_index:q_index + len(indices)] = euler_angle[:len(indices)]
+                euler_angle = angle_from_rep(raw_angle)
+                target_q[q_index:q_index + len(indices)] \
+                    = euler_angle[:len(indices)]
+
                 q_index += len(indices)
-                netvector_index += ActionMode.lengths[self.actionmode]
+                nv_index += ActionMode.lengths[self.actionmode]
 
         if q_index != len(self.control_skel.q):
             raise RuntimeError("Not all dofs mapped over")
-        if netvector_index != len(netvector):
+        if nv_index != len(netvector):
             raise RuntimeError("Not all net outputs used")
 
-        return q
+        return target_q[6:]
 
 
     def should_terminate(self, reward, newstate):
@@ -431,9 +485,9 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
     def step(self, action_vector):
 
-        dof_targets = self.q_from_netvector(action_vector)
+        dof_targets = self.targets_from_netvector(action_vector)
 
-        tau = self.p_gain * (dof_targets[6:] - self.control_skel.q[6:]) \
+        tau = self.p_gain * (dof_targets - self.control_skel.q[6:]) \
               - self.d_gain * (self.control_skel.dq[6:])
         tau = np.clip(tau, -self.max_torque, self.max_torque)
 
@@ -444,35 +498,12 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         if not np.isfinite(newstate).all():
             raise RuntimeError("Ran into an infinite state")
 
-        reward = self.reward(self.control_skel, self.framenum)
-        extrainfo = {"dof_targets": dof_targets}
-        done = self.should_terminate(reward, newstate)
         self.framenum += 1
+        reward = self.reward(self.control_skel, self.framenum)
+        done = self.should_terminate(reward, newstate)
 
-        return newstate, reward, done, extrainfo
+        return newstate, reward, done, {}
 
-    def reset(self, framenum=None, pos_stdv=None, vel_stdv=None):
-
-        if pos_stdv is None:
-            pos_stdv = self.pos_init_noise
-        if vel_stdv is None:
-            vel_stdv = self.vel_init_noise
-
-        self.dart_world.reset()
-
-        if framenum is None:
-            framenum = random.randint(0, self.num_frames - 1)
-        self.framenum = framenum
-
-        self.sync_skel_to_frame(self.control_skel, self.framenum,
-                                pos_stdv, vel_stdv)
-
-        return self._get_obs()
-
-    def viewer_setup(self):
-        self._get_viewer().scene.tb.trans[2] = -80
-        self._get_viewer().scene.tb.trans[1] = -40
-        self._get_viewer().scene.tb.trans[0] = 0
 
     def render(self, mode='human', close=False):
         if close:
