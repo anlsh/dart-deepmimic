@@ -167,9 +167,9 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
             self._get_viewer().scene.tb.trans[2] = -7.5
             self._get_viewer().scene.tb.trans[1] = 0.0
 
-    def reward(self, skel, framenum):
+    # def reward(self, skel, framenum):
 
-        return self.vsk_reward(skel, framenum)
+    #     return self.vsk_reward(skel, framenum)
 
     def vsk_reward(self, skel, framenum):
 

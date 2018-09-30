@@ -166,6 +166,9 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                               self.ee_inner_weight,
                               self.com_inner_weight]
 
+        self.angle_to_rep = lambda x: None
+        self.angle_from_rep = lambda x: None
+
         ##############################################
         # Set angle conversion methods appropriately #
         ##############################################
@@ -173,13 +176,13 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # Type of angles in state space
 
         if self.statemode == StateMode.GEN_EULER:
-            angle_to_rep = lambda x: x
+            self.angle_to_rep = lambda x: x
 
         elif self.statemode == StateMode.GEN_QUAT:
-            angle_to_rep = lambda x: euler2quat(*(x[::-1]))
+            self.angle_to_rep = lambda x: euler2quat(*(x[::-1]))
 
         elif self.statemode == StateMode.GEN_AXIS:
-            angle_to_rep = lambda x: axisangle_from_euler(*x, axes="rxyz")
+            self.angle_to_rep = lambda x: axisangle_from_euler(*x, axes="rxyz")
 
         # Type of angles in action space
 
@@ -284,8 +287,9 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                 joint.set_damping_coefficient(index, self.default_damping)
                 joint.set_spring_stiffness(index, self.default_spring)
 
-        for body in self.control_skel.bodynodes + self.dart_world.skeletons[0].bodynodes:
-           body.set_friction_coeff(self.default_friction)
+        for skel in self.dart_world.skeletons:
+            for body in skel.bodynodes:
+                body.set_friction_coeff(self.default_friction)
 
 
     def construct_frames(self, ref_motion_path):
@@ -353,12 +357,12 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
             if dof_name != ROOT_KEY:
                 if len(indices) > 1:
-                    converted_angle = angle_to_rep(pad2length(skel.q[fi:li],
-                                                             3))
+                    converted_angle = self.angle_to_rep(pad2length(skel.q[fi:li],
+                                                                   3))
                 else:
                     converted_angle = skel.q[fi:fi+1]
             else:
-                converted_angle = angle_to_rep(skel.q[0:3])
+                converted_angle = self.angle_to_rep(skel.q[0:3])
 
             # TODO Pass in an actual angular velocity instead of dq
             state = np.concatenate([state,
@@ -372,9 +376,9 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
     def quaternion_angles(self, skel):
 
-        angles = np.array([])
+        angles = [None] * len(self._dof_names)
 
-        for dof_name in self._dof_names:
+        for dof_index, dof_name in enumerate(self._dof_names):
 
             indices, _ = self.metadict[dof_name]
 
@@ -386,10 +390,9 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             else:
                 euler_angle = skel.q[0:3]
 
-            quat_angle = euler2quat(*(euler_angle[::-1]))
-            angles = np.concatenate([angles, quat_angle])
+            angles[dof_index] = euler2quat(*(euler_angle[::-1]))
 
-        return angles
+        return np.array(angles)
 
 
     def reward(self, skel, framenum):
@@ -405,8 +408,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         #####################
 
         quatdiffs = [mult(inverse(ra), a) for a, ra in zip(angles, ref_angles)]
-        # old_posdiffs = [2 * np.arccos(mult(inverse(ra), a)[0])
-        #                 for a, ra in zip(angles, ref_angles)]
         posdiffs = [2 * atan2(norm(quat[1:]), quat[0]) for quat in quatdiffs]
 
         posdiffmag = norm(posdiffs)**2
@@ -462,7 +463,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             else:
                 raw_angle = netvector[nv_index:nv_index \
                                       + ActionMode.lengths[self.actionmode]]
-                euler_angle = angle_from_rep(raw_angle)
+                euler_angle = self.angle_from_rep(raw_angle)
                 target_q[q_index:q_index + len(indices)] \
                     = euler_angle[:len(indices)]
 
