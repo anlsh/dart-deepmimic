@@ -17,6 +17,9 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
                           help='Path to the control skeleton')
         self.add_argument('--ref-motion-path', required=True,
                           help='Path to the reference motion AMC')
+        self.add_argument('--policy-query-frequency', required=False,
+                          type=float, default= 30,
+                          help="Number of times per second to query policy")
         self.add_argument('--ref-motion-dt', required=False,
                           type=float, default= 1 / 120,
                           help="Timestep of the motion frames")
@@ -108,6 +111,7 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
         return DartDeepMimicArgParse.classes[self.args.environment_mode](
             skeleton_path=self.args.control_skel_path,
             refmotion_path=self.args.ref_motion_path,
+            policy_query_frequency=self.args.policy_query_frequency,
             refmotion_dt=self.args.ref_motion_dt,
             statemode=self.args.state_mode,
             actionmode=self.args.action_mode,

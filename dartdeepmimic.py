@@ -83,7 +83,8 @@ def set_dofs(dof_list, pos_list, vel_list, pstdv, vstdv):
 class DartDeepMimicEnv(dart_env.DartEnv):
 
     def __init__(self, skeleton_path,
-                 refmotion_path, refmotion_dt,
+                 refmotion_path,
+                 policy_query_frequency, refmotion_dt,
                  statemode,
                  actionmode,
                  p_gain, d_gain,
@@ -109,6 +110,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         self.statemode = statemode
         self.actionmode = actionmode
+        self.policy_query_frequency = policy_query_frequency
         self.refmotion_dt = refmotion_dt
         self.simsteps_per_dataframe = simsteps_per_dataframe
         self.pos_init_noise = pos_init_noise
@@ -131,6 +133,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.ee_inner_weight = ee_inner_weight
         self.com_weight = com_weight
         self.com_inner_weight = com_inner_weight
+        self.__visualize = visualize
+        self._skeleton_path = skeleton_path
 
         self.framenum = 0
 
@@ -156,8 +160,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # Self.parameters for internal use #
         ####################################
 
-        self.__visualize = visualize
-        self._skeleton_path = skeleton_path
         self._outerweights = [self.pos_weight, self.vel_weight,
                               self.ee_weight, self.com_weight]
 
@@ -165,6 +167,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                               self.vel_inner_weight,
                               self.ee_inner_weight,
                               self.com_inner_weight]
+
+        self.step_resolution = (1 / self.policy_query_frequency) / self.refmotion_dt
 
         self.angle_to_rep = lambda x: None
         self.angle_from_rep = lambda x: None
@@ -214,6 +218,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         if not self.self_collide:
             warnings.warn("Self collisions are disabled, be sure you meant"
                           + " to do this!", RuntimeWarning)
+
         if (self.p_gain < 0) or (self.d_gain < 0):
             raise RuntimeError("All PID gains should be positive")
 
@@ -223,6 +228,11 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         if (pos_weight < 0) or (vel_weight < 0) or \
            (ee_weight < 0) or (com_weight) < 0:
             raise RuntimeError("Outer weights should always be >= 0")
+
+        if self.step_resolution % 1 != 0:
+            raise RuntimeError("Refmotion dt doesn't divide query dt")
+        else:
+            self.step_resolution = int(self.step_resolution)
 
 
         #################################################################
@@ -296,6 +306,13 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         """
         Abstract method to be specified depending on where data is being parsed
         from
+        """
+        raise NotImplementedError()
+
+
+    def _get_ee_positions(self, skel):
+        """
+        Abstract method for subclasses to implement
         """
         raise NotImplementedError()
 
@@ -382,8 +399,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
             indices, _ = self.metadict[dof_name]
 
-            quat_angle = None
-
             if dof_name != ROOT_KEY:
                 euler_angle = pad2length(skel.q[indices[0]:indices[-1]+1],
                                          3)
@@ -423,9 +438,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # END EFFECTOR REWARD #
         #######################
 
-        eediffmag = norm([self.control_skel.bodynodes[j].to_world(END_OFFSET)
-                          - ref_ee_positions[i]
-                          for i, j in enumerate(self._end_effector_indices)])**2
+        eediffmag = norm(self._get_ee_positions(self.control_skel) - self.ref_ee_frames[framenum])**2
 
         #########################
         # CENTER OF MASS REWARD #
@@ -488,19 +501,21 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         dof_targets = self.targets_from_netvector(action_vector)
 
-        tau = self.p_gain * (dof_targets - self.control_skel.q[6:]) \
-              - self.d_gain * (self.control_skel.dq[6:])
-        tau = np.clip(tau, -self.max_torque, self.max_torque)
+        for _ in range(self.step_resolution):
+            tau = self.p_gain * (dof_targets - self.control_skel.q[6:]) \
+                  - self.d_gain * (self.control_skel.dq[6:])
+            tau = np.clip(tau, -self.max_torque, self.max_torque)
 
-        self.do_simulation(np.concatenate([np.zeros(6), tau]),
-                           self.simsteps_per_dataframe)
+            self.do_simulation(np.concatenate([np.zeros(6), tau]),
+                               self.simsteps_per_dataframe)
+            self.framenum += 1
 
         newstate = self._get_obs()
         if not np.isfinite(newstate).all():
             raise RuntimeError("Ran into an infinite state")
 
-        self.framenum += 1
-        reward = self.reward(self.control_skel, self.framenum)
+        reward = self.reward(self.control_skel, min(self.framenum,
+                                                    self.num_frames - 1))
         done = self.should_terminate(reward, newstate)
 
         return newstate, reward, done, {}
