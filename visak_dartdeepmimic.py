@@ -7,71 +7,71 @@ from numpy.linalg import norm
 import copy
 
 
-# def transformActions(actions):
-#     joint_targets = np.zeros(23, )
+def transformActions(actions):
+    joint_targets = np.zeros(23, )
 
-#     # Left thigh
-#     lthigh = actions[:4]
-#     euler_lthigh = angle_axis2euler(theta=lthigh[0], vector=lthigh[1:])
-#     joint_targets[0] = euler_lthigh[2]
-#     joint_targets[1] = euler_lthigh[1]
-#     joint_targets[2] = euler_lthigh[0]
+    # Left thigh
+    lthigh = actions[:4]
+    euler_lthigh = angle_axis2euler(theta=lthigh[0], vector=lthigh[1:])
+    joint_targets[0] = euler_lthigh[2]
+    joint_targets[1] = euler_lthigh[1]
+    joint_targets[2] = euler_lthigh[0]
 
-#     ###### Left Knee
-#     joint_targets[3] = actions[4]
+    ###### Left Knee
+    joint_targets[3] = actions[4]
 
-#     ### left foot
-#     lfoot = actions[5:9]
-#     euler_lfoot = angle_axis2euler(theta=lfoot[0], vector=lfoot[1:])
-#     joint_targets[4] = euler_lfoot[2]
-#     joint_targets[5] = euler_lfoot[0]
+    ### left foot
+    lfoot = actions[5:9]
+    euler_lfoot = angle_axis2euler(theta=lfoot[0], vector=lfoot[1:])
+    joint_targets[4] = euler_lfoot[2]
+    joint_targets[5] = euler_lfoot[1]
 
-#     # right thigh
-#     rthigh = actions[9:13]
-#     euler_rthigh = angle_axis2euler(theta=rthigh[0], vector=rthigh[1:])
-#     joint_targets[6] = euler_rthigh[2]
-#     joint_targets[7] = euler_rthigh[1]
-#     joint_targets[8] = euler_rthigh[0]
+    # right thigh
+    rthigh = actions[9:13]
+    euler_rthigh = angle_axis2euler(theta=rthigh[0], vector=rthigh[1:])
+    joint_targets[6] = euler_rthigh[2]
+    joint_targets[7] = euler_rthigh[1]
+    joint_targets[8] = euler_rthigh[0]
 
-#     ###### right Knee
-#     joint_targets[9] = actions[13]
+    ###### right Knee
+    joint_targets[9] = actions[13]
 
-#     ### right foot
-#     rfoot = actions[14:18]
-#     euler_rfoot = angle_axis2euler(theta=rfoot[0], vector=rfoot[1:])
-#     joint_targets[10] = euler_rfoot[2]
-#     joint_targets[11] = euler_rfoot[0]
+    ### right foot
+    rfoot = actions[14:18]
+    euler_rfoot = angle_axis2euler(theta=rfoot[0], vector=rfoot[1:])
+    joint_targets[10] = euler_rfoot[2]
+    joint_targets[11] = euler_rfoot[1]
 
-#     ###thorax
+    ###thorax
 
-#     thorax = actions[18:22]
-#     euler_thorax = angle_axis2euler(theta=thorax[0], vector=thorax[1:])
-#     joint_targets[12] = euler_thorax[2]
-#     joint_targets[13] = euler_thorax[1]
-#     joint_targets[14] = euler_thorax[0]
+    thorax = actions[18:22]
+    euler_thorax = angle_axis2euler(theta=thorax[0], vector=thorax[1:])
+    joint_targets[12] = euler_thorax[2]
+    joint_targets[13] = euler_thorax[1]
+    joint_targets[14] = euler_thorax[0]
 
-#     #### l upper arm
-#     l_arm = actions[22:26]
-#     euler_larm = angle_axis2euler(theta=l_arm[0], vector=l_arm[1:])
-#     joint_targets[15] = euler_larm[2]
-#     joint_targets[16] = euler_larm[1]
-#     joint_targets[17] = euler_larm[0]
+    #### l upper arm
+    l_arm = actions[22:26]
+    euler_larm = angle_axis2euler(theta=l_arm[0], vector=l_arm[1:])
+    joint_targets[15] = euler_larm[2]
+    joint_targets[16] = euler_larm[1]
+    joint_targets[17] = euler_larm[0]
 
-#     ## l elbow
+    ## l elbow
 
-#     joint_targets[18] = actions[26]
+    joint_targets[18] = actions[26]
 
-#     ## r upper arm
-#     r_arm = actions[27:31]
-#     euler_rarm = angle_axis2euler(theta=r_arm[0], vector=r_arm[1:])
-#     joint_targets[19] = euler_rarm[2]
-#     joint_targets[20] = euler_rarm[1]
-#     joint_targets[21] = euler_rarm[0]
+    ## r upper arm
+    r_arm = actions[27:31]
+    euler_rarm = angle_axis2euler(theta=r_arm[0], vector=r_arm[1:])
+    joint_targets[19] = euler_rarm[2]
+    joint_targets[20] = euler_rarm[1]
+    joint_targets[21] = euler_rarm[0]
 
-#     ###r elbow
+    ###r elbow
 
-#     joint_targets[22] = actions[31]
-#     return joint_targets
+    joint_targets[22] = actions[31]
+    return joint_targets
 
 def vsk_obs(skel, framenum, num_frames):
 
@@ -273,7 +273,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
     #                      self).targets_from_netvector(netvector)
 
     #     vsk_action = transformActions(netvector)
-    #     print("actiondiff: ", np.subtract(myaction, vsk_action))
+    #     print(np.subtract(myaction, vsk_action))
 
     #     return myaction
 
