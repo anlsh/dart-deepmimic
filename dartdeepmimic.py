@@ -61,9 +61,9 @@ def get_metadict(skel):
         if len(indices) == 0:
             # Weld joints dont have dofs so skip adding them entirely
             continue
-        child_body = [body for body in skel.bodynodes
-                      if body.name.startswith(dof_name)][0]
-        metadict[dof_name] = (indices, child_body)
+        child_body_index = [i for i, body in enumerate(skel.bodynodes)
+                            if body.name.startswith(dof_name)][0]
+        metadict[dof_name] = (indices, child_body_index)
 
     return metadict
 
@@ -186,7 +186,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             self.angle_to_rep = lambda x: euler2quat(*(x[::-1]))
 
         elif self.statemode == StateMode.GEN_AXIS:
-            self.angle_to_rep = lambda x: axisangle_from_euler(*x, axes="rxyz")
+            self.angle_to_rep = lambda x: axisangle_from_euler(*(x[::-1]), axes="rxyz")
 
         # Type of angles in action space
 
@@ -357,25 +357,28 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         state = np.array([self.framenum / self.num_frames])
 
-        for dof_name in self._dof_names:
+        # TODO Provide it with the root theta once more when testing is done
+        for dof_name in self._dof_names[1:]:
 
-            indices, body = self.metadict[dof_name]
+            indices, body_index = self.metadict[dof_name]
+            body = skel.bodynodes[body_index]
             fi, li = indices[0], indices[-1] + 1
 
-            converted_angle = None
+            # TODO Bring this back to compressing the revolute joints
+            # if dof_name != ROOT_KEY:
+            #     if True: # len(indices) > 1:
 
-            if dof_name != ROOT_KEY:
-                if len(indices) > 1:
-                    converted_angle = self.angle_to_rep(pad2length(skel.q[fi:li],
+            converted_angle = self.angle_to_rep(pad2length(skel.q[fi:li],
                                                                    3))
-                else:
-                    converted_angle = skel.q[fi:fi+1]
-            else:
-                converted_angle = self.angle_to_rep(skel.q[0:3])
+                # else:
+                #     converted_angle = skel.q[fi:fi+1]
+            # else:
+            #     converted_angle = self.angle_to_rep(skel.q[0:3])
+            #     fi, li = 0, 4
 
             # TODO Pass in an actual angular velocity instead of dq
             state = np.concatenate([state,
-                                    body.com() - skel.com(),
+                                    body.com() - skel.bodynodes[0].com(),
                                     converted_angle,
                                     body.dC,
                                     skel.dq[fi:li]])
