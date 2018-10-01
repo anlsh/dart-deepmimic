@@ -357,7 +357,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         state = np.array([self.framenum / self.num_frames])
 
-        # TODO Provide it with the root theta once more when testing is done
         for dof_name in self._dof_names:
 
             indices, body_index = self.metadict[dof_name]
@@ -416,6 +415,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # POSITIONAL REWARD #
         #####################
 
+        # TODO Remove the [1:] from the end to reward based on root pos
         quatdiffs = [mult(inverse(ra), a) for a, ra in zip(angles, ref_angles)]
         posdiffs = [2 * atan2(norm(quat[1:]), quat[0]) for quat in quatdiffs]
 
@@ -432,17 +432,25 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # END EFFECTOR REWARD #
         #######################
 
-        eediffmag = norm(self._get_ee_positions(self.control_skel) - self.ref_ee_frames[framenum])**2
+        eediffmag = norm(self._get_ee_positions(skel) - self.ref_ee_frames[framenum])**2
 
         #########################
         # CENTER OF MASS REWARD #
         #########################
 
-        comdiffmag = norm(self.control_skel.com() - ref_com)**2
+        comdiffmag = norm(skel.com() - ref_com)**2
 
         ################
         # TOTAL REWARD #
         ################
+
+
+        # print("MY TERMS")
+        # print("===========")
+        # print("posdiffmag: ", posdiffmag)
+        # # print("veldiffmag: ", veldiffmag)
+        # print("eediffmag: ", eediffmag)
+        # print("comdiffmag: ", comdiffmag)
 
         diffmags = [posdiffmag, veldiffmag, eediffmag, comdiffmag]
 
