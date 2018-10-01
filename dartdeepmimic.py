@@ -197,16 +197,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             raise NotImplementedError()
 
         elif self.actionmode == ActionMode.GEN_AXIS:
-
-            def tform_from_angleaxis(angleaxis):
-                angle = angleaxis[0]
-                axis = angleaxis[1:]
-                if norm(axis) != 0:
-                    return angle_axis2euler(angle, axis)[::-1]
-                else:
-                    return np.array([0, 0, 0])
-
-            self.angle_from_rep = tform_from_angleaxis
+            self.angle_from_rep = lambda x: angle_axis2euler(theta=x[0],
+                                                             vector=x[1:])[::-1]
 
         #################################################
         # Sanity check the values of certain parameters #
