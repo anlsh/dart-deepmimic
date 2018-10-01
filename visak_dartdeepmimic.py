@@ -72,6 +72,53 @@ from numpy.linalg import norm
 #     joint_targets[22] = actions[31]
 #     return joint_targets
 
+def PID(skel, target):
+    kp = np.array([250] * 23)
+    kd = np.array([0.005] * 23)
+
+    kp[0] = 600 + 25
+    kp[3] = 225 + 25
+    kp[9] = 225 + 25
+    kp[10] = 200
+    kp[16] = 200
+    kp[[1, 2]] = 150
+    kp[[7, 8]] = 150
+    kp[6] = 600 + 25
+    kp[15:] = 155
+    kd[15:] = 0.05
+
+    kp = [item / 2 for item in kp]
+    kd = [item / 2 for item in kd]
+
+    q = skel.q
+    qdot = skel.dq
+
+    ndofs = len(q)
+
+    tau = np.zeros((ndofs,))
+    for i in range(6, ndofs):
+        tau[i] = -kp[i - 6] * (q[i] - target[i - 6]) - kd[i - 6] * qdot[i]
+
+
+    def ClampTorques(torques):
+        torqueLimits = np.array(
+            [150.0 * 5, 80. * 3, 80. * 3, 100. * 5, 80. * 5, 60., 150.0 * 5,
+             80. * 3, 80. * 3, 100. * 5, 80. * 5, 60.,
+             150. * 5, 150. * 5, 150. * 5, 10., 5., 5., 5., 10., 5., 5, 5.]) * 2
+
+        for i in range(6, ndofs):
+            if torques[i] > torqueLimits[i - 6]:
+                torques[i] = torqueLimits[i - 6]
+            if torques[i] < -torqueLimits[i - 6]:
+                torques[i] = -torqueLimits[i - 6]
+
+        return torques
+
+
+    torqs = ClampTorques(tau)
+
+    return torqs[6:]
+
 class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
     def __init__(self, *args, **kwargs):
@@ -81,6 +128,9 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         self.WalkVelocities = None
 
         super(VisakDartDeepMimicEnv, self).__init__(*args, **kwargs)
+
+    def PID(self, skel, targets):
+        return PID(skel, targets)
 
     # def targets_from_netvector(self, netvector):
 

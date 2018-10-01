@@ -489,14 +489,25 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         return done
 
 
+    def PID(self, skel, targets):
+        """
+        Targets should be all for ACTUATED dofs (meaning all of them will be
+        used)
+        """
+
+        tau = self.p_gain * (dof_targets - skel.q[6:]) \
+              - self.d_gain * (skel.dq[6:])
+        tau = np.clip(tau, -self.max_torque, self.max_torque)
+
+        return tau
+
+
     def step(self, action_vector):
 
         dof_targets = self.targets_from_netvector(action_vector)
 
         for _ in range(self.step_resolution):
-            tau = self.p_gain * (dof_targets - self.control_skel.q[6:]) \
-                  - self.d_gain * (self.control_skel.dq[6:])
-            tau = np.clip(tau, -self.max_torque, self.max_torque)
+            tau = self.PID(self.control_skel, dof_targets)
 
             self.do_simulation(np.concatenate([np.zeros(6), tau]),
                                self.simsteps_per_dataframe)
