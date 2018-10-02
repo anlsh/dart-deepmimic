@@ -223,8 +223,8 @@ def PID(skel, target):
     kp[15:] = 155
     kd[15:] = 0.05
 
-    kp = [item / 2 for item in kp]
-    kd = [item / 2 for item in kd]
+    kp = np.multiply(1/2, kp)
+    kd = np.multiply(1/2, kd)
 
     q = skel.q[6:]
     qdot = skel.dq[6:]
@@ -232,7 +232,7 @@ def PID(skel, target):
     # ndofs = len(q)
 
     # tau = np.zeros((ndofs - 6,))
-    tau = np.multiply(-kp, q - target) - np.multiply(kd, qdot)
+    tau = np.multiply(kp, q, target) - np.multiply(kd, qdot)
     # for i in range(ndofs - 6):
     #     tau[i] = -kp[i] * (q[i] - target[i]) - kd[i] * qdot[i]
 
@@ -250,8 +250,8 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         super(VisakDartDeepMimicEnv, self).__init__(*args, **kwargs)
 
-    # def PID(self, skel, targets):
-    #     return PID(skel, targets)
+    def PID(self, skel, targets):
+        return PID(skel, targets)
 
     # def _get_obs(self, skel=None):
 
@@ -390,10 +390,8 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
     def reward(self, skel, framenum):
 
-        # self.vsk_reward(skel, framenum)
-        ret = super(VisakDartDeepMimicEnv, self).reward(skel, framenum)
-
-        return ret
+        return self.vsk_reward(skel, framenum)
+        # ret = super(VisakDartDeepMimicEnv, self).reward(skel, framenum)
 
     def vsk_reward(self, skel, framenum):
 
@@ -402,7 +400,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         point_rfoot = [0., 0., -0.20]
         point_lfoot = [0., 0., -0.20]
 
-        ee_positions = self._get_ee_positions()
+        ee_positions = self._get_ee_positions(skel)
         ref_ee_positions = self.ref_ee_frames[framenum]
         end_effector_reward = np.exp(-40 * np.sum(np.square(ee_positions \
                                                             - ref_ee_positions)))
@@ -415,7 +413,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         Joint_weights[[0, 3, 6, 9, 16, 20, 10, 16]] = 10
         Weight_matrix = np.diag(Joint_weights)
 
-        vel_diff = self.ref_vel_frames[framenum][6:] - skel.dq[6:]
+        vel_diff = self.ref_dq_frames[framenum][6:] - skel.dq[6:]
         vel_pen = np.sum(vel_diff.T * Weight_matrix * vel_diff)
         joint_vel_term = 1 * np.exp(-1e-1 * vel_pen)
 
