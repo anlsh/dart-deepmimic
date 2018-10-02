@@ -197,6 +197,17 @@ def vsk_obs(skel, framenum, num_frames):
 
     return state
 
+
+def ClampTorques(torques):
+    torqueLimits = np.array(
+        [150.0 * 5, 80. * 3, 80. * 3, 100. * 5, 80. * 5, 60., 150.0 * 5,
+            80. * 3, 80. * 3, 100. * 5, 80. * 5, 60.,
+            150. * 5, 150. * 5, 150. * 5, 10., 5., 5., 5., 10., 5., 5, 5.]) * 2
+
+    np.clip(torques, -torqueLimits, torqueLimits)
+
+    return torques
+
 def PID(skel, target):
     kp = np.array([250] * 23)
     kd = np.array([0.005] * 23)
@@ -215,34 +226,19 @@ def PID(skel, target):
     kp = [item / 2 for item in kp]
     kd = [item / 2 for item in kd]
 
-    q = skel.q
-    qdot = skel.dq
+    q = skel.q[6:]
+    qdot = skel.dq[6:]
 
-    ndofs = len(q)
+    # ndofs = len(q)
 
-    tau = np.zeros((ndofs,))
-    for i in range(6, ndofs):
-        tau[i] = -kp[i - 6] * (q[i] - target[i - 6]) - kd[i - 6] * qdot[i]
-
-
-    def ClampTorques(torques):
-        torqueLimits = np.array(
-            [150.0 * 5, 80. * 3, 80. * 3, 100. * 5, 80. * 5, 60., 150.0 * 5,
-             80. * 3, 80. * 3, 100. * 5, 80. * 5, 60.,
-             150. * 5, 150. * 5, 150. * 5, 10., 5., 5., 5., 10., 5., 5, 5.]) * 2
-
-        for i in range(6, ndofs):
-            if torques[i] > torqueLimits[i - 6]:
-                torques[i] = torqueLimits[i - 6]
-            if torques[i] < -torqueLimits[i - 6]:
-                torques[i] = -torqueLimits[i - 6]
-
-        return torques
-
+    # tau = np.zeros((ndofs - 6,))
+    tau = np.multiply(-kp, q - target) - np.multiply(kd, qdot)
+    # for i in range(ndofs - 6):
+    #     tau[i] = -kp[i] * (q[i] - target[i]) - kd[i] * qdot[i]
 
     torqs = ClampTorques(tau)
 
-    return torqs[6:]
+    return torqs
 
 class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
@@ -406,33 +402,25 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         point_rfoot = [0., 0., -0.20]
         point_lfoot = [0., 0., -0.20]
 
-        global_rarm = skel.bodynodes[16].to_world(point_rarm)
-        global_larm = skel.bodynodes[13].to_world(point_larm)
-        global_lfoot = skel.bodynodes[4].to_world(point_lfoot)
-        global_rfoot = skel.bodynodes[7].to_world(point_rfoot)
+        ee_positions = self._get_ee_positions()
+        ref_ee_positions = self.ref_ee_frames[framenum]
+        end_effector_reward = np.exp(-40 * np.sum(np.square(ee_positions \
+                                                            - ref_ee_positions)))
 
-        height = skel.bodynodes[0].com()[1]
+        com_reward = np.exp(-40 * norm(self.ref_com_frames[framenum]
+                                       - skel.com())**2)
+
 
         Joint_weights = np.ones(23, )
         Joint_weights[[0, 3, 6, 9, 16, 20, 10, 16]] = 10
-
         Weight_matrix = np.diag(Joint_weights)
 
-        rarm_term = norm(self.rarm_endeffector[framenum, :] - global_rarm)**2
-        larm_term = norm(self.larm_endeffector[framenum, :] - global_larm)**2
-        rfoot_term = norm(self.rfoot_endeffector[framenum, :] - global_rfoot)**2
-        lfoot_term = norm(self.lfoot_endeffector[framenum, :] - global_lfoot)**2
-
-        end_effector_reward = np.exp(-40 * (rarm_term + larm_term
-                                            + rfoot_term + lfoot_term))
-        com_reward = np.exp(-40 * norm(self.com[framenum, :]
-                                       - skel.com())**2)
-
-        vel_diff = self.WalkVelocities[framenum, 6:] - skel.dq[6:]
+        vel_diff = self.ref_vel_frames[framenum][6:] - skel.dq[6:]
         vel_pen = np.sum(vel_diff.T * Weight_matrix * vel_diff)
-        joint_vel_term = 1 * np.asarray(np.exp(-1e-1 * vel_pen))
+        joint_vel_term = 1 * np.exp(-1e-1 * vel_pen)
 
-        quat_term, posdiffmag = self.vsk_quatreward()
+        quat_term, posdiffmag = self.vsk_quatreward(skel, framenum)
+
         reward = 0.1 * end_effector_reward + 0.1 * joint_vel_term \
                  + 0.25 * com_reward + 1.65 * quat_term
 
@@ -449,12 +437,12 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         return reward
 
 
-    def vsk_quatreward(self, ):
+    def vsk_quatreward(self, skel, framenum):
         quaternion_difference = []
 
         #### lthigh
-        lthigh_euler = self.control_skel.q[6:9]
-        lthigh_mocap = self.WalkPositions[self.framenum, 6:9]
+        lthigh_euler = skel.q[6:9]
+        lthigh_mocap = self.WalkPositions[framenum, 6:9]
         quat_lthigh = euler2quat(z=lthigh_euler[2], y=lthigh_euler[1], x=lthigh_euler[0])
         quat_lthigh_mocap = euler2quat(z=lthigh_mocap[2], y=lthigh_mocap[1], x=lthigh_mocap[0])
         lthigh_diff = mult(inverse(quat_lthigh_mocap), quat_lthigh)
@@ -462,8 +450,8 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         quaternion_difference.append(scalar_lthigh)
 
         ##### lknee
-        lknee_euler = self.control_skel.q[9]
-        lknee_mocap = self.WalkPositions[self.framenum, 9]
+        lknee_euler = skel.q[9]
+        lknee_mocap = self.WalkPositions[framenum, 9]
         quat_lknee = euler2quat(z=0., y=0., x=lknee_euler)
         quat_lknee_mocap = euler2quat(z=0., y=0., x=lknee_mocap)
         lknee_diff = mult(inverse(quat_lknee_mocap), quat_lknee)
@@ -471,8 +459,8 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         quaternion_difference.append(scalar_lknee)
 
         #### lfoot
-        lfoot_euler = self.control_skel.q[10:12]
-        lfoot_mocap = self.WalkPositions[self.framenum, 10:12]
+        lfoot_euler = skel.q[10:12]
+        lfoot_mocap = self.WalkPositions[framenum, 10:12]
         quat_lfoot = euler2quat(z=lfoot_euler[1], y=0., x=lfoot_euler[0])
         quat_lfoot_mocap = euler2quat(z=lfoot_mocap[1], y=0., x=lfoot_mocap[0])
         lfoot_diff = mult(inverse(quat_lfoot_mocap), quat_lfoot)
@@ -480,8 +468,8 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         quaternion_difference.append(scalar_lfoot)
 
         #### rthigh
-        rthigh_euler = self.control_skel.q[12:15]
-        rthigh_mocap = self.WalkPositions[self.framenum, 12:15]
+        rthigh_euler = skel.q[12:15]
+        rthigh_mocap = self.WalkPositions[framenum, 12:15]
         quat_rthigh = euler2quat(z=rthigh_euler[2], y=rthigh_euler[1], x=rthigh_euler[0])
         quat_rthigh_mocap = euler2quat(z=rthigh_mocap[2], y=rthigh_mocap[1], x=rthigh_mocap[0])
         rthigh_diff = mult(inverse(quat_rthigh_mocap), quat_rthigh)
@@ -489,8 +477,8 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         quaternion_difference.append(scalar_rthigh)
 
         ##### rknee
-        rknee_euler = self.control_skel.q[15]
-        rknee_mocap = self.WalkPositions[self.framenum, 15]
+        rknee_euler = skel.q[15]
+        rknee_mocap = self.WalkPositions[framenum, 15]
         quat_rknee = euler2quat(z=0., y=0., x=rknee_euler)
         quat_rknee_mocap = euler2quat(z=0., y=0., x=rknee_mocap)
         rknee_diff = mult(inverse(quat_rknee_mocap), quat_rknee)
@@ -498,8 +486,8 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         quaternion_difference.append(scalar_rknee)
 
         #### rfoot
-        rfoot_euler = self.control_skel.q[16:18]
-        rfoot_mocap = self.WalkPositions[self.framenum, 16:18]
+        rfoot_euler = skel.q[16:18]
+        rfoot_mocap = self.WalkPositions[framenum, 16:18]
         quat_rfoot = euler2quat(z=rfoot_euler[1], y=0., x=rfoot_euler[0])
         quat_rfoot_mocap = euler2quat(z=rfoot_mocap[1], y=0., x=rfoot_mocap[0])
         rfoot_diff = mult(inverse(quat_rfoot_mocap), quat_rfoot)
@@ -512,18 +500,18 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         # ALERT ALERT CHANGING THE GOOD AND HOLY CODE #
         ###############################################
 
-        # scalar_thoraxx = self.control_skel.q[18] - self.WalkPositions[self.framenum, 18]
+        # scalar_thoraxx = skel.q[18] - self.WalkPositions[self.framenum, 18]
         # quaternion_difference.append(scalar_thoraxx)
-        # scalar_thoraxy = self.control_skel.q[19] - self.WalkPositions[self.framenum, 19]
+        # scalar_thoraxy = skel.q[19] - self.WalkPositions[self.framenum, 19]
         # quaternion_difference.append(scalar_thoraxy)
-        # scalar_thoraxz = self.control_skel.q[20] - self.WalkPositions[self.framenum, 20]
+        # scalar_thoraxz = skel.q[20] - self.WalkPositions[self.framenum, 20]
         # quaternion_difference.append(scalar_thoraxz)
 
         ##################################################
         # THE DEFILED CODE (although the above is weird) #
         ##################################################
-        thorax_euler  = self.control_skel.q[18:21]
-        thorax_mocap  = self.WalkPositions[self.framenum, 18:21]
+        thorax_euler  = skel.q[18:21]
+        thorax_mocap  = self.WalkPositions[framenum, 18:21]
         quat_thorax = euler2quat(*thorax_euler)
         quat_thorax_mc = euler2quat(*thorax_mocap)
         thing_diff = mult(inverse(quat_thorax_mc), quat_thorax)
@@ -531,8 +519,8 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         quaternion_difference.append(scalar_thorax)
 
         #### l upper arm
-        larm_euler = self.control_skel.q[21:24]
-        larm_mocap = self.WalkPositions[self.framenum, 21:24]
+        larm_euler = skel.q[21:24]
+        larm_mocap = self.WalkPositions[framenum, 21:24]
         quat_larm = euler2quat(z=larm_euler[2], y=larm_euler[1], x=larm_euler[0])
         quat_larm_mocap = euler2quat(z=larm_mocap[2], y=larm_mocap[1], x=larm_mocap[0])
         larm_diff = mult(inverse(quat_larm_mocap), quat_larm)
@@ -540,8 +528,8 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         quaternion_difference.append(scalar_larm)
 
         ##### l elbow
-        lelbow_euler = self.control_skel.q[24]
-        lelbow_mocap = self.WalkPositions[self.framenum, 24]
+        lelbow_euler = skel.q[24]
+        lelbow_mocap = self.WalkPositions[framenum, 24]
         quat_lelbow = euler2quat(z=0., y=0., x=lelbow_euler)
         quat_lelbow_mocap = euler2quat(z=0., y=0., x=lelbow_mocap)
         lelbow_diff = mult(inverse(quat_lelbow_mocap), quat_lelbow)
@@ -549,8 +537,8 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         quaternion_difference.append(scalar_lelbow)
 
         #### r upper arm
-        rarm_euler = self.control_skel.q[25:28]
-        rarm_mocap = self.WalkPositions[self.framenum, 25:28]
+        rarm_euler = skel.q[25:28]
+        rarm_mocap = self.WalkPositions[framenum, 25:28]
         quat_rarm = euler2quat(z=rarm_euler[2], y=rarm_euler[1], x=rarm_euler[0])
         quat_rarm_mocap = euler2quat(z=rarm_mocap[2], y=rarm_mocap[1], x=rarm_mocap[0])
         rarm_diff = mult(inverse(quat_rarm_mocap), quat_rarm)
@@ -558,8 +546,8 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         quaternion_difference.append(scalar_rarm)
 
         ##### r elbow
-        relbow_euler = self.control_skel.q[28]
-        relbow_mocap = self.WalkPositions[self.framenum, 28]
+        relbow_euler = skel.q[28]
+        relbow_mocap = self.WalkPositions[framenum, 28]
         quat_relbow = euler2quat(z=0., y=0., x=relbow_euler)
         quat_relbow_mocap = euler2quat(z=0., y=0., x=relbow_mocap)
         relbow_diff = mult(inverse(quat_relbow_mocap), quat_relbow)
