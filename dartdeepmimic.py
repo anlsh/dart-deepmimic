@@ -521,8 +521,12 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         for _ in range(self.step_resolution):
             tau = self.PID(self.control_skel, dof_targets)
 
-            self.do_simulation(np.concatenate([np.zeros(6), tau]),
-                               self.simsteps_per_dataframe)
+            self.control_skel.set_forces(np.concatenate([np.zeros(6),
+                                                        tau]))
+
+            for __ in range(self.simsteps_per_dataframe):
+                self.dart_world.step()
+
             self.framenum += 1
 
         newstate = self._get_obs()
