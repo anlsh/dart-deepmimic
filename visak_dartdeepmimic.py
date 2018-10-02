@@ -254,8 +254,8 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         super(VisakDartDeepMimicEnv, self).__init__(*args, **kwargs)
 
-    def PID(self, skel, targets):
-        return PID(skel, targets)
+    # def PID(self, skel, targets):
+    #     return PID(skel, targets)
 
     # def _get_obs(self, skel=None):
 
@@ -301,16 +301,16 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
             self.WalkPositions = np.loadtxt(fp)
         with open("assets/mocap/walk/WalkVelocities_corrected.txt", "rb") as fp:
             self.WalkVelocities = np.loadtxt(fp)
-        with open("assets/mocap/walk/rarm_endeffector.txt", "rb") as fp:
-            self.rarm_endeffector = np.loadtxt(fp)[:-1]
-        with open("assets/mocap/walk/larm_endeffector.txt", "rb") as fp:
-            self.larm_endeffector = np.loadtxt(fp)[:-1]
-        with open("assets/mocap/walk/lfoot_endeffector.txt", "rb") as fp:
-            self.lfoot_endeffector = np.loadtxt(fp)[:-1]
-        with open("assets/mocap/walk/rfoot_endeffector.txt", 'rb') as fp:
-            self.rfoot_endeffector = np.loadtxt(fp)[:-1]
-        with open("assets/mocap/walk/com.txt", 'rb') as fp:
-            self.com = np.loadtxt(fp)[:-1]
+        # with open("assets/mocap/walk/rarm_endeffector.txt", "rb") as fp:
+        #     self.rarm_endeffector = np.loadtxt(fp)[:-1]
+        # with open("assets/mocap/walk/larm_endeffector.txt", "rb") as fp:
+        #     self.larm_endeffector = np.loadtxt(fp)[:-1]
+        # with open("assets/mocap/walk/lfoot_endeffector.txt", "rb") as fp:
+        #     self.lfoot_endeffector = np.loadtxt(fp)[:-1]
+        # with open("assets/mocap/walk/rfoot_endeffector.txt", 'rb') as fp:
+        #     self.rfoot_endeffector = np.loadtxt(fp)[:-1]
+        # with open("assets/mocap/walk/com.txt", 'rb') as fp:
+        #     self.com = np.loadtxt(fp)[:-1]
 
         num_frames = len(self.WalkPositions)
 
@@ -377,7 +377,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
     def should_terminate(self, reward, newstate):
 
-        done = self.framenum == self.num_frames - 1
+        done = self.framenum >= self.num_frames - 1
         done = done or not ((np.abs(newstate[2:]) < 200).all()
                             and (self.control_skel.bodynodes[0].com()[1] > -0.7)
                             and (self.control_skel.q[3] > -0.4)
@@ -392,13 +392,12 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
             self._get_viewer().scene.tb.trans[2] = -7.5
             self._get_viewer().scene.tb.trans[1] = 0.0
 
-    # def reward(self, skel, framenum):
+    def reward(self, skel, framenum):
 
-    #     self.vsk_reward(skel, framenum)
-    #     ret = super(VisakDartDeepMimicEnv, self).reward(skel, framenum)
+        # self.vsk_reward(skel, framenum)
+        ret = super(VisakDartDeepMimicEnv, self).reward(skel, framenum)
 
-    #     print("\n\n")
-    #     return ret
+        return ret
 
     def vsk_reward(self, skel, framenum):
 
@@ -437,15 +436,15 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         reward = 0.1 * end_effector_reward + 0.1 * joint_vel_term \
                  + 0.25 * com_reward + 1.65 * quat_term
 
-        print("VISAK TERMS")
-        print("===========")
-        print("posdiffmag: ", posdiffmag)
-        # print("veldiffmag: ", np.sum(np.square(vel_diff)))
-        # print(vel_diff)
-        print("eediffmag: ", sum([rarm_term, larm_term,
-                                  rfoot_term, lfoot_term]))
-        print("comdiffmag: ", np.sum(np.square(self.com[framenum, :] \
-                                        - skel.bodynodes[0].com())))
+        # print("VISAK TERMS")
+        # print("===========")
+        # print("posdiffmag: ", posdiffmag)
+        # # print("veldiffmag: ", np.sum(np.square(vel_diff)))
+        # # print(vel_diff)
+        # print("eediffmag: ", sum([rarm_term, larm_term,
+        #                           rfoot_term, lfoot_term]))
+        # print("comdiffmag: ", np.sum(np.square(self.com[framenum, :] \
+        #                                 - skel.bodynodes[0].com())))
 
         return reward
 

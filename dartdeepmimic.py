@@ -321,7 +321,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         dq = self.ref_dq_frames[frame_index]
 
         set_dofs(skel.dofs[3:6], q[3:6], dq[3:6], 0, 0)
-        set_dofs(skel.dofs[0:3], q[:3], dq[:3], 0, vel_stdv)
+        set_dofs(skel.dofs[0:3], q[:3], dq[:3], 0, 0)
         set_dofs(skel.dofs[6:], q[6:], dq[6:], pos_stdv, vel_stdv)
 
 
@@ -416,7 +416,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         #####################
 
         # TODO Remove the [1:] from the end to reward based on root pos
-        quatdiffs = [mult(inverse(ra), a) for a, ra in zip(angles, ref_angles)]
+        quatdiffs = [mult(inverse(ra), a) for a, ra in zip(angles,
+                                                           ref_angles)]
         posdiffs = [2 * atan2(norm(quat[1:]), quat[0]) for quat in quatdiffs]
 
         posdiffmag = norm(posdiffs)**2
@@ -432,7 +433,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # END EFFECTOR REWARD #
         #######################
 
-        eediffmag = norm(self._get_ee_positions(skel) - self.ref_ee_frames[framenum])**2
+        eediffmag = norm(self._get_ee_positions(skel)
+                         - self.ref_ee_frames[framenum])**2
 
         #########################
         # CENTER OF MASS REWARD #
@@ -448,7 +450,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # print("MY TERMS")
         # print("===========")
         # print("posdiffmag: ", posdiffmag)
-        # # print("veldiffmag: ", veldiffmag)
+        # print("veldiffmag: ", veldiffmag)
         # print("eediffmag: ", eediffmag)
         # print("comdiffmag: ", comdiffmag)
 
@@ -463,8 +465,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
     def targets_from_netvector(self, netvector):
 
-        target_q = np.zeros(len(self.control_skel.q))
-        q_index = 6
+        target_q = np.zeros(len(self.control_skel.q) - 6)
+        q_index = 0
         nv_index = 0
 
         for dof_name in self._actuated_dof_names:
@@ -485,21 +487,21 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                 q_index += len(indices)
                 nv_index += ActionMode.lengths[self.actionmode]
 
-        if q_index != len(self.control_skel.q):
+        if q_index != len(self.control_skel.q) - 6:
             raise RuntimeError("Not all dofs mapped over")
         if nv_index != len(netvector):
             raise RuntimeError("Not all net outputs used")
 
-        return target_q[6:]
+        return target_q
 
 
     def should_terminate(self, reward, newstate):
-        done = self.framenum == self.num_frames - 1
+        done = self.framenum >= self.num_frames - 1
         done = done or reward < self.reward_cutoff
         return done
 
 
-    def PID(self, skel, targets):
+    def PID(self, skel, dof_targets):
         """
         Targets should be all for ACTUATED dofs (meaning all of them will be
         used)
