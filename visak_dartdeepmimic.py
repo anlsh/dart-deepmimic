@@ -24,7 +24,7 @@ def transformActions(actions):
     lfoot = actions[5:9]
     euler_lfoot = angle_axis2euler(theta=lfoot[0], vector=lfoot[1:])
     joint_targets[4] = euler_lfoot[2]
-    joint_targets[5] = euler_lfoot[1]
+    joint_targets[5] = euler_lfoot[0]
 
     # right thigh
     rthigh = actions[9:13]
@@ -40,7 +40,7 @@ def transformActions(actions):
     rfoot = actions[14:18]
     euler_rfoot = angle_axis2euler(theta=rfoot[0], vector=rfoot[1:])
     joint_targets[10] = euler_rfoot[2]
-    joint_targets[11] = euler_rfoot[1]
+    joint_targets[11] = euler_rfoot[0]
 
     ###thorax
 
@@ -71,6 +71,10 @@ def transformActions(actions):
     ###r elbow
 
     joint_targets[22] = actions[31]
+
+    # TODO Visak does this in his code during the advance method, idk why
+    joint_targets[[6, 9, 10]] = joint_targets[[12, 15, 16]]
+
     return joint_targets
 
 def vsk_obs(skel, framenum, num_frames):
@@ -263,15 +267,14 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
     #     print(canon_obs - my_obs)
     #     return my_obs
 
-    # def targets_from_netvector(self, netvector):
+    def targets_from_netvector(self, netvector):
 
-    #     myaction = super(VisakDartDeepMimicEnv,
-    #                      self).targets_from_netvector(netvector)
+        # myaction = super(VisakDartDeepMimicEnv,
+        #                  self).targets_from_netvector(netvector)
 
-    #     vsk_action = transformActions(netvector)
-    #     print(np.subtract(myaction, vsk_action))
+        return transformActions(netvector)
 
-    #     return myaction
+        # return myaction
 
     def _get_ee_positions(self, skel):
 
