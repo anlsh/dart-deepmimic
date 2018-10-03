@@ -72,9 +72,6 @@ def transformActions(actions):
 
     joint_targets[22] = actions[31]
 
-    # TODO Visak does this in his code during the advance method, idk why
-    joint_targets[[6, 9, 10]] = joint_targets[[12, 15, 16]]
-
     return joint_targets
 
 def vsk_obs(skel, framenum, num_frames):
@@ -236,7 +233,7 @@ def PID(skel, target):
     # ndofs = len(q)
 
     # tau = np.zeros((ndofs - 6,))
-    tau = np.multiply(kp, q, target) - np.multiply(kd, qdot)
+    tau = np.multiply(kp, (target - q)) - np.multiply(kd, qdot)
     # for i in range(ndofs - 6):
     #     tau[i] = -kp[i] * (q[i] - target[i]) - kd[i] * qdot[i]
 
@@ -257,15 +254,15 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
     def PID(self, skel, targets):
         return PID(skel, targets)
 
-    # def _get_obs(self, skel=None):
+    def _get_obs(self, skel=None):
 
-    #     if skel is None:
-    #         skel = self.control_skel
+        if skel is None:
+            skel = self.control_skel
 
-    #     my_obs = super(VisakDartDeepMimicEnv, self)._get_obs(skel)
-    #     canon_obs = vsk_obs(skel, self.framenum, self.num_frames)
-    #     print(canon_obs - my_obs)
-    #     return my_obs
+        # my_obs = super(VisakDartDeepMimicEnv, self)._get_obs(skel)
+        return vsk_obs(skel, self.framenum, self.num_frames)
+        # print(canon_obs - my_obs)
+        # return my_obs
 
     def targets_from_netvector(self, netvector):
 
