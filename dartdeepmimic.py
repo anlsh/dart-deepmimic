@@ -532,7 +532,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
             self.dart_world.step()
 
-            self.framenum += 1
+        self.framenum += 1
 
         newstate = self._get_obs()
         reward = self.reward(self.control_skel, min(self.framenum,
