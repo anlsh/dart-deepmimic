@@ -265,9 +265,10 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         action_limits = self.max_angle * pi * np.ones(self.action_dim)
         action_limits = [-action_limits, action_limits]
 
+        # TODO Hardcoded frame skip, pulled from visak's code
         super(DartDeepMimicEnv,
               self).__init__(model_paths=[self._skeleton_path],
-                             # frame_skip=1,
+                             frame_skip=16,
                              observation_size=self.obs_dim,
                              action_bounds=action_limits,
                              # dt=self.refmotion_dt / self.simsteps_per_dataframe,
