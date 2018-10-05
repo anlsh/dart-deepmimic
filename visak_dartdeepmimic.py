@@ -227,18 +227,18 @@ def PID(skel, target):
     kp = np.multiply(1/2, kp)
     kd = np.multiply(1/2, kd)
 
+
+    # q = skel.q[6:]
+    # dq = skel.dq[6:]
+    # tau = np.multiply(kp, (target - q)) - np.multiply(kd, dq)
+
     q = skel.q[6:]
     qdot = skel.dq[6:]
-
-    # ndofs = len(q)
-    q = skel.q[6:]
-    dq = skel.dq[6:]
-    tau = np.multiply(kp, (target - q)) - np.multiply(kd, dq)
-
-    # tau = np.zeros((ndofs - 6,))
-    # tau = np.multiply(kp, (target - q)) - np.multiply(kd, qdot)
-    # for i in range(ndofs - 6):
-    #     tau[i] = -kp[i] * (q[i] - target[i]) - kd[i] * qdot[i]
+    ndofs = len(q)
+    tau = np.zeros((ndofs - 6,))
+    tau = np.multiply(kp, (target - q)) - np.multiply(kd, qdot)
+    for i in range(ndofs - 6):
+        tau[i] = -kp[i] * (q[i] - target[i]) - kd[i] * qdot[i]
 
     torqs = ClampTorques(tau)
 
