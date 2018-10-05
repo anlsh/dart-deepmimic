@@ -425,6 +425,9 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         reward = 0.1 * end_effector_reward + 0.1 * joint_vel_term \
                  + 0.25 * com_reward + 1.65 * quat_term
 
+        if not np.isfinite(reward):
+            import pdb; pdb.set_trace()
+
         # print("VISAK TERMS")
         # print("===========")
         # print("posdiffmag: ", posdiffmag)
