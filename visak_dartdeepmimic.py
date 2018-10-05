@@ -566,9 +566,20 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
             print("everything in skeleotn finite?", np.isfinite(skel.q))
             print(skel.q)
             print("frame: ", framenum)
+            print("QUATERNIONS")
+            print(np.isfinite(quaternion_difference))
             # raise RuntimeError('Infinite quaternion difference ')
-            import pdb; pdb.set_trace()
-
+            print("lthigh: ", quat_lthigh, quat_lthigh_mocap)
+            print("lknee: ", quat_lknee, quat_lknee_mocap)
+            print("lfoot: ", quat_lfoot, quat_lfoot)
+            print("rthigh: ", quat_rthigh, quat_rthigh_mocap)
+            print("rknee: ", quat_rknee, quat_rknee_mocap)
+            print("rfoot: ", quat_rfoot, quat_rfoot)
+            print("thorax: ", quat_thorax, quat_thorax_mc)
+            print("larm: ", quat_larm, quat_larm_mocap)
+            print("larm: ", quat_lelbow, quat_lelbow_mocap)
+            print("larm: ", quat_rarm, quat_rarm_mocap)
+            print("larm: ", quat_relbow, quat_relbow_mocap)
 
         quat_reward = np.exp(-2 * np.sum(np.square(quaternion_difference)))
 
