@@ -517,10 +517,13 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         ##################################################
         # THE DEFILED CODE (although the above is weird) #
         ##################################################
+        # TODO Why in the world does this give NaN for quaternion difference
+        # sometimes???
+
         thorax_euler  = skel.q[18:21]
         thorax_mocap  = self.WalkPositions[framenum, 18:21]
-        quat_thorax = euler2quat(*thorax_euler)
-        quat_thorax_mc = euler2quat(*thorax_mocap)
+        quat_thorax = euler2quat(*(thorax_euler[::-1]))
+        quat_thorax_mc = euler2quat(*(thorax_mocap[::-1]))
         thing_diff = mult(inverse(quat_thorax_mc), quat_thorax)
         scalar_thorax = 2 * np.arccos(thing_diff[0])
         quaternion_difference.append(scalar_thorax)
