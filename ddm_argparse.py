@@ -20,9 +20,10 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
         self.add_argument('--policy-query-frequency', required=False,
                           type=float, default= 30,
                           help="Number of times per second to query policy")
-        self.add_argument('--ref-motion-dt', required=False,
-                          type=float, default= 1 / 120,
-                          help="Timestep of the motion frames")
+        # TODO DEAD ARGUMENT
+        # self.add_argument('--ref-motion-dt', required=False,
+        #                   type=float, default= 1 / 120,
+        #                   help="Timestep of the motion frames")
         self.add_argument('--state-mode', default=0, type=int,
                           help="Code for the state representation")
         self.add_argument('--action-mode', type=int, required=True,
@@ -41,9 +42,10 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
                           help="Default spring stiffness for joints")
         self.add_argument('--default-friction', type=float, default=20,
                           help="Default friction coefficient for bodies")
-        self.add_argument('--simsteps-per-dataframe', type=int, default=10,
-                          help="Number of simulation steps per frame of mocap" +
-                          " data")
+        # TODO Dead variable, re-enable here and in dartdeepmimic
+        # self.add_argument('--simsteps-per-dataframe', type=int, default=10,
+        #                   help="Number of simulation steps per frame of mocap" +
+        #                   " data")
         self.add_argument('--reward-cutoff', type=float, default=0.1,
                           help="Terminate the episode when rewards below this" +
                           " threshold are calculated. Should be in range (0, 1)")
@@ -112,7 +114,7 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
             skeleton_path=self.args.control_skel_path,
             refmotion_path=self.args.ref_motion_path,
             policy_query_frequency=self.args.policy_query_frequency,
-            refmotion_dt=self.args.ref_motion_dt,
+            # refmotion_dt=self.args.ref_motion_dt,
             statemode=self.args.state_mode,
             actionmode=self.args.action_mode,
             p_gain=self.args.p_gain,
@@ -134,7 +136,7 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
             default_spring=self.args.default_spring,
             default_friction=self.args.default_friction,
             visualize=self.args.visualize,
-            simsteps_per_dataframe=self.args.simsteps_per_dataframe,
+            # simsteps_per_dataframe=self.args.simsteps_per_dataframe,
             screen_width=self.args.window_width,
             screen_height=self.args.window_height,
             gravity=self.args.gravity,

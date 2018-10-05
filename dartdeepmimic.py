@@ -84,7 +84,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
     def __init__(self, skeleton_path,
                  refmotion_path,
-                 policy_query_frequency, refmotion_dt,
+                 policy_query_frequency,
+                 # refmotion_dt,
                  statemode,
                  actionmode,
                  p_gain, d_gain,
@@ -99,7 +100,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                  default_damping,
                  default_spring,
                  default_friction,
-                 visualize, simsteps_per_dataframe,
+                 visualize,
+                 # simsteps_per_dataframe,
                  screen_width,
                  screen_height,
                  gravity, self_collide):
@@ -111,8 +113,9 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.statemode = statemode
         self.actionmode = actionmode
         self.policy_query_frequency = policy_query_frequency
-        self.refmotion_dt = refmotion_dt
-        self.simsteps_per_dataframe = simsteps_per_dataframe
+        # TODO Dead variable, re-enable here and in argparse
+        # self.refmotion_dt = refmotion_dt
+        # self.simsteps_per_dataframe = simsteps_per_dataframe
         self.pos_init_noise = pos_init_noise
         self.vel_init_noise = vel_init_noise
         self.max_torque = max_torque
@@ -168,7 +171,9 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                               self.ee_inner_weight,
                               self.com_inner_weight]
 
-        self.step_resolution = (1 / self.policy_query_frequency) / self.refmotion_dt
+        # TODO Re-enable step resolution calculation
+        # self.step_resolution = (1 / self.policy_query_frequency) / self.refmotion_dt
+        self.step_resolution = 4
 
         self.angle_to_rep = lambda x: None
         self.angle_from_rep = lambda x: None
@@ -283,7 +288,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.dart_world.set_gravity(int(self.gravity) * GRAVITY_VECTOR)
         self.control_skel.set_self_collision_check(self.self_collide)
 
-        for joint in self.control_skel.joints:
+        for joint in self.control_skel.joints[1:]:
             if joint.name == ROOT_KEY:
                 continue
             for index in range(joint.num_dofs()):
@@ -525,8 +530,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             self.control_skel.set_forces(np.concatenate([np.zeros(6),
                                                         tau]))
 
-            for __ in range(self.simsteps_per_dataframe):
-                self.dart_world.step()
+            self.dart_world.step()
 
             self.framenum += 1
 
