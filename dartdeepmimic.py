@@ -535,12 +535,14 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             self.framenum += 1
 
         newstate = self._get_obs()
-        if not np.isfinite(newstate).all():
-            raise RuntimeError("Ran into an infinite state")
-
         reward = self.reward(self.control_skel, min(self.framenum,
                                                     self.num_frames - 1))
-        done = self.should_terminate(reward, newstate)
+        done = bool(self.should_terminate(reward, newstate))
+
+        if not np.isfinite(newstate).all():
+            raise RuntimeError("Ran into an infinite state")
+        if not np.isfinite(reward):
+            raise RuntimeError("Obtained infinite reward")
 
         return newstate, reward, done, {}
 
