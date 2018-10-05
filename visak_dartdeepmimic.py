@@ -230,12 +230,12 @@ def PID(skel, target):
     q = skel.q[6:]
     qdot = skel.dq[6:]
 
-    # ndofs = len(q)
+    ndofs = len(q)
 
-    # tau = np.zeros((ndofs - 6,))
-    tau = np.multiply(kp, (target - q)) - np.multiply(kd, qdot)
-    # for i in range(ndofs - 6):
-    #     tau[i] = -kp[i] * (q[i] - target[i]) - kd[i] * qdot[i]
+    tau = np.zeros((ndofs - 6,))
+    # tau = np.multiply(kp, (target - q)) - np.multiply(kd, qdot)
+    for i in range(ndofs - 6):
+        tau[i] = -kp[i] * (q[i] - target[i]) - kd[i] * qdot[i]
 
     torqs = ClampTorques(tau)
 
