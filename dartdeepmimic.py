@@ -267,10 +267,10 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         super(DartDeepMimicEnv,
               self).__init__(model_paths=[self._skeleton_path],
-                             frame_skip=1,
+                             # frame_skip=1,
                              observation_size=self.obs_dim,
                              action_bounds=action_limits,
-                             dt=self.refmotion_dt / self.simsteps_per_dataframe,
+                             # dt=self.refmotion_dt / self.simsteps_per_dataframe,
                              visualize=self.__visualize,
                              disableViewer=not self.__visualize)
         self.control_skel = self.dart_world.skeletons[-1]
