@@ -426,7 +426,10 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
                  + 0.25 * com_reward + 1.65 * quat_term
 
         if not np.isfinite(reward):
-            import pdb; pdb.set_trace()
+            print("Quaternion Term: ", np.isfinite(quat_term))
+            print("Vel Term: ", np.isfinite(joint_vel_term))
+            print("Com Term: ", np.isfinite(com_reward))
+            print("Ee Term: ", np.isfinite(end_effector_reward))
 
         # print("VISAK TERMS")
         # print("===========")
@@ -558,6 +561,12 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         scalar_relbow = 2 * np.arccos(relbow_diff[0])
         quaternion_difference.append(scalar_relbow)
 
+
+        if not np.isfinite(quaternion_difference).all():
+            print("everything in skeleotn finite?", np.isfinite(skel.q))
+            print(skel.q)
+            print("frame: ", framenum)
+            raise RuntimeError('Infinite quaternion difference ')
 
         quat_reward = np.exp(-2 * np.sum(np.square(quaternion_difference)))
 
