@@ -257,15 +257,15 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
     def PID(self, skel, targets):
         return PID(skel, targets)
 
-    def _get_obs(self, skel=None):
+    # def _get_obs(self, skel=None):
 
-        if skel is None:
-            skel = self.control_skel
+    #     if skel is None:
+    #         skel = self.control_skel
 
-        # my_obs = super(VisakDartDeepMimicEnv, self)._get_obs(skel)
-        return vsk_obs(skel, self.framenum, self.num_frames)
-        # print(canon_obs - my_obs)
-        # return my_obs
+    #     # my_obs = super(VisakDartDeepMimicEnv, self)._get_obs(skel)
+    #     return vsk_obs(skel, self.framenum, self.num_frames)
+    #     # print(canon_obs - my_obs)
+    #     # return my_obs
 
     def targets_from_netvector(self, netvector):
 
