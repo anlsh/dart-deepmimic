@@ -507,26 +507,23 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         # ALERT ALERT CHANGING THE GOOD AND HOLY CODE #
         ###############################################
 
-        # scalar_thoraxx = skel.q[18] - self.WalkPositions[self.framenum, 18]
-        # quaternion_difference.append(scalar_thoraxx)
-        # scalar_thoraxy = skel.q[19] - self.WalkPositions[self.framenum, 19]
-        # quaternion_difference.append(scalar_thoraxy)
-        # scalar_thoraxz = skel.q[20] - self.WalkPositions[self.framenum, 20]
-        # quaternion_difference.append(scalar_thoraxz)
+        scalar_thoraxx = skel.q[18] - self.WalkPositions[self.framenum,18]
+        quaternion_difference.append(scalar_thoraxx)
+        scalar_thoraxy = skel.q[19] - self.WalkPositions[self.framenum,19]
+        quaternion_difference.append(scalar_thoraxy)
+        scalar_thoraxz = skel.q[20] - self.WalkPositions[self.framenum,20]
+        quaternion_difference.append(scalar_thoraxz)
 
         ##################################################
         # THE DEFILED CODE (although the above is weird) #
         ##################################################
-        # TODO Why in the world does this give NaN for quaternion difference
-        # sometimes???
-
-        thorax_euler  = skel.q[18:21]
-        thorax_mocap  = self.WalkPositions[framenum, 18:21]
-        quat_thorax = euler2quat(*(thorax_euler[::-1]))
-        quat_thorax_mc = euler2quat(*(thorax_mocap[::-1]))
-        thing_diff = mult(inverse(quat_thorax_mc), quat_thorax)
-        scalar_thorax = 2 * np.arccos(thing_diff[0])
-        quaternion_difference.append(scalar_thorax)
+        # thorax_euler  = skel.q[18:21]
+        # thorax_mocap  = self.WalkPositions[framenum, 18:21]
+        # quat_thorax = euler2quat(*(thorax_euler[::-1]))
+        # quat_thorax_mc = euler2quat(*(thorax_mocap[::-1]))
+        # thing_diff = mult(inverse(quat_thorax_mc), quat_thorax)
+        # scalar_thorax = 2 * np.arccos(thing_diff[0])
+        # quaternion_difference.append(scalar_thorax)
 
         #### l upper arm
         larm_euler = skel.q[21:24]
@@ -534,6 +531,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         quat_larm = euler2quat(z=larm_euler[2], y=larm_euler[1], x=larm_euler[0])
         quat_larm_mocap = euler2quat(z=larm_mocap[2], y=larm_mocap[1], x=larm_mocap[0])
         larm_diff = mult(inverse(quat_larm_mocap), quat_larm)
+        scalar_larm = 2 * np.arccos(larm_diff)
         quaternion_difference.append(scalar_larm)
 
         ##### l elbow
