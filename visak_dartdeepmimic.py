@@ -507,11 +507,11 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         # ALERT ALERT CHANGING THE GOOD AND HOLY CODE #
         ###############################################
 
-        scalar_thoraxx = skel.q[18] - self.WalkPositions[self.framenum,18]
+        scalar_thoraxx = skel.q[18] - self.WalkPositions[framenum,18]
         quaternion_difference.append(scalar_thoraxx)
-        scalar_thoraxy = skel.q[19] - self.WalkPositions[self.framenum,19]
+        scalar_thoraxy = skel.q[19] - self.WalkPositions[framenum,19]
         quaternion_difference.append(scalar_thoraxy)
-        scalar_thoraxz = skel.q[20] - self.WalkPositions[self.framenum,20]
+        scalar_thoraxz = skel.q[20] - self.WalkPositions[framenum,20]
         quaternion_difference.append(scalar_thoraxz)
 
         ##################################################
