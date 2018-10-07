@@ -445,7 +445,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
 
     def vsk_quatreward(self, skel, framenum):
-        quaternion_difference = np.array([])
+        quaternion_difference = []
 
         #### lthigh
         lthigh_euler = skel.q[6:9]
@@ -531,7 +531,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         quat_larm = euler2quat(z=larm_euler[2], y=larm_euler[1], x=larm_euler[0])
         quat_larm_mocap = euler2quat(z=larm_mocap[2], y=larm_mocap[1], x=larm_mocap[0])
         larm_diff = mult(inverse(quat_larm_mocap), quat_larm)
-        scalar_larm = 2 * np.arccos(larm_diff)
+        scalar_larm = 2 * np.arccos(larm_diff[0])
         quaternion_difference.append(scalar_larm)
 
         ##### l elbow
@@ -561,6 +561,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         scalar_relbow = 2 * np.arccos(relbow_diff[0])
         quaternion_difference.append(scalar_relbow)
 
+        quaternion_difference = np.array(quaternion_difference)
         quaternion_difference[np.isinf(quaternion_difference)] = 0
         quaternion_difference[np.isnan(quaternion_difference)] = 0
 
