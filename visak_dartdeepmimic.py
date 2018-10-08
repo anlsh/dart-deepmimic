@@ -333,8 +333,8 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         done = self.framenum >= self.num_frames - 1
         done = done or not ((np.abs(newstate[2:]) < 200).all()
                             and (self.robot_skeleton.bodynodes[0].com()[1] > -0.7)
-                            and (self.robot_skeleton.q[2] > -0.4)
-                            and (self.robot_skeleton.q[2] < 0.3)
+                            # and (self.robot_skeleton.q[2] > -0.4)
+                            # and (self.robot_skeleton.q[2] < 0.3)
                             and (abs(self.robot_skeleton.q[1]) < 0.30)
                             and (abs(self.robot_skeleton.q[0]) < 0.30))
         return done
