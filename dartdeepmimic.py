@@ -17,9 +17,6 @@ from math import atan2
 ROOT_KEY = "root"
 GRAVITY_VECTOR = np.array([0, -9.8, 0])
 
-END_OFFSET = np.array([1, 1, 1])
-
-
 class StateMode:
     """
     Just a convenience enum
@@ -66,18 +63,6 @@ def get_metadict(skel):
         metadict[dof_name] = (indices, child_body_index)
 
     return metadict
-
-
-def set_dofs(dof_list, pos_list, vel_list, pstdv, vstdv):
-    """
-    Given a list of dof objects, set their positions and velocities
-    accordingly
-    """
-    if not(len(dof_list) == len(pos_list) == len(vel_list)):
-        raise RuntimeError("Zip got tattered lists")
-    for dof, pos, vel in zip(dof_list, pos_list, vel_list):
-        dof.set_position(np.random.normal(pos, pstdv))
-        dof.set_velocity(np.random.normal(vel, vstdv))
 
 
 class DartDeepMimicEnv(dart_env.DartEnv):
@@ -142,7 +127,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.framenum = 0
 
         # Set later, simply declaring up front
-        self.control_skel = None
+        self.robot_skeleton = None
         self.obs_dim = None
         self.action_dim = None
         self.metadict = None
@@ -262,11 +247,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                           self.ref_ee_frames) = self.construct_frames(ref_skel,
                                                                       refmotion_path)
 
-
-        self.load_world()
-
-    def load_world(self):
-
         action_limits = self.max_angle * pi * np.ones(self.action_dim)
         action_limits = [-action_limits, action_limits]
 
@@ -279,16 +259,15 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                              # dt=self.refmotion_dt / self.simsteps_per_dataframe,
                              visualize=self.__visualize,
                              disableViewer=not self.__visualize)
-        self.control_skel = self.dart_world.skeletons[-1]
 
         #########################################################
         # Set various per joint/body parameters based on inputs #
         #########################################################
 
         self.dart_world.set_gravity(int(self.gravity) * GRAVITY_VECTOR)
-        self.control_skel.set_self_collision_check(self.self_collide)
+        self.robot_skeleton.set_self_collision_check(self.self_collide)
 
-        for joint in self.control_skel.joints[1:]:
+        for joint in self.robot_skeleton.joints[1:]:
             if joint.name == ROOT_KEY:
                 continue
             for index in range(joint.num_dofs()):
@@ -320,15 +299,13 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         Given a skeleton, mocap frame index, and numbers specifying pos and
         velocity, sync the skeleton to the frame
 
-        # TODO Is this the right thing to do?
         Root position (angle and position) is never fuzzed to prevent clipping
         """
         q = self.ref_q_frames[frame_index]
         dq = self.ref_dq_frames[frame_index]
 
-        set_dofs(skel.dofs[3:6], q[3:6], dq[3:6], 0, 0)
-        set_dofs(skel.dofs[0:3], q[:3], dq[:3], 0, 0)
-        set_dofs(skel.dofs[6:], q[6:], dq[6:], pos_stdv, vel_stdv)
+        # TODO WHERE'S THE NOISE
+        self.set_state(q, dq)
 
 
     def reset(self, framenum=None, pos_stdv=None, vel_stdv=None):
@@ -346,7 +323,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.framenum = framenum if framenum is not None \
                                  else random.randint(0, self.num_frames-1)
 
-        self.sync_skel_to_frame(self.control_skel, self.framenum,
+        self.sync_skel_to_frame(self.robot_skeleton, self.framenum,
                                 pos_stdv, vel_stdv)
 
         return self._get_obs()
@@ -359,7 +336,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         """
 
         if skel is None:
-            skel = self.control_skel
+            skel = self.robot_skeleton
 
         state = np.array([self.framenum / self.num_frames])
 
@@ -421,7 +398,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # POSITIONAL REWARD #
         #####################
 
-        # TODO Remove the [1:] from the end to reward based on root pos
         quatdiffs = [mult(inverse(ra), a) for a, ra in zip(angles,
                                                            ref_angles)]
         posdiffs = [2 * atan2(norm(quat[1:]), quat[0]) for quat in quatdiffs]
@@ -471,7 +447,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
     def targets_from_netvector(self, netvector):
 
-        target_q = np.zeros(len(self.control_skel.q) - 6)
+        target_q = np.zeros(len(self.robot_skeleton.q) - 6)
         q_index = 0
         nv_index = 0
 
@@ -493,7 +469,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                 q_index += len(indices)
                 nv_index += ActionMode.lengths[self.actionmode]
 
-        if q_index != len(self.control_skel.q) - 6:
+        if q_index != len(self.robot_skeleton.q) - 6:
             raise RuntimeError("Not all dofs mapped over")
         if nv_index != len(netvector):
             raise RuntimeError("Not all net outputs used")
@@ -525,9 +501,9 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         dof_targets = self.targets_from_netvector(action_vector)
 
         for _ in range(self.step_resolution):
-            tau = self.PID(self.control_skel, dof_targets)
+            tau = self.PID(self.robot_skeleton, dof_targets)
 
-            self.control_skel.set_forces(np.concatenate([np.zeros(6),
+            self.robot_skeleton.set_forces(np.concatenate([np.zeros(6),
                                                         tau]))
 
             self.dart_world.step()
@@ -535,7 +511,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.framenum += 1
 
         newstate = self._get_obs()
-        reward = self.reward(self.control_skel, min(self.framenum,
+        reward = self.reward(self.robot_skeleton, min(self.framenum,
                                                     self.num_frames - 1))
         done = bool(self.should_terminate(reward, newstate))
 

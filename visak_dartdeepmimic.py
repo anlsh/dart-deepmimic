@@ -1,4 +1,4 @@
-from dartdeepmimic import DartDeepMimicEnv, set_dofs, END_OFFSET
+from dartdeepmimic import DartDeepMimicEnv
 import ddm_argparse
 import numpy as np
 from euclideanSpace import euler2quat, angle_axis2euler
@@ -260,7 +260,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
     def _get_obs(self, skel=None):
 
         if skel is None:
-            skel = self.control_skel
+            skel = self.robot_skeleton
 
         # my_obs = super(VisakDartDeepMimicEnv, self)._get_obs(skel)
         return vsk_obs(skel, self.framenum, self.num_frames)
@@ -290,26 +290,11 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
 
     def construct_frames(self, ref_skel, ref_motion_path):
-        """
-        AMC data is given in sequential degrees, while dart specifies angles
-        in rotating radians. The conversion is quite expensive, so we precomute
-        all positions and velocities and store the results
-        """
 
         with open("assets/mocap/walk/WalkPositions_corrected.txt", "rb") as fp:
             self.WalkPositions = np.loadtxt(fp)
         with open("assets/mocap/walk/WalkVelocities_corrected.txt", "rb") as fp:
             self.WalkVelocities = np.loadtxt(fp)
-        # with open("assets/mocap/walk/rarm_endeffector.txt", "rb") as fp:
-        #     self.rarm_endeffector = np.loadtxt(fp)[:-1]
-        # with open("assets/mocap/walk/larm_endeffector.txt", "rb") as fp:
-        #     self.larm_endeffector = np.loadtxt(fp)[:-1]
-        # with open("assets/mocap/walk/lfoot_endeffector.txt", "rb") as fp:
-        #     self.lfoot_endeffector = np.loadtxt(fp)[:-1]
-        # with open("assets/mocap/walk/rfoot_endeffector.txt", 'rb') as fp:
-        #     self.rfoot_endeffector = np.loadtxt(fp)[:-1]
-        # with open("assets/mocap/walk/com.txt", 'rb') as fp:
-        #     self.com = np.loadtxt(fp)[:-1]
 
         num_frames = len(self.WalkPositions)
 
@@ -321,55 +306,24 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         for i in range(len(self.WalkPositions)):
 
-            updated_pos = self.WalkPositions[i,:].copy()
-            updated_pos[3:6] = updated_pos[3:6][::-1]
+            updated_pos = self.WalkPositions[i,:]
             temp = updated_pos[3:6].copy()
             updated_pos[3:6] = updated_pos[0:3][::-1]
-            updated_pos[0:3] = temp
+            updated_pos[0:3] = temp[::-1]
 
-            updated_vel = self.WalkVelocities[i,:].copy()
-            updated_vel[3:6] = updated_vel[3:6][::-1]
+            updated_vel = self.WalkVelocities[i,:]
             temp = updated_vel[3:6].copy()
             updated_vel[3:6] = updated_vel[0:3][::-1]
-            updated_vel[0:3] = temp
+            updated_vel[0:3] = temp[::-1]
 
-            set_dofs(ref_skel.dofs, updated_pos, updated_vel, 0, 0)
+            ref_skel.set_positions(updated_pos)
+            ref_skel.set_velocities(updated_vel)
+
             pos_frames[i] = updated_pos
             vel_frames[i] = updated_vel
             com_frames[i] = ref_skel.com()
             quat_frames[i] = self.quaternion_angles(ref_skel)
             ee_frames[i] = self._get_ee_positions(ref_skel)
-
-            # print("===== CONFIRMATION THAT Q,DQ SET CORRECTLY ====")
-            # print(updated_pos - ref_skel.q)
-            # print(updated_vel - ref_skel.dq)
-
-
-            # print("========= Q STUFF ==========")
-            # # print(ref_skel.q)
-            # # print(self.WalkPositions[i])
-            # print(ref_skel.q - self.WalkPositions[i])
-
-            # print("======== DQ STUFF ===========")
-            # # print(ref_skel.dq)
-            # # print(self.WalkVelocities[i])
-            # print(ref_skel.dq - self.WalkVelocities[i])
-
-            # print("======== COM STUFF =========")
-            # print(ref_skel.bodynodes[0].com())
-            # print(self.com[i])
-            # print("")
-            # exit()
-
-        # print("And now for the final test...")
-        # print(com_frames[0])
-        # exit()
-
-        # print(ee_frames[0])
-        # print(np.concatenate([self.rarm_endeffector[0],
-        #                       self.larm_endeffector[0],
-        #                       self.lfoot_endeffector[0],
-        #                       self.rfoot_endeffector[0]]))
 
         return num_frames, (pos_frames, vel_frames, quat_frames, com_frames,
                             ee_frames)
@@ -378,11 +332,11 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         done = self.framenum >= self.num_frames - 1
         done = done or not ((np.abs(newstate[2:]) < 200).all()
-                            and (self.control_skel.bodynodes[0].com()[1] > -0.7)
-                            and (self.control_skel.q[3] > -0.4)
-                            # and (self.control_skel.q[3] < 0.3)
-                            and (abs(self.control_skel.q[4]) < 0.30)
-                            and (abs(self.control_skel.q[5]) < 0.30))
+                            and (self.robot_skeleton.bodynodes[0].com()[1] > -0.7)
+                            and (self.robot_skeleton.q[2] > -0.4)
+                            and (self.robot_skeleton.q[2] < 0.3)
+                            and (abs(self.robot_skeleton.q[1]) < 0.30)
+                            and (abs(self.robot_skeleton.q[0]) < 0.30))
         return done
 
     def viewer_setup(self):
@@ -394,7 +348,6 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
     def reward(self, skel, framenum):
 
         return self.vsk_reward(skel, framenum)
-        # ret = super(VisakDartDeepMimicEnv, self).reward(skel, framenum)
 
     def vsk_reward(self, skel, framenum):
 
@@ -424,22 +377,6 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         reward = 0.1 * end_effector_reward + 0.1 * joint_vel_term \
                  + 0.25 * com_reward + 1.65 * quat_term
-
-        if not np.isfinite(reward):
-            print("Quaternion Term: ", np.isfinite(quat_term))
-            print("Vel Term: ", np.isfinite(joint_vel_term))
-            print("Com Term: ", np.isfinite(com_reward))
-            print("Ee Term: ", np.isfinite(end_effector_reward))
-
-        # print("VISAK TERMS")
-        # print("===========")
-        # print("posdiffmag: ", posdiffmag)
-        # # print("veldiffmag: ", np.sum(np.square(vel_diff)))
-        # # print(vel_diff)
-        # print("eediffmag: ", sum([rarm_term, larm_term,
-        #                           rfoot_term, lfoot_term]))
-        # print("comdiffmag: ", np.sum(np.square(self.com[framenum, :] \
-        #                                 - skel.bodynodes[0].com())))
 
         return reward
 
