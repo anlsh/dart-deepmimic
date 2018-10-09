@@ -13,31 +13,24 @@ if __name__ == "__main__":
 
     with open(sys.argv[1], "r") as f:
         data = mmap.mmap(f.fileno(), 0, prot=mmap.PROT_READ)
-        # data = f.read()
         matches = re.findall(pattern, data)
 
-    # data = np.zeros([3, len(matches)])
-    # for index, match in enumerate(matches):
-    #     data[i] = np.array([float(match.group(m)) for m in range(1, 3)])
     data = np.array(matches).astype(np.float).T
 
-    # print(args.typed)
-    # plt.plot(data[0], data[1 if args.typed else 2])
-    # plt.show()
-    # plt.subplot(2, 1, 1)
-    # plt.plot(data[3], data[1])
-    # plt.title('A tale of 2 subplots')
-    # plt.ylabel('Avg Episode Length')
-    # plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
+    plt.subplot(3, 1, 1)
+    plt.plot(data[3], data[1])
+    plt.title('A tale of 2 subplots')
+    plt.ylabel('Avg Episode Length')
+    plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
 
-    # plt.subplot(2, 1, 2)
-    # plt.plot(data[3], data[2])
-    # plt.ylabel('Avg cumulative reward')
-    # plt.xlabel('Timesteps of experience collected"')
-    # plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
+    plt.subplot(3, 1, 2)
+    plt.plot(data[3], data[2])
+    plt.ylabel('Avg cumulative reward')
+    plt.xlabel('Timesteps of experience collected"')
+    plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
 
+    plt.subplot(3, 1, 3)
     avg_reward_data = np.divide(data[2], data[1])
-    # plt.subplot(2, 1, 1)
     plt.plot(data[3], avg_reward_data)
     plt.ylabel('Avg reward per timestep')
     plt.xlabel('Timesteps of experiene collected')
