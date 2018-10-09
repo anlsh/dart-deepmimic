@@ -269,7 +269,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         q = skel.q[6:]
         dq = skel.dq[6:]
-        tau = np.multiply(kp, (target - q)) - np.multiply(kd, dq)
+        tau = np.multiply(kp, (targets - q)) - np.multiply(kd, dq)
 
         torqs = ClampTorques(tau)
 
@@ -321,14 +321,14 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         for i in range(num_frames):
 
             updated_pos = self.WalkPositions[i,:]
-            temp = updated_pos[3:6].copy()
-            updated_pos[3:6] = updated_pos[0:3][::-1]
-            updated_pos[0:3] = temp[::-1]
+            # temp = updated_pos[3:6].copy()
+            # updated_pos[3:6] = updated_pos[0:3][::-1]
+            # updated_pos[0:3] = temp[::-1]
 
             updated_vel = self.WalkVelocities[i,:]
-            temp = updated_vel[3:6].copy()
-            updated_vel[3:6] = updated_vel[0:3][::-1]
-            updated_vel[0:3] = temp[::-1]
+            # temp = updated_vel[3:6].copy()
+            # updated_vel[3:6] = updated_vel[0:3][::-1]
+            # updated_vel[0:3] = temp[::-1]
 
             ref_skel.set_positions(updated_pos)
             ref_skel.set_velocities(updated_vel)
@@ -361,10 +361,10 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
             term, rude_term = True, False
         if not ((np.abs(newstate[2:]) < 200).all()
                 and (self.robot_skeleton.bodynodes[0].com()[1] > -0.7)
-                and (self.robot_skeleton.q[2] > -0.4)
-                and (self.robot_skeleton.q[2] < 0.3)
-                and (abs(self.robot_skeleton.q[1]) < 0.30)
-                and (abs(self.robot_skeleton.q[0]) < 0.30)):
+                and (self.robot_skeleton.q[3] > -0.4)
+                and (self.robot_skeleton.q[3] < 0.3)
+                and (abs(self.robot_skeleton.q[4]) < 0.30)
+                and (abs(self.robot_skeleton.q[5]) < 0.30)):
             term, rude_term = True, True
 
         if rude_term and not term:

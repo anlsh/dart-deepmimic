@@ -224,21 +224,23 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         ref_skel = pydart.World(.00001,
                                 self._skeleton_path).skeletons[-1]
 
-        self.metadict = get_metadict(ref_skel)
+        # TODO Re-enable all of this stuff IMMEDIATELY
+        # self.metadict = get_metadict(ref_skel)
 
-        self._dof_names = [key for key in self.metadict]
-        self._dof_names.sort(key=lambda x:self.metadict[x][0][0])
-        self._actuated_dof_names = self._dof_names[1:]
+        # self._dof_names = [key for key in self.metadict]
+        # self._dof_names.sort(key=lambda x:self.metadict[x][0][0])
+        # self._actuated_dof_names = self._dof_names[1:]
 
-        self._end_effector_indices = [i for i, node
-                                       in enumerate(ref_skel.bodynodes)
-                                     if len(node.child_bodynodes) == 0]
+        # self._end_effector_indices = [i for i, node
+        #                                in enumerate(ref_skel.bodynodes)
+        #                              if len(node.child_bodynodes) == 0]
 
-        self.obs_dim = len(self._get_obs(ref_skel))
-        self.action_dim = sum([ActionMode.lengths[self.actionmode]
-                               if len(self.metadict[name][0]) > 1 else 1
-                               for name in self._actuated_dof_names])
-
+        # self.obs_dim = len(self._get_obs(ref_skel))
+        # self.action_dim = sum([ActionMode.lengths[self.actionmode]
+        #                        if len(self.metadict[name][0]) > 1 else 1
+        #                        for name in self._actuated_dof_names])
+        self.obs_dim = 134
+        self.action_dim = 32
 
         self.num_frames, (self.ref_q_frames,
                           self.ref_dq_frames,
@@ -264,7 +266,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # Set various per joint/body parameters based on inputs #
         #########################################################
 
-        self.dart_world.set_gravity(int(self.gravity) * GRAVITY_VECTOR)
+        # TODO Re-enable setting gravity I guess
+        # self.dart_world.set_gravity(int(self.gravity) * GRAVITY_VECTOR)
         self.robot_skeleton.set_self_collision_check(self.self_collide)
 
         for joint in self.robot_skeleton.joints[1:]:
@@ -484,7 +487,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
     #     return tau
 
 
-    def _step(self, action_vector):
+    def step(self, action_vector):
 
         # DIFF This is in exact parity with Visak's code, except
         # for the head flag
