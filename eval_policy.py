@@ -77,6 +77,6 @@ if __name__ == "__main__":
             if env.framenum == env.num_frames - 1:
                 env.framenum = 0
             action = agent.act(ob, reward, done)
-            reward = env.reward(env.control_skel, env.framenum)
+            reward = env.reward(env.robot_skeleton, env.framenum)
             ob, reward, done, _ = env.step(action)
             env.render()

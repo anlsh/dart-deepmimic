@@ -262,19 +262,11 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         if skel is None:
             skel = self.robot_skeleton
 
-        # my_obs = super(VisakDartDeepMimicEnv, self)._get_obs(skel)
         return vsk_obs(skel, self.framenum, self.num_frames)
-        # print(canon_obs - my_obs)
-        # return my_obs
 
     def targets_from_netvector(self, netvector):
 
-        # myaction = super(VisakDartDeepMimicEnv,
-        #                  self).targets_from_netvector(netvector)
-
         return transformActions(netvector)
-
-        # return myaction
 
     def _get_ee_positions(self, skel):
 
@@ -322,7 +314,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
             pos_frames[i] = updated_pos
             vel_frames[i] = updated_vel
             com_frames[i] = ref_skel.com()
-            quat_frames[i] = self.quaternion_angles(ref_skel)
+            # quat_frames[i] = self.quaternion_angles(ref_skel)
             ee_frames[i] = self._get_ee_positions(ref_skel)
 
         return num_frames, (pos_frames, vel_frames, quat_frames, com_frames,
@@ -333,8 +325,8 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         done = self.framenum >= self.num_frames - 1
         done = done or not ((np.abs(newstate[2:]) < 200).all()
                             and (self.robot_skeleton.bodynodes[0].com()[1] > -0.7)
-                            # and (self.robot_skeleton.q[2] > -0.4)
-                            # and (self.robot_skeleton.q[2] < 0.3)
+                            and (self.robot_skeleton.q[2] > -0.4)
+                            and (self.robot_skeleton.q[2] < 0.3)
                             and (abs(self.robot_skeleton.q[1]) < 0.30)
                             and (abs(self.robot_skeleton.q[0]) < 0.30))
         return done
@@ -347,19 +339,10 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
     def reward(self, skel, framenum):
 
-        return self.vsk_reward(skel, framenum)
-
-    def vsk_reward(self, skel, framenum):
-
-        point_rarm = [0., -0.60, -0.15]
-        point_larm = [0., -0.60, -0.15]
-        point_rfoot = [0., 0., -0.20]
-        point_lfoot = [0., 0., -0.20]
-
         ee_positions = self._get_ee_positions(skel)
         ref_ee_positions = self.ref_ee_frames[framenum]
-        end_effector_reward = np.exp(-40 * np.sum(np.square(ee_positions \
-                                                            - ref_ee_positions)))
+        end_effector_reward = np.exp(-40 * norm(ee_positions \
+                                                - ref_ee_positions)**2)
 
         com_reward = np.exp(-40 * norm(self.ref_com_frames[framenum]
                                        - skel.com())**2)
@@ -371,9 +354,9 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         vel_diff = self.ref_dq_frames[framenum][6:] - skel.dq[6:]
         vel_pen = np.sum(vel_diff.T * Weight_matrix * vel_diff)
-        joint_vel_term = 1 * np.exp(-1e-1 * vel_pen)
+        joint_vel_term = np.exp(-0.1 * vel_pen)
 
-        quat_term, _ = self.vsk_quatreward(skel, framenum)
+        quat_term = self.vsk_quatreward(skel, framenum)
 
         reward = 0.1 * end_effector_reward + 0.1 * joint_vel_term \
                  + 0.25 * com_reward + 1.65 * quat_term
@@ -451,17 +434,6 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         scalar_thoraxz = skel.q[20] - self.WalkPositions[framenum,20]
         quaternion_difference.append(scalar_thoraxz)
 
-        ##################################################
-        # THE DEFILED CODE (although the above is weird) #
-        ##################################################
-        # thorax_euler  = skel.q[18:21]
-        # thorax_mocap  = self.WalkPositions[framenum, 18:21]
-        # quat_thorax = euler2quat(*(thorax_euler[::-1]))
-        # quat_thorax_mc = euler2quat(*(thorax_mocap[::-1]))
-        # thing_diff = mult(inverse(quat_thorax_mc), quat_thorax)
-        # scalar_thorax = 2 * np.arccos(thing_diff[0])
-        # quaternion_difference.append(scalar_thorax)
-
         #### l upper arm
         larm_euler = skel.q[21:24]
         larm_mocap = self.WalkPositions[framenum, 21:24]
@@ -502,6 +474,6 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         quaternion_difference[np.isinf(quaternion_difference)] = 0
         quaternion_difference[np.isnan(quaternion_difference)] = 0
 
-        quat_reward = np.exp(-2 * np.sum(np.square(quaternion_difference)))
+        quat_reward = np.exp(-2 * norm(quaternion_difference)**2)
 
-        return quat_reward, np.sum(np.square(quaternion_difference))
+        return quat_reward

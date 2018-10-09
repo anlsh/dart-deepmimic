@@ -278,7 +278,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             for body in skel.bodynodes:
                 body.set_friction_coeff(self.default_friction)
 
-
     def construct_frames(self, ref_motion_path):
         """
         Abstract method to be specified depending on where data is being parsed
@@ -286,13 +285,11 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         """
         raise NotImplementedError()
 
-
     def _get_ee_positions(self, skel):
         """
         Abstract method for subclasses to implement
         """
         raise NotImplementedError()
-
 
     def sync_skel_to_frame(self, skel, frame_index, pos_stdv, vel_stdv):
         """
@@ -306,7 +303,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         # TODO WHERE'S THE NOISE
         self.set_state(q, dq)
-
 
     def reset(self, framenum=None, pos_stdv=None, vel_stdv=None):
         """
@@ -427,14 +423,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         ################
         # TOTAL REWARD #
         ################
-
-
-        # print("MY TERMS")
-        # print("===========")
-        # print("posdiffmag: ", posdiffmag)
-        # print("veldiffmag: ", veldiffmag)
-        # print("eediffmag: ", eediffmag)
-        # print("comdiffmag: ", comdiffmag)
 
         diffmags = [posdiffmag, veldiffmag, eediffmag, comdiffmag]
 
