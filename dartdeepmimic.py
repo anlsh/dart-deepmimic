@@ -466,7 +466,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
 
     def should_terminate(self, reward, newstate):
-        done = self.framenum >= self.num_frames - 1
+        done = self.framenum >= self.num_frames
         done = done or reward < self.reward_cutoff
         return done
 
@@ -496,12 +496,15 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
             self.dart_world.step()
 
-        self.framenum += 1
 
         newstate = self._get_obs()
-        reward = self.reward(self.robot_skeleton, min(self.framenum,
-                                                    self.num_frames - 1))
-        done = bool(self.should_terminate(reward, newstate))
+        reward = self.reward(self.robot_skeleton, self.framenum)
+        done, rude_term = self.should_terminate(reward, newstate)
+
+        if rude_term:
+            reward = 0
+
+        self.framenum += 1
 
         if not np.isfinite(newstate).all():
             raise RuntimeError("Ran into an infinite state")

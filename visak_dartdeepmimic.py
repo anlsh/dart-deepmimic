@@ -321,15 +321,27 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
                             ee_frames)
 
     def should_terminate(self, reward, newstate):
+        """
+        Returns a tuple of (done, rude_termination)
 
-        done = self.framenum >= self.num_frames - 1
-        done = done or not ((np.abs(newstate[2:]) < 200).all()
-                            and (self.robot_skeleton.bodynodes[0].com()[1] > -0.7)
-                            and (self.robot_skeleton.q[2] > -0.4)
-                            and (self.robot_skeleton.q[2] < 0.3)
-                            and (abs(self.robot_skeleton.q[1]) < 0.30)
-                            and (abs(self.robot_skeleton.q[0]) < 0.30))
-        return done
+        If rude termination is given as true, zero reward will be
+        yielded from the state
+        """
+        term, rude_term = False, False
+
+        if self.framenum >= self.num_frames - 1:
+            term, rude_term = True, False
+        if not ((np.abs(newstate[2:]) < 200).all()
+                and (self.robot_skeleton.bodynodes[0].com()[1] > -0.7)
+                and (self.robot_skeleton.q[2] > -0.4)
+                and (self.robot_skeleton.q[2] < 0.3)
+                and (abs(self.robot_skeleton.q[1]) < 0.30)
+                and (abs(self.robot_skeleton.q[0]) < 0.30)):
+            term, rude_term = True, True
+
+        if rude_term and not term:
+            raise RuntimeError("Must terminate to rudely terminate :)")
+        return term, rude_term
 
     def viewer_setup(self):
         if not self.disableViewer:
