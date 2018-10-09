@@ -313,7 +313,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
             pos_frames[i] = ref_skel.q
             vel_frames[i] = ref_skel.dq
-            com_frames[i] = ref_skel.com()
+            com_frames[i] = ref_skel.bodynodes[0].com()
             # quat_frames[i] = self.quaternion_angles(ref_skel)
             ee_frames[i] = self._get_ee_positions(ref_skel)
 
@@ -357,7 +357,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
                                                 - ref_ee_positions)**2)
 
         com_reward = np.exp(-40 * norm(self.ref_com_frames[framenum]
-                                       - skel.com())**2)
+                                       - skel.bodynodes[0].com())**2)
 
 
         Joint_weights = np.ones(23, )
