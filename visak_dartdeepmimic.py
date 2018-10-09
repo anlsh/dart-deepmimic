@@ -8,6 +8,9 @@ import copy
 
 
 def transformActions(actions):
+    # DIFF Visak accidentally reused some indices, I correct that but
+    # everything else remains the same
+
     joint_targets = np.zeros(23, )
 
     # Left thigh
@@ -75,6 +78,8 @@ def transformActions(actions):
     return joint_targets
 
 def vsk_obs(skel, framenum, num_frames):
+    # DIFF Visak doesn't specify all the information I do for the abdomen
+    # but is unlikely to explain performance gap
 
     state = np.array([framenum / num_frames])
 
@@ -101,7 +106,7 @@ def vsk_obs(skel, framenum, num_frames):
     #######################################################################3
     RelPos_lfoot = skel.bodynodes[3].com() - skel.bodynodes[0].com()
     LinVel_lfoot = skel.bodynodes[3].dC
-    quat_lfoot = euler2quat(z=0, y=skel.q[11], x=skel.q[10])
+    quat_lfoot = euler2quat(z=skel.q[11], y=0, x=skel.q[10])
 
     state = np.concatenate((state,
                            RelPos_lfoot,
@@ -132,7 +137,7 @@ def vsk_obs(skel, framenum, num_frames):
     #####################################################################
     RelPos_rfoot = skel.bodynodes[6].com() - skel.bodynodes[0].com()
     LinVel_rfoot = skel.bodynodes[6].dC
-    quat_rfoot = euler2quat(z=0, y=skel.q[17], x=skel.q[16])
+    quat_rfoot = euler2quat(z=skel.q[17], y=0, x=skel.q[16])
 
     state = np.concatenate((state,
                             RelPos_rfoot,
@@ -200,49 +205,35 @@ def vsk_obs(skel, framenum, num_frames):
 
 
 def ClampTorques(torques):
+    # DIFF I use a more elegant method of clipping, but is equivalent
     torqueLimits = np.array(
-        [150.0 * 5, 80. * 3, 80. * 3, 100. * 5, 80. * 5, 60., 150.0 * 5,
-            80. * 3, 80. * 3, 100. * 5, 80. * 5, 60.,
-            150. * 5, 150. * 5, 150. * 5, 10., 5., 5., 5., 10., 5., 5, 5.]) * 2
+        [150.0 * 5,
+         80. * 3,
+         80. * 3,
+         100. * 5,
+         80. * 5,
+         60.,
+         150.0 * 5,
+         80. * 3,
+         80. * 3,
+         100. * 5,
+         80. * 5,
+         60.,
+         150. * 5,
+         150. * 5,
+         150. * 5,
+         10.,
+         5.,
+         5.,
+         5.,
+         10.,
+         5.,
+         5,
+         5.]) * 2
 
     np.clip(torques, -torqueLimits, torqueLimits)
 
     return torques
-
-def PID(skel, target):
-    kp = np.array([250] * 23)
-    kd = np.array([0.005] * 23)
-
-    kp[0] = 600 + 25
-    kp[3] = 225 + 25
-    kp[9] = 225 + 25
-    kp[10] = 200
-    kp[16] = 200
-    kp[[1, 2]] = 150
-    kp[[7, 8]] = 150
-    kp[6] = 600 + 25
-    kp[15:] = 155
-    kd[15:] = 0.05
-
-    kp = np.multiply(1/2, kp)
-    kd = np.multiply(1/2, kd)
-
-
-    q = skel.q[6:]
-    dq = skel.dq[6:]
-    tau = np.multiply(kp, (target - q)) - np.multiply(kd, dq)
-
-    # q = skel.q[6:]
-    # qdot = skel.dq[6:]
-    # ndofs = len(q)
-    # tau = np.zeros((ndofs - 6,))
-    # tau = np.multiply(kp, (target - q)) - np.multiply(kd, qdot)
-    # for i in range(ndofs - 6):
-    #     tau[i] = -kp[i] * (q[i] - target[i]) - kd[i] * qdot[i]
-
-    torqs = ClampTorques(tau)
-
-    return torqs
 
 class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
@@ -255,7 +246,34 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         super(VisakDartDeepMimicEnv, self).__init__(*args, **kwargs)
 
     def PID(self, skel, targets):
-        return PID(skel, targets)
+        # DIFF I used a more elegant way to calculate the PID torques,
+        # but actually it is equivalent
+
+        kp = np.array([250.] * 23)
+        kd = np.array([0.005] * 23)
+
+        kp[0] = 600 + 25
+        kp[3] = 225 + 25
+        kp[9] = 225 + 25
+        kp[10] = 200
+        kp[16] = 200
+        kp[[1, 2]] = 150
+        kp[[7, 8]] = 150
+        kp[6] = 600 + 25
+        kp[15:] = 155
+
+        kd[15:] = 0.05
+
+        kp = np.multiply(1/2, kp)
+        kd = np.multiply(1/2, kd)
+
+        q = skel.q[6:]
+        dq = skel.dq[6:]
+        tau = np.multiply(kp, (target - q)) - np.multiply(kd, dq)
+
+        torqs = ClampTorques(tau)
+
+        return torqs
 
     def _get_obs(self, skel=None):
 
@@ -270,6 +288,8 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
     def _get_ee_positions(self, skel):
 
+        # DIFF Done *Exactly* as visak calculates them
+
         point_rarm = [0., -0.60, -0.15]
         point_larm = [0., -0.60, -0.15]
         point_rfoot = [0., 0., -0.20]
@@ -282,6 +302,8 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
 
     def construct_frames(self, ref_skel, ref_motion_path):
+
+        # TODO Unknown if this is airtight, though it probably is...
 
         with open("assets/mocap/walk/WalkPositions_corrected.txt", "rb") as fp:
             self.WalkPositions = np.loadtxt(fp)
@@ -296,7 +318,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         com_frames = [None] * num_frames
         ee_frames = [None] * num_frames
 
-        for i in range(len(self.WalkPositions)):
+        for i in range(num_frames):
 
             updated_pos = self.WalkPositions[i,:]
             temp = updated_pos[3:6].copy()
@@ -327,6 +349,12 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         If rude termination is given as true, zero reward will be
         yielded from the state
         """
+
+        # TODO I don't know whether the indices are exactly right given
+        # the playing around that I've done with them...
+
+        # TODO I can do a test with the unadulterated skeleton as well...
+
         term, rude_term = False, False
 
         if self.framenum >= self.num_frames - 1:
@@ -350,6 +378,8 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
             self._get_viewer().scene.tb.trans[1] = 0.0
 
     def reward(self, skel, framenum):
+
+        # DIFF I calcualate reward exactly as Visak does
 
         ee_positions = self._get_ee_positions(skel)
         ref_ee_positions = self.ref_ee_frames[framenum]
@@ -377,6 +407,13 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
 
     def vsk_quatreward(self, skel, framenum):
+
+        # DIFF Quaternion difference (and therefore reward) are computed
+        # same as Visak does, but for the fact that I do some finiteness
+        # checks before returning anything
+
+        # TODO Perhaps 0 is not the right thing to return wwhen finiteness cheks are failed
+
         quaternion_difference = []
 
         #### lthigh

@@ -325,42 +325,42 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         return self._get_obs()
 
 
-    def _get_obs(self, skel=None):
-        """
-        Return a 1-dimensional vector of the skeleton's state, as defined by
-        the state code. When skeleton is not specified, control_skel is used
-        """
+    # def _get_obs(self, skel=None):
+    #     """
+    #     Return a 1-dimensional vector of the skeleton's state, as defined by
+    #     the state code. When skeleton is not specified, control_skel is used
+    #     """
 
-        if skel is None:
-            skel = self.robot_skeleton
+    #     if skel is None:
+    #         skel = self.robot_skeleton
 
-        state = np.array([self.framenum / self.num_frames])
+    #     state = np.array([self.framenum / self.num_frames])
 
-        for dof_name in self._dof_names:
+    #     for dof_name in self._dof_names:
 
-            indices, body_index = self.metadict[dof_name]
-            body = skel.bodynodes[body_index]
-            fi, li = indices[0], indices[-1] + 1
+    #         indices, body_index = self.metadict[dof_name]
+    #         body = skel.bodynodes[body_index]
+    #         fi, li = indices[0], indices[-1] + 1
 
-            if dof_name != ROOT_KEY:
-                if len(indices) > 1:
+    #         if dof_name != ROOT_KEY:
+    #             if len(indices) > 1:
 
-                    converted_angle = self.angle_to_rep(pad2length(skel.q[fi:li],
-                                                                   3))
-                else:
-                    converted_angle = skel.q[fi:fi+1]
-            else:
-                converted_angle = self.angle_to_rep(skel.q[0:3])
-                fi, li = 0, 4
+    #                 converted_angle = self.angle_to_rep(pad2length(skel.q[fi:li],
+    #                                                                3))
+    #             else:
+    #                 converted_angle = skel.q[fi:fi+1]
+    #         else:
+    #             converted_angle = self.angle_to_rep(skel.q[0:3])
+    #             fi, li = 0, 4
 
-            # TODO Pass in an actual angular velocity instead of dq
-            state = np.concatenate([state,
-                                    body.com() - skel.bodynodes[0].com(),
-                                    converted_angle,
-                                    body.dC,
-                                    skel.dq[fi:li]])
+    #         # TODO Pass in an actual angular velocity instead of dq
+    #         state = np.concatenate([state,
+    #                                 body.com() - skel.bodynodes[0].com(),
+    #                                 converted_angle,
+    #                                 body.dC,
+    #                                 skel.dq[fi:li]])
 
-        return state
+    #     return state
 
 
     def quaternion_angles(self, skel):
@@ -382,118 +382,119 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         return np.array(angles)
 
 
-    def reward(self, skel, framenum):
+    # def reward(self, skel, framenum):
 
-        angles = self.quaternion_angles(skel)
+    #     angles = self.quaternion_angles(skel)
 
-        ref_angles = self.ref_quat_frames[framenum]
-        ref_com = self.ref_com_frames[framenum]
-        ref_ee_positions = self.ref_ee_frames[framenum]
+    #     ref_angles = self.ref_quat_frames[framenum]
+    #     ref_com = self.ref_com_frames[framenum]
+    #     ref_ee_positions = self.ref_ee_frames[framenum]
 
-        #####################
-        # POSITIONAL REWARD #
-        #####################
+    #     #####################
+    #     # POSITIONAL REWARD #
+    #     #####################
 
-        quatdiffs = [mult(inverse(ra), a) for a, ra in zip(angles,
-                                                           ref_angles)]
-        posdiffs = [2 * atan2(norm(quat[1:]), quat[0]) for quat in quatdiffs]
+    #     quatdiffs = [mult(inverse(ra), a) for a, ra in zip(angles,
+    #                                                        ref_angles)]
+    #     posdiffs = [2 * atan2(norm(quat[1:]), quat[0]) for quat in quatdiffs]
 
-        posdiffmag = norm(posdiffs)**2
+    #     posdiffmag = norm(posdiffs)**2
 
-        ###################
-        # VELOCITY REWARD #
-        ###################
+    #     ###################
+    #     # VELOCITY REWARD #
+    #     ###################
 
-        ref_dq = self.ref_dq_frames[framenum]
-        veldiffmag = norm(skel.dq - ref_dq)**2
+    #     ref_dq = self.ref_dq_frames[framenum]
+    #     veldiffmag = norm(skel.dq - ref_dq)**2
 
-        #######################
-        # END EFFECTOR REWARD #
-        #######################
+    #     #######################
+    #     # END EFFECTOR REWARD #
+    #     #######################
 
-        eediffmag = norm(self._get_ee_positions(skel)
-                         - self.ref_ee_frames[framenum])**2
+    #     eediffmag = norm(self._get_ee_positions(skel)
+    #                      - self.ref_ee_frames[framenum])**2
 
-        #########################
-        # CENTER OF MASS REWARD #
-        #########################
+    #     #########################
+    #     # CENTER OF MASS REWARD #
+    #     #########################
 
-        comdiffmag = norm(skel.com() - ref_com)**2
+    #     comdiffmag = norm(skel.com() - ref_com)**2
 
-        ################
-        # TOTAL REWARD #
-        ################
+    #     ################
+    #     # TOTAL REWARD #
+    #     ################
 
-        diffmags = [posdiffmag, veldiffmag, eediffmag, comdiffmag]
+    #     diffmags = [posdiffmag, veldiffmag, eediffmag, comdiffmag]
 
-        reward = sum([ow * exp(iw * diff)
-                      for ow, iw, diff in zip(self._outerweights,
-                                              self._innerweights,
-                                              diffmags)])
+    #     reward = sum([ow * exp(iw * diff)
+    #                   for ow, iw, diff in zip(self._outerweights,
+    #                                           self._innerweights,
+    #                                           diffmags)])
 
-        return reward
+    #     return reward
 
-    def targets_from_netvector(self, netvector):
+    # def targets_from_netvector(self, netvector):
 
-        target_q = np.zeros(len(self.robot_skeleton.q) - 6)
-        q_index = 0
-        nv_index = 0
+    #     target_q = np.zeros(len(self.robot_skeleton.q) - 6)
+    #     q_index = 0
+    #     nv_index = 0
 
-        for dof_name in self._actuated_dof_names:
-            indices, _ = self.metadict[dof_name]
+    #     for dof_name in self._actuated_dof_names:
+    #         indices, _ = self.metadict[dof_name]
 
-            if len(indices) == 1:
-                target_q[q_index] = netvector[nv_index:nv_index+1]
-                q_index += 1
-                nv_index += 1
+    #         if len(indices) == 1:
+    #             target_q[q_index] = netvector[nv_index:nv_index+1]
+    #             q_index += 1
+    #             nv_index += 1
 
-            else:
-                raw_angle = netvector[nv_index:nv_index \
-                                      + ActionMode.lengths[self.actionmode]]
-                euler_angle = self.angle_from_rep(raw_angle)
-                target_q[q_index:q_index + len(indices)] \
-                    = euler_angle[:len(indices)]
+    #         else:
+    #             raw_angle = netvector[nv_index:nv_index \
+    #                                   + ActionMode.lengths[self.actionmode]]
+    #             euler_angle = self.angle_from_rep(raw_angle)
+    #             target_q[q_index:q_index + len(indices)] \
+    #                 = euler_angle[:len(indices)]
 
-                q_index += len(indices)
-                nv_index += ActionMode.lengths[self.actionmode]
+    #             q_index += len(indices)
+    #             nv_index += ActionMode.lengths[self.actionmode]
 
-        if q_index != len(self.robot_skeleton.q) - 6:
-            raise RuntimeError("Not all dofs mapped over")
-        if nv_index != len(netvector):
-            raise RuntimeError("Not all net outputs used")
+    #     if q_index != len(self.robot_skeleton.q) - 6:
+    #         raise RuntimeError("Not all dofs mapped over")
+    #     if nv_index != len(netvector):
+    #         raise RuntimeError("Not all net outputs used")
 
-        return target_q
-
-
-    def should_terminate(self, reward, newstate):
-        done = self.framenum >= self.num_frames
-        done = done or reward < self.reward_cutoff
-        return done
+    #     return target_q
 
 
-    def PID(self, skel, dof_targets):
-        """
-        Targets should be all for ACTUATED dofs (meaning all of them will be
-        used)
-        """
-
-        tau = self.p_gain * (dof_targets - skel.q[6:]) \
-              - self.d_gain * (skel.dq[6:])
-        tau = np.clip(tau, -self.max_torque, self.max_torque)
-
-        return tau
+    # def should_terminate(self, reward, newstate):
+    #     done = self.framenum >= self.num_frames
+    #     done = done or reward < self.reward_cutoff
+    #     return done
 
 
-    def step(self, action_vector):
+    # def PID(self, skel, dof_targets):
+    #     """
+    #     Targets should be all for ACTUATED dofs (meaning all of them will be
+    #     used)
+    #     """
+
+    #     tau = self.p_gain * (dof_targets - skel.q[6:]) \
+    #           - self.d_gain * (skel.dq[6:])
+    #     tau = np.clip(tau, -self.max_torque, self.max_torque)
+
+    #     return tau
+
+
+    def _step(self, action_vector):
+
+        # DIFF This is in exact parity with Visak's code, except
+        # for the head flag
 
         dof_targets = self.targets_from_netvector(action_vector)
 
         for _ in range(self.step_resolution):
             tau = self.PID(self.robot_skeleton, dof_targets)
-
             self.robot_skeleton.set_forces(np.concatenate([np.zeros(6),
                                                         tau]))
-
             self.dart_world.step()
 
 
