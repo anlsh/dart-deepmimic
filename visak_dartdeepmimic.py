@@ -311,8 +311,8 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
             ref_skel.set_positions(updated_pos)
             ref_skel.set_velocities(updated_vel)
 
-            pos_frames[i] = updated_pos
-            vel_frames[i] = updated_vel
+            pos_frames[i] = ref_skel.q
+            vel_frames[i] = ref_skel.dq
             com_frames[i] = ref_skel.com()
             # quat_frames[i] = self.quaternion_angles(ref_skel)
             ee_frames[i] = self._get_ee_positions(ref_skel)
