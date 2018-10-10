@@ -6,235 +6,6 @@ from quaternions import mult, inverse
 from numpy.linalg import norm
 import copy
 
-
-def transformActions(actions):
-    # DIFF Visak accidentally reused some indices, I correct that but
-    # everything else remains the same
-
-    joint_targets = np.zeros(23, )
-
-    # Left thigh
-    lthigh = actions[:4]
-    euler_lthigh = angle_axis2euler(theta=lthigh[0], vector=lthigh[1:])
-    joint_targets[0] = euler_lthigh[2]
-    joint_targets[1] = euler_lthigh[1]
-    joint_targets[2] = euler_lthigh[0]
-
-    ###### Left Knee
-    joint_targets[3] = actions[4]
-
-    ### left foot
-    lfoot = actions[5:9]
-    euler_lfoot = angle_axis2euler(theta=lfoot[0], vector=lfoot[1:])
-    joint_targets[4] = euler_lfoot[2]
-    joint_targets[5] = euler_lfoot[0]
-
-    # right thigh
-    rthigh = actions[9:13]
-    euler_rthigh = angle_axis2euler(theta=rthigh[0], vector=rthigh[1:])
-    joint_targets[6] = euler_rthigh[2]
-    joint_targets[7] = euler_rthigh[1]
-    joint_targets[8] = euler_rthigh[0]
-
-    ###### right Knee
-    joint_targets[9] = actions[13]
-
-    ### right foot
-    rfoot = actions[14:18]
-    euler_rfoot = angle_axis2euler(theta=rfoot[0], vector=rfoot[1:])
-    joint_targets[10] = euler_rfoot[2]
-    joint_targets[11] = euler_rfoot[0]
-
-    ###thorax
-
-    thorax = actions[18:22]
-    euler_thorax = angle_axis2euler(theta=thorax[0], vector=thorax[1:])
-    joint_targets[12] = euler_thorax[2]
-    joint_targets[13] = euler_thorax[1]
-    joint_targets[14] = euler_thorax[0]
-
-    #### l upper arm
-    l_arm = actions[22:26]
-    euler_larm = angle_axis2euler(theta=l_arm[0], vector=l_arm[1:])
-    joint_targets[15] = euler_larm[2]
-    joint_targets[16] = euler_larm[1]
-    joint_targets[17] = euler_larm[0]
-
-    ## l elbow
-
-    joint_targets[18] = actions[26]
-
-    ## r upper arm
-    r_arm = actions[27:31]
-    euler_rarm = angle_axis2euler(theta=r_arm[0], vector=r_arm[1:])
-    joint_targets[19] = euler_rarm[2]
-    joint_targets[20] = euler_rarm[1]
-    joint_targets[21] = euler_rarm[0]
-
-    ###r elbow
-
-    joint_targets[22] = actions[31]
-
-    return joint_targets
-
-def vsk_obs(skel, framenum, num_frames):
-    # DIFF Visak doesn't specify all the information I do for the abdomen
-    # but is unlikely to explain performance gap
-
-    state = np.array([framenum / num_frames])
-
-    # observation for left leg thigh######################################
-    RelPos_lthigh = skel.bodynodes[1].com() - skel.bodynodes[0].com()
-    LinVel_lthigh = skel.bodynodes[1].dC
-    quat_lthigh = euler2quat(z=skel.q[8], y=skel.q[7], x=skel.q[6])
-
-    state = np.concatenate((state,
-                            RelPos_lthigh,
-                            quat_lthigh,
-                            LinVel_lthigh,
-                            skel.dq[6:9]))
-    ################################################################3
-    RelPos_lknee = skel.bodynodes[2].com() - skel.bodynodes[0].com()
-    LinVel_lknee = skel.bodynodes[2].dC
-    quat_lknee = euler2quat(z=0., y=0., x=skel.q[9])
-
-    state = np.concatenate((state,
-                            RelPos_lknee,
-                            quat_lknee,
-                            LinVel_lknee,
-                            skel.dq[9: 9 + 1]))
-    #######################################################################3
-    RelPos_lfoot = skel.bodynodes[3].com() - skel.bodynodes[0].com()
-    LinVel_lfoot = skel.bodynodes[3].dC
-    quat_lfoot = euler2quat(z=skel.q[11], y=0, x=skel.q[10])
-
-    state = np.concatenate((state,
-                           RelPos_lfoot,
-                           quat_lfoot,
-                           LinVel_lfoot,
-                           skel.dq[10:12]))
-    #######################################################################3
-    RelPos_rthigh = skel.bodynodes[4].com() - skel.bodynodes[0].com()
-    LinVel_rthigh = skel.bodynodes[4].dC
-    quat_rthigh = euler2quat(z=skel.q[14], y=skel.q[13], x=skel.q[12])
-
-    state = np.concatenate((state,
-                           RelPos_rthigh,
-                           quat_rthigh,
-                           LinVel_rthigh,
-                           skel.dq[12:15]))
-    #####################################################################
-    RelPos_rknee = skel.bodynodes[5].com() - skel.bodynodes[0].com()
-    LinVel_rknee = skel.bodynodes[5].dC
-    quat_rknee = euler2quat(z=0., y=0., x=skel.q[15])
-
-    state = np.concatenate((state,
-                            RelPos_rknee,
-                            quat_rknee,
-                            LinVel_rknee,
-                            skel.dq[15: 15 + 1]))
-
-    #####################################################################
-    RelPos_rfoot = skel.bodynodes[6].com() - skel.bodynodes[0].com()
-    LinVel_rfoot = skel.bodynodes[6].dC
-    quat_rfoot = euler2quat(z=skel.q[17], y=0, x=skel.q[16])
-
-    state = np.concatenate((state,
-                            RelPos_rfoot,
-                            quat_rfoot,
-                            LinVel_rfoot,
-                            skel.dq[16:18]))
-
-    ############ ABDOMEN ########################
-
-    RelPos_abdomen = skel.bodynodes[7].com() - skel.bodynodes[0].com()
-    LinVel_abdomen = skel.bodynodes[7].dC
-    quat_abdomen = euler2quat(z=skel.q[20], y=skel.q[19], x=skel.q[18])
-
-    state = np.concatenate((state,
-                            RelPos_abdomen,
-                            quat_abdomen,
-                            LinVel_abdomen,
-                            skel.dq[18:21]))
-
-    ###########################################################
-    RelPos_larm = skel.bodynodes[12].com() - skel.bodynodes[0].com()
-    LinVel_larm = skel.bodynodes[12].dC
-    quat_larm = euler2quat(z=skel.q[23], y=skel.q[22], x=skel.q[21])
-
-    state = np.concatenate((state,
-                            RelPos_larm,
-                            quat_larm,
-                            LinVel_larm,
-                            skel.dq[21:24]))
-    ##############################################################
-    RelPos_lelbow = skel.bodynodes[13].com() - skel.bodynodes[0].com()
-    LinVel_lelbow = skel.bodynodes[13].dC
-    quat_lelbow = euler2quat(z=0., y=0., x=skel.q[24])
-
-    state = np.concatenate((state,
-                            RelPos_lelbow,
-                            quat_lelbow,
-                            LinVel_lelbow,
-                            skel.dq[24:24 + 1]))
-
-    ################################################################
-    RelPos_rarm = skel.bodynodes[15].com() - skel.bodynodes[0].com()
-    LinVel_rarm = skel.bodynodes[15].dC
-    quat_rarm = euler2quat(z=skel.q[27], y=skel.q[26], x=skel.q[25])
-
-    state = np.concatenate((state,
-                            RelPos_rarm,
-                            quat_rarm,
-                            LinVel_rarm,
-                            skel.dq[25:28]))
-    #################################################################3
-    RelPos_relbow = skel.bodynodes[16].com() - skel.bodynodes[0].com()
-    LinVel_relbow = skel.bodynodes[16].dC
-    quat_relbow = euler2quat(z=0., y=0., x=skel.q[28])
-
-    state = np.concatenate((state,
-                            RelPos_relbow,
-                            quat_relbow,
-                            LinVel_relbow,
-                            skel.dq[28: 28 + 1]))
-
-    ##################################################################
-
-    return state
-
-
-def ClampTorques(torques):
-    # DIFF I use a more elegant method of clipping, but is equivalent
-    torqueLimits = np.array(
-        [150.0 * 5,
-         80. * 3,
-         80. * 3,
-         100. * 5,
-         80. * 5,
-         60.,
-         150.0 * 5,
-         80. * 3,
-         80. * 3,
-         100. * 5,
-         80. * 5,
-         60.,
-         150. * 5,
-         150. * 5,
-         150. * 5,
-         10.,
-         5.,
-         5.,
-         5.,
-         10.,
-         5.,
-         5,
-         5.]) * 2
-
-    np.clip(torques, -torqueLimits, torqueLimits)
-
-    return torques
-
 class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
     def __init__(self, *args, **kwargs):
@@ -271,35 +42,236 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         dq = skel.dq[6:]
         tau = np.multiply(kp, (targets - q)) - np.multiply(kd, dq)
 
-        torqs = ClampTorques(tau)
+        # DIFF I use a more elegant method of clipping, but is equivalent
+        TORQUE_LIMITS = np.array(
+            [150.0 * 5,
+            80. * 3,
+            80. * 3,
+            100. * 5,
+            80. * 5,
+            60.,
+            150.0 * 5,
+            80. * 3,
+            80. * 3,
+            100. * 5,
+            80. * 5,
+            60.,
+            150. * 5,
+            150. * 5,
+            150. * 5,
+            10.,
+            5.,
+            5.,
+            5.,
+            10.,
+            5.,
+            5,
+            5.]) * 2
 
-        return torqs
+        return np.clip(tau, -TORQUE_LIMITS, TORQUE_LIMITS)
 
     def _get_obs(self, skel=None):
 
         if skel is None:
             skel = self.robot_skeleton
 
-        return vsk_obs(skel, self.framenum, self.num_frames)
+        # DIFF Visak doesn't specify all the information I do for the abdomen
+        # but is unlikely to explain performance gap
 
-    def targets_from_netvector(self, netvector):
+        state = np.array([self.framenum / self.num_frames])
 
-        return transformActions(netvector)
+        # observation for left leg thigh######################################
+        RelPos_lthigh = skel.bodynodes[1].com() - skel.bodynodes[0].com()
+        LinVel_lthigh = skel.bodynodes[1].dC
+        quat_lthigh = euler2quat(z=skel.q[8], y=skel.q[7], x=skel.q[6])
 
-    def _get_ee_positions(self, skel):
+        state = np.concatenate((state,
+                                RelPos_lthigh,
+                                quat_lthigh,
+                                LinVel_lthigh,
+                                skel.dq[6:9]))
+        ################################################################3
+        RelPos_lknee = skel.bodynodes[2].com() - skel.bodynodes[0].com()
+        LinVel_lknee = skel.bodynodes[2].dC
+        quat_lknee = euler2quat(z=0., y=0., x=skel.q[9])
 
-        # DIFF Done *Exactly* as visak calculates them
+        state = np.concatenate((state,
+                                RelPos_lknee,
+                                quat_lknee,
+                                LinVel_lknee,
+                                skel.dq[9: 9 + 1]))
+        #######################################################################3
+        RelPos_lfoot = skel.bodynodes[3].com() - skel.bodynodes[0].com()
+        LinVel_lfoot = skel.bodynodes[3].dC
+        quat_lfoot = euler2quat(z=skel.q[11], y=0, x=skel.q[10])
 
-        point_rarm = [0., -0.60, -0.15]
-        point_larm = [0., -0.60, -0.15]
-        point_rfoot = [0., 0., -0.20]
-        point_lfoot = [0., 0., -0.20]
+        state = np.concatenate((state,
+                            RelPos_lfoot,
+                            quat_lfoot,
+                            LinVel_lfoot,
+                            skel.dq[10:12]))
+        #######################################################################3
+        RelPos_rthigh = skel.bodynodes[4].com() - skel.bodynodes[0].com()
+        LinVel_rthigh = skel.bodynodes[4].dC
+        quat_rthigh = euler2quat(z=skel.q[14], y=skel.q[13], x=skel.q[12])
 
-        return np.concatenate([skel.bodynodes[16].to_world(point_rarm),
-                               skel.bodynodes[13].to_world(point_larm),
-                               skel.bodynodes[4].to_world(point_lfoot),
-                               skel.bodynodes[7].to_world(point_rfoot)])
+        state = np.concatenate((state,
+                            RelPos_rthigh,
+                            quat_rthigh,
+                            LinVel_rthigh,
+                            skel.dq[12:15]))
+        #####################################################################
+        RelPos_rknee = skel.bodynodes[5].com() - skel.bodynodes[0].com()
+        LinVel_rknee = skel.bodynodes[5].dC
+        quat_rknee = euler2quat(z=0., y=0., x=skel.q[15])
 
+        state = np.concatenate((state,
+                                RelPos_rknee,
+                                quat_rknee,
+                                LinVel_rknee,
+                                skel.dq[15: 15 + 1]))
+
+        #####################################################################
+        RelPos_rfoot = skel.bodynodes[6].com() - skel.bodynodes[0].com()
+        LinVel_rfoot = skel.bodynodes[6].dC
+        quat_rfoot = euler2quat(z=skel.q[17], y=0, x=skel.q[16])
+
+        state = np.concatenate((state,
+                                RelPos_rfoot,
+                                quat_rfoot,
+                                LinVel_rfoot,
+                                skel.dq[16:18]))
+
+        ############ ABDOMEN ########################
+
+        RelPos_abdomen = skel.bodynodes[7].com() - skel.bodynodes[0].com()
+        LinVel_abdomen = skel.bodynodes[7].dC
+        quat_abdomen = euler2quat(z=skel.q[20], y=skel.q[19], x=skel.q[18])
+
+        state = np.concatenate((state,
+                                RelPos_abdomen,
+                                quat_abdomen,
+                                LinVel_abdomen,
+                                skel.dq[18:21]))
+
+        ###########################################################
+        RelPos_larm = skel.bodynodes[12].com() - skel.bodynodes[0].com()
+        LinVel_larm = skel.bodynodes[12].dC
+        quat_larm = euler2quat(z=skel.q[23], y=skel.q[22], x=skel.q[21])
+
+        state = np.concatenate((state,
+                                RelPos_larm,
+                                quat_larm,
+                                LinVel_larm,
+                                skel.dq[21:24]))
+        ##############################################################
+        RelPos_lelbow = skel.bodynodes[13].com() - skel.bodynodes[0].com()
+        LinVel_lelbow = skel.bodynodes[13].dC
+        quat_lelbow = euler2quat(z=0., y=0., x=skel.q[24])
+
+        state = np.concatenate((state,
+                                RelPos_lelbow,
+                                quat_lelbow,
+                                LinVel_lelbow,
+                                skel.dq[24:24 + 1]))
+
+        ################################################################
+        RelPos_rarm = skel.bodynodes[15].com() - skel.bodynodes[0].com()
+        LinVel_rarm = skel.bodynodes[15].dC
+        quat_rarm = euler2quat(z=skel.q[27], y=skel.q[26], x=skel.q[25])
+
+        state = np.concatenate((state,
+                                RelPos_rarm,
+                                quat_rarm,
+                                LinVel_rarm,
+                                skel.dq[25:28]))
+        #################################################################3
+        RelPos_relbow = skel.bodynodes[16].com() - skel.bodynodes[0].com()
+        LinVel_relbow = skel.bodynodes[16].dC
+        quat_relbow = euler2quat(z=0., y=0., x=skel.q[28])
+
+        state = np.concatenate((state,
+                                RelPos_relbow,
+                                quat_relbow,
+                                LinVel_relbow,
+                                skel.dq[28: 28 + 1]))
+
+        ##################################################################
+
+        return state
+
+    def targets_from_netvector(self, actions):
+
+        # DIFF Visak accidentally reused some indices, I correct that but
+        # everything else remains the same
+
+        # DIFF Does Visak clip his neural network outputs to be in range?
+
+        joint_targets = np.zeros(23)
+
+        # Left thigh
+        lthigh = actions[:4]
+        euler_lthigh = angle_axis2euler(theta=lthigh[0], vector=lthigh[1:])
+        joint_targets[0] = euler_lthigh[2]
+        joint_targets[1] = euler_lthigh[1]
+        joint_targets[2] = euler_lthigh[0]
+
+        ###### Left Knee
+        joint_targets[3] = actions[4]
+
+        ### left foot
+        lfoot = actions[5:9]
+        euler_lfoot = angle_axis2euler(theta=lfoot[0], vector=lfoot[1:])
+        joint_targets[4] = euler_lfoot[2]
+        joint_targets[5] = euler_lfoot[0]
+
+        # right thigh
+        rthigh = actions[9:13]
+        euler_rthigh = angle_axis2euler(theta=rthigh[0], vector=rthigh[1:])
+        joint_targets[6] = euler_rthigh[2]
+        joint_targets[7] = euler_rthigh[1]
+        joint_targets[8] = euler_rthigh[0]
+
+        ###### right Knee
+        joint_targets[9] = actions[13]
+
+        ### right foot
+        rfoot = actions[14:18]
+        euler_rfoot = angle_axis2euler(theta=rfoot[0], vector=rfoot[1:])
+        joint_targets[10] = euler_rfoot[2]
+        joint_targets[11] = euler_rfoot[0]
+
+        ###thorax
+
+        thorax = actions[18:22]
+        euler_thorax = angle_axis2euler(theta=thorax[0], vector=thorax[1:])
+        joint_targets[12] = euler_thorax[2]
+        joint_targets[13] = euler_thorax[1]
+        joint_targets[14] = euler_thorax[0]
+
+        #### l upper arm
+        l_arm = actions[22:26]
+        euler_larm = angle_axis2euler(theta=l_arm[0], vector=l_arm[1:])
+        joint_targets[15] = euler_larm[2]
+        joint_targets[16] = euler_larm[1]
+        joint_targets[17] = euler_larm[0]
+
+        ## l elbow
+
+        joint_targets[18] = actions[26]
+
+        ## r upper arm
+        r_arm = actions[27:31]
+        euler_rarm = angle_axis2euler(theta=r_arm[0], vector=r_arm[1:])
+        joint_targets[19] = euler_rarm[2]
+        joint_targets[20] = euler_rarm[1]
+        joint_targets[21] = euler_rarm[0]
+
+        ###r elbow
+
+        joint_targets[22] = actions[31]
+
+        return joint_targets
 
     def construct_frames(self, ref_skel, ref_motion_path):
 
@@ -321,14 +293,8 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         for i in range(num_frames):
 
             updated_pos = self.WalkPositions[i,:]
-            # temp = updated_pos[3:6].copy()
-            # updated_pos[3:6] = updated_pos[0:3][::-1]
-            # updated_pos[0:3] = temp[::-1]
 
             updated_vel = self.WalkVelocities[i,:]
-            # temp = updated_vel[3:6].copy()
-            # updated_vel[3:6] = updated_vel[0:3][::-1]
-            # updated_vel[0:3] = temp[::-1]
 
             ref_skel.set_positions(updated_pos)
             ref_skel.set_velocities(updated_vel)
@@ -336,11 +302,25 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
             pos_frames[i] = ref_skel.q
             vel_frames[i] = ref_skel.dq
             com_frames[i] = ref_skel.bodynodes[0].com()
-            # quat_frames[i] = self.quaternion_angles(ref_skel)
             ee_frames[i] = self._get_ee_positions(ref_skel)
 
         return num_frames, (pos_frames, vel_frames, quat_frames, com_frames,
                             ee_frames)
+
+
+    def _get_ee_positions(self, skel):
+
+        # DIFF Done *Exactly* as visak calculates them
+
+        point_rarm = [0., -0.60, -0.15]
+        point_larm = [0., -0.60, -0.15]
+        point_rfoot = [0., 0., -0.20]
+        point_lfoot = [0., 0., -0.20]
+
+        return np.array([skel.bodynodes[16].to_world(point_rarm),
+                         skel.bodynodes[13].to_world(point_larm),
+                         skel.bodynodes[4].to_world(point_lfoot),
+                         skel.bodynodes[7].to_world(point_rfoot)])
 
     def should_terminate(self, reward, newstate):
         """
@@ -349,12 +329,6 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         If rude termination is given as true, zero reward will be
         yielded from the state
         """
-
-        # TODO I don't know whether the indices are exactly right given
-        # the playing around that I've done with them...
-
-        # TODO I can do a test with the unadulterated skeleton as well...
-
         term, rude_term = False, False
 
         if self.framenum >= self.num_frames - 1:
@@ -383,8 +357,10 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         ee_positions = self._get_ee_positions(skel)
         ref_ee_positions = self.ref_ee_frames[framenum]
-        end_effector_reward = np.exp(-40 * norm(ee_positions \
-                                                - ref_ee_positions)**2)
+        ee_diffs = ee_positions - ref_ee_positions
+        ee_diffmag = np.sum(np.linalg.norm(k)**2 for k in ee_diffs)
+
+        end_effector_reward = np.exp(-40 * ee_diffmag)
 
         com_reward = np.exp(-40 * norm(self.ref_com_frames[framenum]
                                        - skel.bodynodes[0].com())**2)
@@ -471,10 +447,6 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         quaternion_difference.append(scalar_rfoot)
 
         # Abdoemn/thorax
-
-        ###############################################
-        # ALERT ALERT CHANGING THE GOOD AND HOLY CODE #
-        ###############################################
 
         scalar_thoraxx = skel.q[18] - self.WalkPositions[framenum,18]
         quaternion_difference.append(scalar_thoraxx)

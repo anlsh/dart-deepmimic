@@ -273,6 +273,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         for joint in self.robot_skeleton.joints[1:]:
             if joint.name == ROOT_KEY:
                 continue
+            if joint.has_position_limit(0):
+                joint.set_position_limit_enforced(True)
             for index in range(joint.num_dofs()):
                 joint.set_damping_coefficient(index, self.default_damping)
                 joint.set_spring_stiffness(index, self.default_spring)
@@ -294,18 +296,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         """
         raise NotImplementedError()
 
-    def sync_skel_to_frame(self, skel, frame_index, pos_stdv, vel_stdv):
-        """
-        Given a skeleton, mocap frame index, and numbers specifying pos and
-        velocity, sync the skeleton to the frame
-
-        Root position (angle and position) is never fuzzed to prevent clipping
-        """
-        q = self.ref_q_frames[frame_index]
-        dq = self.ref_dq_frames[frame_index]
-
-        # TODO WHERE'S THE NOISE
-        self.set_state(q, dq)
 
     def reset(self, framenum=None, pos_stdv=None, vel_stdv=None):
         """
@@ -317,13 +307,13 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # I dont actually know what this line of code
         self.dart_world.reset()
 
-        pos_stdv = pos_stdv if pos_stdv is not None else self.pos_init_noise
-        vel_stdv = vel_stdv if vel_stdv is not None else self.pos_init_noise
+        # pos_stdv = pos_stdv if pos_stdv is not None else self.pos_init_noise
+        # vel_stdv = vel_stdv if vel_stdv is not None else self.pos_init_noise
         self.framenum = framenum if framenum is not None \
                                  else random.randint(0, self.num_frames-1)
 
-        self.sync_skel_to_frame(self.robot_skeleton, self.framenum,
-                                pos_stdv, vel_stdv)
+        self.set_state(self.ref_q_frames[self.framenum],
+                       self.ref_dq_frames[self.framenum])
 
         return self._get_obs()
 
@@ -366,23 +356,23 @@ class DartDeepMimicEnv(dart_env.DartEnv):
     #     return state
 
 
-    def quaternion_angles(self, skel):
+    # def quaternion_angles(self, skel):
 
-        angles = [None] * len(self._dof_names)
+    #     angles = [None] * len(self._dof_names)
 
-        for dof_index, dof_name in enumerate(self._dof_names):
+    #     for dof_index, dof_name in enumerate(self._dof_names):
 
-            indices, _ = self.metadict[dof_name]
+    #         indices, _ = self.metadict[dof_name]
 
-            if dof_name != ROOT_KEY:
-                euler_angle = pad2length(skel.q[indices[0]:indices[-1]+1],
-                                         3)
-            else:
-                euler_angle = skel.q[0:3]
+    #         if dof_name != ROOT_KEY:
+    #             euler_angle = pad2length(skel.q[indices[0]:indices[-1]+1],
+    #                                      3)
+    #         else:
+    #             euler_angle = skel.q[0:3]
 
-            angles[dof_index] = euler2quat(*(euler_angle[::-1]))
+    #         angles[dof_index] = euler2quat(*(euler_angle[::-1]))
 
-        return np.array(angles)
+    #     return np.array(angles)
 
 
     # def reward(self, skel, framenum):
@@ -517,6 +507,9 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         return newstate, reward, done, {}
 
+    #################################
+    # UNIMPORTANT RENDERING METHODS #
+    #################################
 
     def render(self, mode='human', close=False):
         if close:
@@ -530,4 +523,3 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             return data
         elif mode == 'human':
             self._get_viewer().runSingleStep()
-
