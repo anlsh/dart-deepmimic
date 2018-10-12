@@ -355,7 +355,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
     #     return state
 
-
     # def quaternion_angles(self, skel):
 
     #     angles = [None] * len(self._dof_names)
@@ -373,7 +372,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
     #         angles[dof_index] = euler2quat(*(euler_angle[::-1]))
 
     #     return np.array(angles)
-
 
     # def reward(self, skel, framenum):
 

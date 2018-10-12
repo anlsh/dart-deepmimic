@@ -40,7 +40,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         q = skel.q[6:]
         dq = skel.dq[6:]
-        tau = np.multiply(kp, (targets - q)) - np.multiply(kd, dq)
+        tau = np.multiply(kp, targets) - np.multiply(kd, dq)
 
         # DIFF I use a more elegant method of clipping, but is equivalent
         TORQUE_LIMITS = np.array(
@@ -387,8 +387,6 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         # DIFF Quaternion difference (and therefore reward) are computed
         # same as Visak does, but for the fact that I do some finiteness
         # checks before returning anything
-
-        # TODO Perhaps 0 is not the right thing to return wwhen finiteness cheks are failed
 
         quaternion_difference = []
 
