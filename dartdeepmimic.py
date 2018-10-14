@@ -228,7 +228,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         self._dof_names = [key for key in self.metadict]
         self._dof_names.sort(key=lambda x:self.metadict[x][0][0])
-        self._actuated_dof_names = self._dof_names[1:]
+        self._actuated_dof_names = [name for name in self._dof_names
+                                    if not name.startswith(ROOT_KEY)]
 
         self._end_effector_indices = [i for i, node
                                        in enumerate(ref_skel.bodynodes)
@@ -438,7 +439,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             else:
                 raw_angle = netvector[nv_index:nv_index \
                                       + ActionMode.lengths[self.actionmode]]
-                euler_angle = self.angle_from_rep(raw_angle)
+                euler_angle = np.array(self.angle_from_rep(raw_angle))
                 target_q[q_index:q_index + len(indices)] \
                     = euler_angle[:len(indices)]
 
