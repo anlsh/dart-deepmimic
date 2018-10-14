@@ -421,36 +421,36 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
     #     return reward
 
-    # def targets_from_netvector(self, netvector):
+    def targets_from_netvector(self, netvector):
 
-    #     target_q = np.zeros(len(self.robot_skeleton.q) - 6)
-    #     q_index = 0
-    #     nv_index = 0
+        target_q = np.zeros(len(self.robot_skeleton.q) - 6)
+        q_index = 0
+        nv_index = 0
 
-    #     for dof_name in self._actuated_dof_names:
-    #         indices, _ = self.metadict[dof_name]
+        for dof_name in self._actuated_dof_names:
+            indices, _ = self.metadict[dof_name]
 
-    #         if len(indices) == 1:
-    #             target_q[q_index] = netvector[nv_index:nv_index+1]
-    #             q_index += 1
-    #             nv_index += 1
+            if len(indices) == 1:
+                target_q[q_index] = netvector[nv_index:nv_index+1]
+                q_index += 1
+                nv_index += 1
 
-    #         else:
-    #             raw_angle = netvector[nv_index:nv_index \
-    #                                   + ActionMode.lengths[self.actionmode]]
-    #             euler_angle = self.angle_from_rep(raw_angle)
-    #             target_q[q_index:q_index + len(indices)] \
-    #                 = euler_angle[:len(indices)]
+            else:
+                raw_angle = netvector[nv_index:nv_index \
+                                      + ActionMode.lengths[self.actionmode]]
+                euler_angle = self.angle_from_rep(raw_angle)
+                target_q[q_index:q_index + len(indices)] \
+                    = euler_angle[:len(indices)]
 
-    #             q_index += len(indices)
-    #             nv_index += ActionMode.lengths[self.actionmode]
+                q_index += len(indices)
+                nv_index += ActionMode.lengths[self.actionmode]
 
-    #     if q_index != len(self.robot_skeleton.q) - 6:
-    #         raise RuntimeError("Not all dofs mapped over")
-    #     if nv_index != len(netvector):
-    #         raise RuntimeError("Not all net outputs used")
+        if q_index != len(self.robot_skeleton.q) - 6:
+            raise RuntimeError("Not all dofs mapped over")
+        if nv_index != len(netvector):
+            raise RuntimeError("Not all net outputs used")
 
-    #     return target_q
+        return target_q
 
 
     # def should_terminate(self, reward, newstate):
