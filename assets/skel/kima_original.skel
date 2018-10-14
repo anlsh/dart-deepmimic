@@ -37,7 +37,7 @@
 
         <skeleton name="human">
             <transformation>0 0 0 0 -1.570796 0</transformation>
-            <body name="pelvis_aux">
+            <body name="root1_body">
                 <transformation>0.0 0.0 0.0 0 1.570796 0</transformation>
                 <inertia>
                     <mass>0.0</mass>
@@ -45,7 +45,7 @@
                 </inertia>
             </body>
 
-            <body name="pelvis">
+            <body name="root2_body">
                 <transformation>0.0 0.0 0.0 0 1.570796 0</transformation>
                 <inertia>
                     <mass>11.3316</mass>
@@ -74,7 +74,7 @@
                 </collision_shape>
             </body>
 
-            <body name="l-upperleg">
+            <body name="l-upperleg_body">
 
                 <transformation>-0.1225 -0.035 0.0 0 0.0 0</transformation>
                 <inertia>
@@ -99,7 +99,7 @@
                     </geometry>
                 </collision_shape>
             </body>
-            <body name="l-lowerleg">
+            <body name="l-lowerleg_body">
                 <transformation>-0.1225 -0.46375 0.0 0 0.0 0</transformation>
                 <inertia>
                     <mass>3.534</mass>
@@ -122,7 +122,7 @@
                     </geometry>
                 </collision_shape>
             </body>
-            <body name="l-foot">
+            <body name="l-foot_body">
                 <transformation>-0.1225 -0.8645 0.0 0 0 0</transformation>
                 <inertia>
                     <mass>1.684</mass>
@@ -146,7 +146,7 @@
                 </collision_shape>
             </body>
 
-            <body name="r-upperleg">
+            <body name="r-upperleg_body">
                 <transformation>0.1225 -0.035 0.0 0 0.0 0</transformation>
                 <inertia>
                     <mass>7.6</mass>
@@ -169,7 +169,7 @@
                     </geometry>
                 </collision_shape>
             </body>
-            <body name="r-lowerleg">
+            <body name="r-lowerleg_body">
                 <transformation>0.1225 -0.46375 0.0 0 0.0 0</transformation>
                 <inertia>
                     <mass>3.534</mass>
@@ -192,7 +192,7 @@
                     </geometry>
                 </collision_shape>
             </body>
-            <body name="r-foot">
+            <body name="r-foot_body">
                 <transformation>0.1225 -0.8645 0.0 0 0 0</transformation>
                 <inertia>
                     <mass>1.684</mass>
@@ -216,7 +216,7 @@
                 </collision_shape>
             </body>
 
-            <body name="abdomen">
+            <body name="abdomen_body">
                 <transformation>0.0 0.09275 0.0 0 1.570796 0</transformation>
                 <inertia>
                     <mass>11.3316</mass>
@@ -243,7 +243,7 @@
                     </geometry>
                 </collision_shape>
             </body>
-            <body name="thorax">
+            <body name="thorax_body">
                 <transformation>0.0 0.27825 0.0 0 1.570796 0</transformation>
                 <inertia>
                     <mass>13.5888</mass>
@@ -270,7 +270,7 @@
                     </geometry>
                 </collision_shape>
             </body>
-            <body name="neck">
+            <body name="neck_body">
                 <transformation>0.0 0.47825 0.0 0 1.570796 0</transformation>
                 <inertia>
                     <mass>0.05888</mass>
@@ -299,7 +299,7 @@
                     </geometry>
                 </collision_shape>
             </body>
-            <body name="head">
+            <body name="head_body">
                 <transformation>0.0 0.58975 0.0 0 1.570796 0</transformation>
                 <inertia>
                     <mass>6.156</mass>
@@ -325,7 +325,7 @@
                 </collision_shape>
             </body>
 
-            <body name="l-clavicle">
+            <body name="l-clavicle_body">
                 <transformation>-0.03 0.47075 0.0 0 1.570796 0</transformation>
                 <inertia>
                     <mass>0.76</mass>
@@ -343,7 +343,7 @@
 
 
             </body>
-            <body name="l-upperarm">
+            <body name="l-upperarm_body">
                 <transformation>-0.205 0.455 0.0 0 0 0</transformation>
                 <inertia>
                     <mass>2.128</mass>
@@ -366,7 +366,7 @@
                     </geometry>
                 </collision_shape>
             </body>
-            <body name="l-lowerarm">
+            <body name="l-lowerarm_body">
                 <transformation>-0.205 0.14 0.0 0 0 0</transformation>
                 <inertia>
                     <mass>1.416</mass>
@@ -390,7 +390,7 @@
                 </collision_shape>
             </body>
 
-            <body name="r-clavicle">
+            <body name="r-clavicle_body">
                 <transformation>0.18 0.47075 0.0 0 1.570796 0</transformation>
                 <inertia>
                     <mass>0.76</mass>
@@ -407,7 +407,7 @@
                 </visualization_shape>
 
             </body>
-            <body name="r-upperarm">
+            <body name="r-upperarm_body">
                 <transformation>0.205 0.455 0.0 0 0 0</transformation>
                 <inertia>
                     <mass>2.128</mass>
@@ -430,7 +430,7 @@
                     </geometry>
                 </collision_shape>
             </body>
-            <body name="r-lowerarm">
+            <body name="r-lowerarm_body">
                 <transformation>0.205 0.14 0.0 0 0 0</transformation>
                 <inertia>
                     <mass>1.416</mass>
@@ -455,24 +455,24 @@
             </body>
 
             <!-- JOINT: Pelvis -->
-            <joint type="translational" name="j_pelvis">
+            <joint type="translational" name="root1">
                 <transformation>0.0 0.0 0.0 0.0 1.57 0.</transformation>
                 <parent>world</parent>
-                <child>pelvis_aux</child>
+                <child>root1_body</child>
             </joint>
 
-            <joint type="euler" name="j_pelvis2">
+            <joint type="euler" name="root2">
 
-                <parent>pelvis_aux</parent>
-                <child>pelvis</child>
+                <parent>root1_body</parent>
+                <child>root2_body</child>
                 <axis_order>zyx</axis_order>
             </joint>
 
-            <joint name="j_thigh_left" type="euler">
+            <joint name="l-upperleg" type="euler">
                 <transformation>0.0 0.0 0.0 0.0 0. 0</transformation>
                 <!-- the above is a workaround since DART don't have Euler in zxy order -->
-                <parent>pelvis</parent>
-                <child>l-upperleg</child>
+                <parent>root2_body</parent>
+                <child>l-upperleg_body</child>
                 <axis_order>xyz</axis_order>
                 <!-- actually being zxy, see transformation above-->
                 <axis>
@@ -510,10 +510,10 @@
                 <init_pos>1.0 0.0 0.0</init_pos>
                 <init_vel>0 0.0 0.0</init_vel>
             </joint>
-            <joint name="j_shin_left" type="revolute">
+            <joint name="l-lowerleg" type="revolute">
                 <transformation>0.0 0.0 0.0 0.0 0.0 0</transformation>
-                <parent>l-upperleg</parent>
-                <child>l-lowerleg</child>
+                <parent>l-upperleg_body</parent>
+                <child>l-lowerleg_body</child>
                 <axis>
                     <xyz>-1.0 0.0 0.0</xyz>
                     <limit>
@@ -528,10 +528,10 @@
                 <init_pos>0.0</init_pos>
                 <init_vel>0</init_vel>
             </joint>
-            <joint name="j_heel_left" type="universal">
+            <joint name="l-foot" type="universal">
                 <transformation>0.0 0.0 0.0 0 0 0</transformation>
-                <parent>l-lowerleg</parent>
-                <child>l-foot</child>
+                <parent>l-lowerleg_body</parent>
+                <child>l-foot_body</child>
                 <axis>
                     <xyz>1.0 0.0 0.0</xyz>
                     <limit>
@@ -558,10 +558,10 @@
                 <init_vel>0 0</init_vel>
             </joint>
 
-            <joint name="j_thigh_right" type="euler">
+            <joint name="r-upperleg" type="euler">
                 <transformation>0.0 0.0 0.0 0.0 0.0 0</transformation>
-                <parent>pelvis</parent>
-                <child>r-upperleg</child>
+                <parent>root2_body</parent>
+                <child>r-upperleg_body</child>
                 <axis_order>xyz</axis_order>
                 <axis>
                     <limit>
@@ -596,10 +596,10 @@
                 <init_pos>1.57 0.0 0.0</init_pos>
                 <init_vel>0 0.0 0.0</init_vel>
             </joint>
-            <joint name="j_shin_right" type="revolute">
+            <joint name="r-lowerleg" type="revolute">
                 <transformation>0.0 0.0 0.0 0.0 0.0 0</transformation>
-                <parent>r-upperleg</parent>
-                <child>r-lowerleg</child>
+                <parent>r-upperleg_body</parent>
+                <child>r-lowerleg_body</child>
                 <axis>
                     <xyz>-1.0 0.0 0.0</xyz>
                     <limit>
@@ -614,10 +614,10 @@
                 <init_pos>0.0</init_pos>
                 <init_vel>0</init_vel>
             </joint>
-            <joint name="j_heel_right" type="universal">
+            <joint name="r-foot" type="universal">
                 <transformation>0.0 0.0 0.0 0 0 0</transformation>
-                <parent>r-lowerleg</parent>
-                <child>r-foot</child>
+                <parent>r-lowerleg_body</parent>
+                <child>r-foot_body</child>
                 <axis>
                     <xyz>1.0 0.0 0.0</xyz>
                     <limit>
@@ -645,10 +645,10 @@
                 <init_vel>0 0</init_vel>
             </joint>
 
-            <joint name="j_abdomen" type="euler">
+            <joint name="abdomen" type="euler">
                 <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
-                <parent>pelvis</parent>
-                <child>abdomen</child>
+                <parent>root2_body</parent>
+                <child>abdomen_body</child>
                 <axis_order>xyz</axis_order>
                 <axis>
                     <xyz>1.0 0.0 0.0</xyz>
@@ -686,10 +686,10 @@
                 <init_pos>0 0 0</init_pos>
                 <init_vel>0 0 0</init_vel>
             </joint>
-            <joint name="j_spine" type="weld">
+            <joint name="thorax" type="weld">
                 <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
-                <parent>abdomen</parent>
-                <child>thorax</child>
+                <parent>abdomen_body</parent>
+                <child>thorax_body</child>
                 <!-- <axis>
                     <xyz>0.0 1.0 0.0</xyz>
                     <limit>
@@ -704,25 +704,25 @@
                 <init_pos>0</init_pos>
                 <init_vel>0</init_vel> -->
             </joint>
-            <joint name="j_neck" type="weld">
+            <joint name="neck" type="weld">
                 <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
-                <parent>thorax</parent>
-                <child>neck</child>
+                <parent>thorax_body</parent>
+                <child>neck_body</child>
             </joint>
-            <joint name="j_head" type="weld">
+            <joint name="head" type="weld">
                 <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
-                <parent>neck</parent>
-                <child>head</child>
+                <parent>neck_body</parent>
+                <child>head_body</child>
             </joint>
-            <joint name="j_scapula_left" type="weld">
+            <joint name="l-clavicle" type="weld">
                 <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
-                <parent>thorax</parent>
-                <child>l-clavicle</child>
+                <parent>thorax_body</parent>
+                <child>l-clavicle_body</child>
             </joint>
-            <joint name="j_bicep_left" type="euler">
+            <joint name="l-upperarm" type="euler">
                 <transformation>0.0 0.0 0.0 -3.142 -0.523599 -1.570796</transformation>
-                <parent>l-clavicle</parent>
-                <child>l-upperarm</child>
+                <parent>l-clavicle_body</parent>
+                <child>l-upperarm_body</child>
                 <axis_order>xyz</axis_order>
                 <!-- de facto zxy -->
                 <axis>
@@ -758,10 +758,10 @@
                 <init_pos>0.0 0.0 0.0</init_pos>
                 <init_vel>0 0.0 0.0</init_vel>
             </joint>
-            <joint name="j_forearm_left" type="revolute">
+            <joint name="l-lowerarm" type="revolute">
                 <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
-                <parent>l-upperarm</parent>
-                <child>l-lowerarm</child>
+                <parent>l-upperarm_body</parent>
+                <child>l-lowerarm_body</child>
                 <axis>
                     <xyz>1.0 0.0 0.0</xyz>
                     <limit>
@@ -777,15 +777,15 @@
                 <init_vel>0</init_vel>
             </joint>
 
-            <joint name="j_scapula_right" type="weld">
+            <joint name="r-clavicle" type="weld">
                 <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
-                <parent>thorax</parent>
-                <child>r-clavicle</child>
+                <parent>thorax_body</parent>
+                <child>r-clavicle_body</child>
             </joint>
-            <joint name="j_bicep_right" type="euler">
+            <joint name="r-upperarm" type="euler">
                 <transformation>0.0 0.0 0.0 3.142 0.523599 1.570796</transformation>
-                <parent>r-clavicle</parent>
-                <child>r-upperarm</child>
+                <parent>r-clavicle_body</parent>
+                <child>r-upperarm_body</child>
                 <axis_order>xyz</axis_order>
                 <axis>
                     <limit>
@@ -821,10 +821,10 @@
                 <init_pos>0.0 0.0 0.0</init_pos>
                 <init_vel>0 0.0 0.0</init_vel>
             </joint>
-            <joint name="j_forearm_right" type="revolute">
+            <joint name="r-lowerarm" type="revolute">
                 <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
-                <parent>r-upperarm</parent>
-                <child>r-lowerarm</child>
+                <parent>r-upperarm_body</parent>
+                <child>r-lowerarm_body</child>
                 <axis>
                     <xyz>1.0 0.0 0.0</xyz>
                     <limit>
@@ -1127,20 +1127,20 @@
         <!--     </body> -->
 
         <!--     <!-\- JOINT: Pelvis -\-> -->
-        <!--     <joint type="translational" name="j_pelvisdup"> -->
+        <!--     <joint type="translational" name="root1dup"> -->
         <!--         <transformation>0.0 0.0 0.0 0.0 1.57 0.</transformation> -->
         <!--         <parent>world</parent> -->
         <!--         <child>pelvis_auxdup</child> -->
         <!--     </joint> -->
 
-        <!--     <joint type="euler" name="j_pelvis2dup"> -->
+        <!--     <joint type="euler" name="root12dup"> -->
 
         <!--         <parent>pelvis_auxdup</parent> -->
         <!--         <child>pelvisdup</child> -->
         <!--         <axis_order>zyx</axis_order> -->
         <!--     </joint> -->
 
-        <!--     <joint name="j_thigh_leftdup" type="euler"> -->
+        <!--     <joint name="l-upperlegdup" type="euler"> -->
         <!--         <transformation>0.0 0.0 0.0 0.0 0.0 0</transformation> -->
         <!--         <!-\- the above is a workaround since DART don't have Euler in zxy order -\-> -->
         <!--         <parent>pelvisdup</parent> -->
@@ -1180,7 +1180,7 @@
         <!--         <init_pos>0.0 0.0 0.0</init_pos> -->
         <!--         <init_vel>0 0.0 0.0</init_vel> -->
         <!--     </joint> -->
-        <!--     <joint name="j_shin_leftdup" type="revolute"> -->
+        <!--     <joint name="l-lowerlegdup" type="revolute"> -->
         <!--         <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation> -->
         <!--         <parent>l-upperlegdup</parent> -->
         <!--         <child>l-lowerlegdup</child> -->
@@ -1198,7 +1198,7 @@
         <!--         <init_pos>0.0</init_pos> -->
         <!--         <init_vel>0</init_vel> -->
         <!--     </joint> -->
-        <!--     <joint name="j_heel_leftdup" type="universal"> -->
+        <!--     <joint name="l-footdup" type="universal"> -->
         <!--         <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation> -->
         <!--         <parent>l-lowerlegdup</parent> -->
         <!--         <child>l-footdup</child> -->
@@ -1228,7 +1228,7 @@
         <!--         <init_vel>0 0</init_vel> -->
         <!--     </joint> -->
 
-        <!--     <joint name="j_thigh_rightdup" type="euler"> -->
+        <!--     <joint name="r-upperlegdup" type="euler"> -->
         <!--         <transformation>0.0 0.0 0.0 0.0 0.0 0</transformation> -->
         <!--         <parent>pelvisdup</parent> -->
         <!--         <child>r-upperlegdup</child> -->
@@ -1266,7 +1266,7 @@
         <!--         <init_pos>0.0 0.0 0.0</init_pos> -->
         <!--         <init_vel>0 0.0 0.0</init_vel> -->
         <!--     </joint> -->
-        <!--     <joint name="j_shin_rightdup" type="revolute"> -->
+        <!--     <joint name="r-lowerlegdup" type="revolute"> -->
         <!--         <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation> -->
         <!--         <parent>r-upperlegdup</parent> -->
         <!--         <child>r-lowerlegdup</child> -->
@@ -1284,7 +1284,7 @@
         <!--         <init_pos>0.0</init_pos> -->
         <!--         <init_vel>0</init_vel> -->
         <!--     </joint> -->
-        <!--     <joint name="j_heel_rightdup" type="universal"> -->
+        <!--     <joint name="r-footdup" type="universal"> -->
         <!--         <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation> -->
         <!--         <parent>r-lowerlegdup</parent> -->
         <!--         <child>r-footdup</child> -->
@@ -1314,7 +1314,7 @@
         <!--         <init_vel>0 0</init_vel> -->
         <!--     </joint> -->
 
-        <!--     <joint name="j_abdomendup" type="universal"> -->
+        <!--     <joint name="abdomendup" type="universal"> -->
         <!--         <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation> -->
         <!--         <parent>pelvisdup</parent> -->
         <!--         <child>abdomendup</child> -->
@@ -1343,7 +1343,7 @@
         <!--         <init_pos>0 0</init_pos> -->
         <!--         <init_vel>0 0</init_vel> -->
         <!--     </joint> -->
-        <!--     <joint name="j_spinedup" type="revolute"> -->
+        <!--     <joint name="thoraxdup" type="revolute"> -->
         <!--         <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation> -->
         <!--         <parent>abdomendup</parent> -->
         <!--         <child>thoraxdup</child> -->
@@ -1361,18 +1361,18 @@
         <!--         <init_pos>0</init_pos> -->
         <!--         <init_vel>0</init_vel> -->
         <!--     </joint> -->
-        <!--     <joint name="j_headdup" type="weld"> -->
+        <!--     <joint name="headdup" type="weld"> -->
         <!--         <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation> -->
         <!--         <parent>thoraxdup</parent> -->
         <!--         <child>headdup</child> -->
         <!--     </joint> -->
 
-        <!--     <joint name="j_scapula_leftdup" type="weld"> -->
+        <!--     <joint name="l-clavicledup" type="weld"> -->
         <!--         <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation> -->
         <!--         <parent>thoraxdup</parent> -->
         <!--         <child>l-clavicledup</child> -->
         <!--     </joint> -->
-        <!--     <joint name="j_bicep_leftdup" type="euler"> -->
+        <!--     <joint name="l-upperarmdup" type="euler"> -->
         <!--         <transformation>0.0 0.0 0.0 0.0 0.0 1.570796</transformation> -->
         <!--         <parent>l-clavicledup</parent> -->
         <!--         <child>l-upperarmdup</child> -->
@@ -1411,7 +1411,7 @@
         <!--         <init_pos>0.0 0.0 0.0</init_pos> -->
         <!--         <init_vel>0 0.0 0.0</init_vel> -->
         <!--     </joint> -->
-        <!--     <joint name="j_forearm_leftdup" type="revolute"> -->
+        <!--     <joint name="l-lowerarmdup" type="revolute"> -->
         <!--         <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation> -->
         <!--         <parent>l-upperarmdup</parent> -->
         <!--         <child>l-lowerarmdup</child> -->
@@ -1430,12 +1430,12 @@
         <!--         <init_vel>0</init_vel> -->
         <!--     </joint> -->
 
-        <!--     <joint name="j_scapula_rightdup" type="weld"> -->
+        <!--     <joint name="r-clavicledup" type="weld"> -->
         <!--         <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation> -->
         <!--         <parent>thoraxdup</parent> -->
         <!--         <child>r-clavicledup</child> -->
         <!--     </joint> -->
-        <!--     <joint name="j_bicep_rightdup" type="euler"> -->
+        <!--     <joint name="r-upperarmdup" type="euler"> -->
         <!--         <transformation>0.0 0.0 0.0 0.0 0.0 1.570796</transformation> -->
         <!--         <parent>r-clavicledup</parent> -->
         <!--         <child>r-upperarmdup</child> -->
@@ -1474,7 +1474,7 @@
         <!--         <init_pos>0.0 0.0 0.0</init_pos> -->
         <!--         <init_vel>0 0.0 0.0</init_vel> -->
         <!--     </joint> -->
-        <!--     <joint name="j_forearm_rightdup" type="revolute"> -->
+        <!--     <joint name="r-lowerarmdup" type="revolute"> -->
         <!--         <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation> -->
         <!--         <parent>r-upperarmdup</parent> -->
         <!--         <child>r-lowerarmdup</child> -->
@@ -1780,20 +1780,20 @@
         <!--     </body> -->
 
         <!--     <!-\- JOINT: Pelvis -\-> -->
-        <!--     <joint type="translational" name="j_pelvisdup1"> -->
+        <!--     <joint type="translational" name="root1dup1"> -->
         <!--         <transformation>0.0 0.0 0.0 0.0 1.57 0.</transformation> -->
         <!--         <parent>world</parent> -->
         <!--         <child>pelvis_auxdup1</child> -->
         <!--     </joint> -->
 
-        <!--     <joint type="euler" name="j_pelvis2dup1"> -->
+        <!--     <joint type="euler" name="root12dup1"> -->
 
         <!--         <parent>pelvis_auxdup1</parent> -->
         <!--         <child>pelvisdup1</child> -->
         <!--         <axis_order>zyx</axis_order> -->
         <!--     </joint> -->
 
-        <!--     <joint name="j_thigh_leftdup1" type="euler"> -->
+        <!--     <joint name="l-upperlegdup1" type="euler"> -->
         <!--         <transformation>0.0 0.0 0.0 0.0 0.0 0</transformation> -->
         <!--         <!-\- the above is a workaround since DART don't have Euler in zxy order -\-> -->
         <!--         <parent>pelvisdup1</parent> -->
@@ -1833,7 +1833,7 @@
         <!--         <init_pos>0.0 0.0 0.0</init_pos> -->
         <!--         <init_vel>0 0.0 0.0</init_vel> -->
         <!--     </joint> -->
-        <!--     <joint name="j_shin_leftdup1" type="revolute"> -->
+        <!--     <joint name="l-lowerlegdup1" type="revolute"> -->
         <!--         <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation> -->
         <!--         <parent>l-upperlegdup1</parent> -->
         <!--         <child>l-lowerlegdup1</child> -->
@@ -1851,7 +1851,7 @@
         <!--         <init_pos>0.0</init_pos> -->
         <!--         <init_vel>0</init_vel> -->
         <!--     </joint> -->
-        <!--     <joint name="j_heel_leftdup1" type="universal"> -->
+        <!--     <joint name="l-footdup1" type="universal"> -->
         <!--         <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation> -->
         <!--         <parent>l-lowerlegdup1</parent> -->
         <!--         <child>l-footdup1</child> -->
@@ -1881,7 +1881,7 @@
         <!--         <init_vel>0 0</init_vel> -->
         <!--     </joint> -->
 
-        <!--     <joint name="j_thigh_rightdup1" type="euler"> -->
+        <!--     <joint name="r-upperlegdup1" type="euler"> -->
         <!--         <transformation>0.0 0.0 0.0 0.0 0.0 0</transformation> -->
         <!--         <parent>pelvisdup1</parent> -->
         <!--         <child>r-upperlegdup1</child> -->
@@ -1919,7 +1919,7 @@
         <!--         <init_pos>0.0 0.0 0.0</init_pos> -->
         <!--         <init_vel>0 0.0 0.0</init_vel> -->
         <!--     </joint> -->
-        <!--     <joint name="j_shin_rightdup1" type="revolute"> -->
+        <!--     <joint name="r-lowerlegdup1" type="revolute"> -->
         <!--         <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation> -->
         <!--         <parent>r-upperlegdup1</parent> -->
         <!--         <child>r-lowerlegdup1</child> -->
@@ -1937,7 +1937,7 @@
         <!--         <init_pos>0.0</init_pos> -->
         <!--         <init_vel>0</init_vel> -->
         <!--     </joint> -->
-        <!--     <joint name="j_heel_rightdup1" type="universal"> -->
+        <!--     <joint name="r-footdup1" type="universal"> -->
         <!--         <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation> -->
         <!--         <parent>r-lowerlegdup1</parent> -->
         <!--         <child>r-footdup1</child> -->
@@ -1967,7 +1967,7 @@
         <!--         <init_vel>0 0</init_vel> -->
         <!--     </joint> -->
 
-        <!--     <joint name="j_abdomendup1" type="universal"> -->
+        <!--     <joint name="abdomendup1" type="universal"> -->
         <!--         <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation> -->
         <!--         <parent>pelvisdup1</parent> -->
         <!--         <child>abdomendup1</child> -->
@@ -1996,7 +1996,7 @@
         <!--         <init_pos>0 0</init_pos> -->
         <!--         <init_vel>0 0</init_vel> -->
         <!--     </joint> -->
-        <!--     <joint name="j_spinedup1" type="revolute"> -->
+        <!--     <joint name="thoraxdup1" type="revolute"> -->
         <!--         <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation> -->
         <!--         <parent>abdomendup1</parent> -->
         <!--         <child>thoraxdup1</child> -->
@@ -2014,18 +2014,18 @@
         <!--         <init_pos>0</init_pos> -->
         <!--         <init_vel>0</init_vel> -->
         <!--     </joint> -->
-        <!--     <joint name="j_headdup1" type="weld"> -->
+        <!--     <joint name="headdup1" type="weld"> -->
         <!--         <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation> -->
         <!--         <parent>thoraxdup1</parent> -->
         <!--         <child>headdup1</child> -->
         <!--     </joint> -->
 
-        <!--     <joint name="j_scapula_leftdup1" type="weld"> -->
+        <!--     <joint name="l-clavicledup1" type="weld"> -->
         <!--         <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation> -->
         <!--         <parent>thoraxdup1</parent> -->
         <!--         <child>l-clavicledup1</child> -->
         <!--     </joint> -->
-        <!--     <joint name="j_bicep_leftdup1" type="euler"> -->
+        <!--     <joint name="l-upperarmdup1" type="euler"> -->
         <!--         <transformation>0.0 0.0 0.0 0.0 0.0 1.570796</transformation> -->
         <!--         <parent>l-clavicledup1</parent> -->
         <!--         <child>l-upperarmdup1</child> -->
@@ -2064,7 +2064,7 @@
         <!--         <init_pos>0.0 0.0 0.0</init_pos> -->
         <!--         <init_vel>0 0.0 0.0</init_vel> -->
         <!--     </joint> -->
-        <!--     <joint name="j_forearm_leftdup1" type="revolute"> -->
+        <!--     <joint name="l-lowerarmdup1" type="revolute"> -->
         <!--         <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation> -->
         <!--         <parent>l-upperarmdup1</parent> -->
         <!--         <child>l-lowerarmdup1</child> -->
@@ -2083,12 +2083,12 @@
         <!--         <init_vel>0</init_vel> -->
         <!--     </joint> -->
 
-        <!--     <joint name="j_scapula_rightdup1" type="weld"> -->
+        <!--     <joint name="r-clavicledup1" type="weld"> -->
         <!--         <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation> -->
         <!--         <parent>thoraxdup1</parent> -->
         <!--         <child>r-clavicledup1</child> -->
         <!--     </joint> -->
-        <!--     <joint name="j_bicep_rightdup1" type="euler"> -->
+        <!--     <joint name="r-upperarmdup1" type="euler"> -->
         <!--         <transformation>0.0 0.0 0.0 0.0 0.0 1.570796</transformation> -->
         <!--         <parent>r-clavicledup1</parent> -->
         <!--         <child>r-upperarmdup1</child> -->
@@ -2127,7 +2127,7 @@
         <!--         <init_pos>0.0 0.0 0.0</init_pos> -->
         <!--         <init_vel>0 0.0 0.0</init_vel> -->
         <!--     </joint> -->
-        <!--     <joint name="j_forearm_rightdup1" type="revolute"> -->
+        <!--     <joint name="r-lowerarmdup1" type="revolute"> -->
         <!--         <transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation> -->
         <!--         <parent>r-upperarmdup1</parent> -->
         <!--         <child>r-lowerarmdup1</child> -->

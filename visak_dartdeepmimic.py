@@ -70,135 +70,135 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         return np.clip(tau, -TORQUE_LIMITS, TORQUE_LIMITS)
 
-    def _get_obs(self, skel=None):
+    # def _get_obs(self, skel=None):
 
-        if skel is None:
-            skel = self.robot_skeleton
+    #     if skel is None:
+    #         skel = self.robot_skeleton
 
-        # DIFF Visak doesn't specify all the information I do for the abdomen
-        # but is unlikely to explain performance gap
+    #     # DIFF Visak doesn't specify all the information I do for the abdomen
+    #     # but is unlikely to explain performance gap
 
-        state = np.array([self.framenum / self.num_frames])
+    #     state = np.array([self.framenum / self.num_frames])
 
-        # observation for left leg thigh######################################
-        RelPos_lthigh = skel.bodynodes[1].com() - skel.bodynodes[0].com()
-        LinVel_lthigh = skel.bodynodes[1].dC
-        quat_lthigh = euler2quat(z=skel.q[8], y=skel.q[7], x=skel.q[6])
+    #     # observation for left leg thigh######################################
+    #     RelPos_lthigh = skel.bodynodes[1].com() - skel.bodynodes[0].com()
+    #     LinVel_lthigh = skel.bodynodes[1].dC
+    #     quat_lthigh = euler2quat(z=skel.q[8], y=skel.q[7], x=skel.q[6])
 
-        state = np.concatenate((state,
-                                RelPos_lthigh,
-                                quat_lthigh,
-                                LinVel_lthigh,
-                                skel.dq[6:9]))
-        ################################################################3
-        RelPos_lknee = skel.bodynodes[2].com() - skel.bodynodes[0].com()
-        LinVel_lknee = skel.bodynodes[2].dC
-        quat_lknee = euler2quat(z=0., y=0., x=skel.q[9])
+    #     state = np.concatenate((state,
+    #                             RelPos_lthigh,
+    #                             quat_lthigh,
+    #                             LinVel_lthigh,
+    #                             skel.dq[6:9]))
+    #     ################################################################3
+    #     RelPos_lknee = skel.bodynodes[2].com() - skel.bodynodes[0].com()
+    #     LinVel_lknee = skel.bodynodes[2].dC
+    #     quat_lknee = euler2quat(z=0., y=0., x=skel.q[9])
 
-        state = np.concatenate((state,
-                                RelPos_lknee,
-                                quat_lknee,
-                                LinVel_lknee,
-                                skel.dq[9: 9 + 1]))
-        #######################################################################3
-        RelPos_lfoot = skel.bodynodes[3].com() - skel.bodynodes[0].com()
-        LinVel_lfoot = skel.bodynodes[3].dC
-        quat_lfoot = euler2quat(z=skel.q[11], y=0, x=skel.q[10])
+    #     state = np.concatenate((state,
+    #                             RelPos_lknee,
+    #                             quat_lknee,
+    #                             LinVel_lknee,
+    #                             skel.dq[9: 9 + 1]))
+    #     #######################################################################3
+    #     RelPos_lfoot = skel.bodynodes[3].com() - skel.bodynodes[0].com()
+    #     LinVel_lfoot = skel.bodynodes[3].dC
+    #     quat_lfoot = euler2quat(z=skel.q[11], y=0, x=skel.q[10])
 
-        state = np.concatenate((state,
-                            RelPos_lfoot,
-                            quat_lfoot,
-                            LinVel_lfoot,
-                            skel.dq[10:12]))
-        #######################################################################3
-        RelPos_rthigh = skel.bodynodes[4].com() - skel.bodynodes[0].com()
-        LinVel_rthigh = skel.bodynodes[4].dC
-        quat_rthigh = euler2quat(z=skel.q[14], y=skel.q[13], x=skel.q[12])
+    #     state = np.concatenate((state,
+    #                         RelPos_lfoot,
+    #                         quat_lfoot,
+    #                         LinVel_lfoot,
+    #                         skel.dq[10:12]))
+    #     #######################################################################3
+    #     RelPos_rthigh = skel.bodynodes[4].com() - skel.bodynodes[0].com()
+    #     LinVel_rthigh = skel.bodynodes[4].dC
+    #     quat_rthigh = euler2quat(z=skel.q[14], y=skel.q[13], x=skel.q[12])
 
-        state = np.concatenate((state,
-                            RelPos_rthigh,
-                            quat_rthigh,
-                            LinVel_rthigh,
-                            skel.dq[12:15]))
-        #####################################################################
-        RelPos_rknee = skel.bodynodes[5].com() - skel.bodynodes[0].com()
-        LinVel_rknee = skel.bodynodes[5].dC
-        quat_rknee = euler2quat(z=0., y=0., x=skel.q[15])
+    #     state = np.concatenate((state,
+    #                         RelPos_rthigh,
+    #                         quat_rthigh,
+    #                         LinVel_rthigh,
+    #                         skel.dq[12:15]))
+    #     #####################################################################
+    #     RelPos_rknee = skel.bodynodes[5].com() - skel.bodynodes[0].com()
+    #     LinVel_rknee = skel.bodynodes[5].dC
+    #     quat_rknee = euler2quat(z=0., y=0., x=skel.q[15])
 
-        state = np.concatenate((state,
-                                RelPos_rknee,
-                                quat_rknee,
-                                LinVel_rknee,
-                                skel.dq[15: 15 + 1]))
+    #     state = np.concatenate((state,
+    #                             RelPos_rknee,
+    #                             quat_rknee,
+    #                             LinVel_rknee,
+    #                             skel.dq[15: 15 + 1]))
 
-        #####################################################################
-        RelPos_rfoot = skel.bodynodes[6].com() - skel.bodynodes[0].com()
-        LinVel_rfoot = skel.bodynodes[6].dC
-        quat_rfoot = euler2quat(z=skel.q[17], y=0, x=skel.q[16])
+    #     #####################################################################
+    #     RelPos_rfoot = skel.bodynodes[6].com() - skel.bodynodes[0].com()
+    #     LinVel_rfoot = skel.bodynodes[6].dC
+    #     quat_rfoot = euler2quat(z=skel.q[17], y=0, x=skel.q[16])
 
-        state = np.concatenate((state,
-                                RelPos_rfoot,
-                                quat_rfoot,
-                                LinVel_rfoot,
-                                skel.dq[16:18]))
+    #     state = np.concatenate((state,
+    #                             RelPos_rfoot,
+    #                             quat_rfoot,
+    #                             LinVel_rfoot,
+    #                             skel.dq[16:18]))
 
-        ############ ABDOMEN ########################
+    #     ############ ABDOMEN ########################
 
-        RelPos_abdomen = skel.bodynodes[7].com() - skel.bodynodes[0].com()
-        LinVel_abdomen = skel.bodynodes[7].dC
-        quat_abdomen = euler2quat(z=skel.q[20], y=skel.q[19], x=skel.q[18])
+    #     RelPos_abdomen = skel.bodynodes[7].com() - skel.bodynodes[0].com()
+    #     LinVel_abdomen = skel.bodynodes[7].dC
+    #     quat_abdomen = euler2quat(z=skel.q[20], y=skel.q[19], x=skel.q[18])
 
-        state = np.concatenate((state,
-                                RelPos_abdomen,
-                                quat_abdomen,
-                                LinVel_abdomen,
-                                skel.dq[18:21]))
+    #     state = np.concatenate((state,
+    #                             RelPos_abdomen,
+    #                             quat_abdomen,
+    #                             LinVel_abdomen,
+    #                             skel.dq[18:21]))
 
-        ###########################################################
-        RelPos_larm = skel.bodynodes[12].com() - skel.bodynodes[0].com()
-        LinVel_larm = skel.bodynodes[12].dC
-        quat_larm = euler2quat(z=skel.q[23], y=skel.q[22], x=skel.q[21])
+    #     ###########################################################
+    #     RelPos_larm = skel.bodynodes[12].com() - skel.bodynodes[0].com()
+    #     LinVel_larm = skel.bodynodes[12].dC
+    #     quat_larm = euler2quat(z=skel.q[23], y=skel.q[22], x=skel.q[21])
 
-        state = np.concatenate((state,
-                                RelPos_larm,
-                                quat_larm,
-                                LinVel_larm,
-                                skel.dq[21:24]))
-        ##############################################################
-        RelPos_lelbow = skel.bodynodes[13].com() - skel.bodynodes[0].com()
-        LinVel_lelbow = skel.bodynodes[13].dC
-        quat_lelbow = euler2quat(z=0., y=0., x=skel.q[24])
+    #     state = np.concatenate((state,
+    #                             RelPos_larm,
+    #                             quat_larm,
+    #                             LinVel_larm,
+    #                             skel.dq[21:24]))
+    #     ##############################################################
+    #     RelPos_lelbow = skel.bodynodes[13].com() - skel.bodynodes[0].com()
+    #     LinVel_lelbow = skel.bodynodes[13].dC
+    #     quat_lelbow = euler2quat(z=0., y=0., x=skel.q[24])
 
-        state = np.concatenate((state,
-                                RelPos_lelbow,
-                                quat_lelbow,
-                                LinVel_lelbow,
-                                skel.dq[24:24 + 1]))
+    #     state = np.concatenate((state,
+    #                             RelPos_lelbow,
+    #                             quat_lelbow,
+    #                             LinVel_lelbow,
+    #                             skel.dq[24:24 + 1]))
 
-        ################################################################
-        RelPos_rarm = skel.bodynodes[15].com() - skel.bodynodes[0].com()
-        LinVel_rarm = skel.bodynodes[15].dC
-        quat_rarm = euler2quat(z=skel.q[27], y=skel.q[26], x=skel.q[25])
+    #     ################################################################
+    #     RelPos_rarm = skel.bodynodes[15].com() - skel.bodynodes[0].com()
+    #     LinVel_rarm = skel.bodynodes[15].dC
+    #     quat_rarm = euler2quat(z=skel.q[27], y=skel.q[26], x=skel.q[25])
 
-        state = np.concatenate((state,
-                                RelPos_rarm,
-                                quat_rarm,
-                                LinVel_rarm,
-                                skel.dq[25:28]))
-        #################################################################3
-        RelPos_relbow = skel.bodynodes[16].com() - skel.bodynodes[0].com()
-        LinVel_relbow = skel.bodynodes[16].dC
-        quat_relbow = euler2quat(z=0., y=0., x=skel.q[28])
+    #     state = np.concatenate((state,
+    #                             RelPos_rarm,
+    #                             quat_rarm,
+    #                             LinVel_rarm,
+    #                             skel.dq[25:28]))
+    #     #################################################################3
+    #     RelPos_relbow = skel.bodynodes[16].com() - skel.bodynodes[0].com()
+    #     LinVel_relbow = skel.bodynodes[16].dC
+    #     quat_relbow = euler2quat(z=0., y=0., x=skel.q[28])
 
-        state = np.concatenate((state,
-                                RelPos_relbow,
-                                quat_relbow,
-                                LinVel_relbow,
-                                skel.dq[28: 28 + 1]))
+    #     state = np.concatenate((state,
+    #                             RelPos_relbow,
+    #                             quat_relbow,
+    #                             LinVel_relbow,
+    #                             skel.dq[28: 28 + 1]))
 
-        ##################################################################
+    #     ##################################################################
 
-        return state
+    #     return state
 
     def targets_from_netvector(self, actions):
 
