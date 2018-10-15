@@ -40,7 +40,9 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         q = skel.q[6:]
         dq = skel.dq[6:]
-        tau = np.multiply(kp, targets) - np.multiply(kd, dq)
+        tau = np.multiply(kp,
+                          (self.ref_q_frames[self.framenum][6:] + targets) - q) \
+              - np.multiply(kd, dq)
 
         # DIFF I use a more elegant method of clipping, but is equivalent
         TORQUE_LIMITS = np.array(
