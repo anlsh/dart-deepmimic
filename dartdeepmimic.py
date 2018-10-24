@@ -312,42 +312,42 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         return self._get_obs()
 
-    def _get_obs(self, skel=None):
-        """
-        Return a 1-dimensional vector of the skeleton's state, as defined by
-        the state code. When skeleton is not specified, control_skel is used
-        """
+    # def _get_obs(self, skel=None):
+    #     """
+    #     Return a 1-dimensional vector of the skeleton's state, as defined by
+    #     the state code. When skeleton is not specified, control_skel is used
+    #     """
 
-        if skel is None:
-            skel = self.robot_skeleton
+    #     if skel is None:
+    #         skel = self.robot_skeleton
 
-        state = np.array([self.framenum / self.num_frames])
+    #     state = np.array([self.framenum / self.num_frames])
 
-        for dof_name in self._dof_names:
+    #     for dof_name in self._dof_names:
 
-            indices, body_index = self.metadict[dof_name]
-            body = skel.bodynodes[body_index]
-            fi, li = indices[0], indices[-1] + 1
+    #         indices, body_index = self.metadict[dof_name]
+    #         body = skel.bodynodes[body_index]
+    #         fi, li = indices[0], indices[-1] + 1
 
-            if dof_name != ROOT_KEY:
-                if len(indices) > 1:
+    #         if dof_name != ROOT_KEY:
+    #             if len(indices) > 1:
 
-                    converted_angle = self.angle_to_rep(pad2length(skel.q[fi:li],
-                                                                   3))
-                else:
-                    converted_angle = skel.q[fi:fi+1]
-            else:
-                converted_angle = self.angle_to_rep(skel.q[0:3])
-                fi, li = 0, 4
+    #                 converted_angle = self.angle_to_rep(pad2length(skel.q[fi:li],
+    #                                                                3))
+    #             else:
+    #                 converted_angle = skel.q[fi:fi+1]
+    #         else:
+    #             converted_angle = self.angle_to_rep(skel.q[0:3])
+    #             fi, li = 0, 4
 
-            # TODO Pass in an actual angular velocity instead of dq
-            state = np.concatenate([state,
-                                    body.com() - skel.bodynodes[0].com(),
-                                    converted_angle,
-                                    body.dC,
-                                    skel.dq[fi:li]])
+    #         # TODO Pass in an actual angular velocity instead of dq
+    #         state = np.concatenate([state,
+    #                                 body.com() - skel.bodynodes[0].com(),
+    #                                 converted_angle,
+    #                                 body.dC,
+    #                                 skel.dq[fi:li]])
 
-        return state
+    #     return state
 
     # def quaternion_angles(self, skel):
 
