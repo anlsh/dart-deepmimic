@@ -103,7 +103,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # self.simsteps_per_dataframe = simsteps_per_dataframe
         self.pos_init_noise = pos_init_noise
         self.vel_init_noise = vel_init_noise
-        self.max_torque = max_torque
+        # self.max_torque = max_torque
         self.max_angle = max_angle
         self.default_damping = default_damping
         self.default_spring = default_spring
@@ -216,7 +216,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         else:
             self.step_resolution = int(self.step_resolution)
 
-
         #################################################################
         # Extract dof data from skeleton and construct reference frames #
         #################################################################
@@ -231,9 +230,9 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self._actuated_dof_names = [name for name in self._dof_names
                                     if not name.startswith(ROOT_KEY)]
 
-        self._end_effector_indices = [i for i, node
-                                       in enumerate(ref_skel.bodynodes)
-                                     if len(node.child_bodynodes) == 0]
+        # self._end_effector_indices = [i for i, node
+        #                                in enumerate(ref_skel.bodynodes)
+        #                              if len(node.child_bodynodes) == 0]
 
         self.obs_dim = len(self._get_obs(ref_skel))
         self.action_dim = sum([ActionMode.lengths[self.actionmode]
@@ -264,8 +263,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # Set various per joint/body parameters based on inputs #
         #########################################################
 
-        # TODO Re-enable setting gravity I guess
-        # self.dart_world.set_gravity(int(self.gravity) * GRAVITY_VECTOR)
+        self.dart_world.set_gravity(int(self.gravity) * GRAVITY_VECTOR)
         self.robot_skeleton.set_self_collision_check(self.self_collide)
 
         for joint in self.robot_skeleton.joints[1:]:
@@ -294,7 +292,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         """
         raise NotImplementedError()
 
-
     def reset(self, framenum=None, pos_stdv=None, vel_stdv=None):
         """
         Unfortunately, I have to provide default arguments for pos, vel_stdv
@@ -314,7 +311,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                        self.ref_dq_frames[self.framenum])
 
         return self._get_obs()
-
 
     def _get_obs(self, skel=None):
         """
@@ -487,7 +483,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             self.robot_skeleton.set_forces(np.concatenate([np.zeros(6),
                                                         tau]))
             self.dart_world.step()
-
 
         newstate = self._get_obs()
         reward = self.reward(self.robot_skeleton, self.framenum)

@@ -10,6 +10,8 @@ class EnvPlayer:
     def play_motion_no_noise(self):
         for i in range(self.env.num_frames):
             obs = self.env.reset(i, 0, 0)
+            # print(self.env.should_terminate(1, obs))
+            # print(env.reward(env.robot_skeleton, env.framenum))
             self.env.render()
 
     def take_single_step_zero_pos(self, init_frame=0):
