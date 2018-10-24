@@ -279,9 +279,9 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         # TODO Unknown if this is airtight, though it probably is...
 
-        with open("assets/mocap/walk/WalkPositions_corrected.txt", "rb") as fp:
+        with open("assets/mocap/JustJumpPositions_corrected.txt", "rb") as fp:
             self.WalkPositions = np.loadtxt(fp)
-        with open("assets/mocap/walk/WalkVelocities_corrected.txt", "rb") as fp:
+        with open("assets/mocap/JustJumpVelocities_corrected.txt", "rb") as fp:
             self.WalkVelocities = np.loadtxt(fp)
 
         num_frames = len(self.WalkPositions)
@@ -332,6 +332,8 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         yielded from the state
         """
         term, rude_term = False, False
+
+        # TODO Wait a second... are these the jump termination conditions?
 
         if self.framenum >= self.num_frames - 1:
             term, rude_term = True, False
