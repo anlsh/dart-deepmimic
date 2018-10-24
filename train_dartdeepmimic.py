@@ -13,12 +13,10 @@ def train(env, initial_params_path,
           save_interval, out_prefix, num_timesteps, num_cpus,
           hidden_dimensions):
     from baselines.ppo1 import mlp_policy, pposgd_simple
-    #with tf.variable_scope('inclined'):
     sess = U.make_session(num_cpu=num_cpus).__enter__()
 
     U.initialize()
 
-    #set_global_seeds(seed)
     def policy_fn(name, ob_space, ac_space):
         print("Policy with name: ", name)
         policy = mlp_policy.MlpPolicy(name=name, ob_space=ob_space,
@@ -30,7 +28,8 @@ def train(env, initial_params_path,
         return policy
 
     #env = bench.Monitor(env, "results.json")
-    #env.seed(seed)
+    # env.seed(8)
+    set_global_seeds(8)
     gym.logger.setLevel(logging.WARN)
 
     def callback_fn(local_vars, global_vars):
