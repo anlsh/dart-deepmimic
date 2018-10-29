@@ -1,5 +1,4 @@
 from dartdeepmimic import DartDeepMimicEnv
-import ddm_argparse
 import numpy as np
 from euclideanSpace import euler2quat, angle_axis2euler
 from quaternions import mult, inverse
