@@ -81,7 +81,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                  ee_weight, ee_inner_weight,
                  com_weight, com_inner_weight,
                  max_torque,
-                 max_angle,
+                 # max_angle,
                  default_damping,
                  default_spring,
                  default_friction,
@@ -104,7 +104,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.pos_init_noise = pos_init_noise
         self.vel_init_noise = vel_init_noise
         # self.max_torque = max_torque
-        self.max_angle = max_angle
+        # self.max_angle = max_angle
         self.default_damping = default_damping
         self.default_spring = default_spring
         self.default_friction = default_friction
@@ -245,15 +245,16 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                                                        refmotion_path)
         self.num_frames = len(self.ref_q_frames)
 
-        action_limits = self.max_angle * np.ones(self.action_dim)
-        self.action_limits = np.array([-action_limits, action_limits])
+        # TODO Replace the 20 with a max_angle variable
+        action_limits = 20 * np.ones(self.action_dim)
+        action_limits = np.array([-action_limits, action_limits])
 
         # TODO Hardcoded frame skip, pulled from visak's code
         super(DartDeepMimicEnv,
               self).__init__(model_paths=[self._skeleton_path],
                              frame_skip=16,
                              observation_size=self.obs_dim,
-                             action_bounds=self.action_limits,
+                             action_bounds=action_limits,
                              # dt=self.refmotion_dt / self.simsteps_per_dataframe,
                              visualize=self.__visualize,
                              disableViewer=not self.__visualize)
