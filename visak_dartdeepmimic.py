@@ -139,11 +139,6 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
     def targets_from_netvector(self, actions):
 
-        # DIFF Visak accidentally reused some indices, I correct that but
-        # everything else remains the same
-
-        # DIFF Does Visak clip his neural network outputs to be in range?
-
         joint_targets = np.zeros(23)
 
         # Left thigh

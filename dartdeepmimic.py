@@ -280,8 +280,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
     def step(self, action_vector):
 
-        np.clip(action_vector, -self.action_limits, self.action_limits)
-
         nn_angles = self.targets_from_netvector(action_vector)
 
         for _ in range(self.step_resolution):
