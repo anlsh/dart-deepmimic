@@ -280,27 +280,23 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
     def step(self, action_vector):
 
-        # DIFF This is in exact parity with Visak's code, except
-        # for the head flag
-
         np.clip(action_vector, -self.action_limits, self.action_limits)
 
-        dof_targets = self.targets_from_netvector(action_vector)
+        nn_angles = self.targets_from_netvector(action_vector)
 
         for _ in range(self.step_resolution):
-            tau = self.PID(self.robot_skeleton, dof_targets)
+            tau = self.PID(self.robot_skeleton, nn_angles)
             self.robot_skeleton.set_forces(np.concatenate([np.zeros(6),
-                                                        tau]))
+                                                           tau]))
             self.dart_world.step()
 
+        self.framenum += 1
         newstate = self._get_obs()
         reward = self.reward(self.robot_skeleton, self.framenum)
         done, rude_term = self.should_terminate(reward, newstate)
 
         if rude_term:
             reward = 0
-
-        self.framenum += 1
 
         if not np.isfinite(newstate).all():
             raise RuntimeError("Ran into an infinite state")

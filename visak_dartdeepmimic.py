@@ -17,8 +17,6 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
     def construct_frames(self, ref_skel, ref_motion_path):
 
-        # TODO Unknown if this is airtight, though it probably is...
-
         with open("assets/mocap/walk/WalkPositions_corrected.txt",
                   "rb") as fp:
             self.MotionPositions = np.loadtxt(fp)
@@ -39,11 +37,12 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
             updated_pos = self.MotionPositions[i,:]
             updated_vel = self.MotionVelocities[i,:]
 
-            ref_skel.set_positions(updated_pos)
-            ref_skel.set_velocities(updated_vel)
+            pos_frames[i] = updated_pos.copy()
+            vel_frames[i] = updated_vel.copy()
 
-            pos_frames[i] = ref_skel.q.copy()
-            vel_frames[i] = ref_skel.dq.copy()
+            ref_skel.set_positions(pos_frames[i])
+            ref_skel.set_velocities(vel_frames[i])
+
             com_frames[i] = ref_skel.bodynodes[0].com()
             ee_frames[i] = self._get_ee_positions(ref_skel)
 
@@ -86,9 +85,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
             raise RuntimeError("Must terminate to rudely terminate")
         return term, rude_term
 
-    def PID(self, skel, targets):
-        # DIFF I used a more elegant way to calculate the PID torques,
-        # but actually it is equivalent
+    def PID(self, skel, actuated_angle_targets):
 
         kp = np.array([250.] * 23)
         kd = np.array([0.005] * 23)
@@ -105,15 +102,13 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         kd[15:] = 0.05
 
-        kp = np.multiply(1/2, kp)
-        kd = np.multiply(1/2, kd)
+        kp = np.multiply(.5, kp)
+        kd = np.multiply(.5, kd)
 
-        q = skel.q[6:]
-        dq = skel.dq[6:]
-        tau = np.multiply(kp,
-                          (self.ref_q_frames[self.framenum][6:] + targets)
-                          - q) \
-              - np.multiply(kd, dq)
+        tau_p = np.multiply(kp, actuated_angle_targets - skel.q[6:])
+        tau_d = np.multiply(kd, skel.dq[6:])
+
+        tau = tau_p - tau_d
 
         # DIFF I use a more elegant method of clipping, but is equivalent
         TORQUE_LIMITS = np.array([150.0 * 5,
