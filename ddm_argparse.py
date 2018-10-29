@@ -36,7 +36,7 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
         self.add_argument('--max-angle', type=float, default=5,
                           help="Max magnitude of angle (in terms of pi) that "
                           + "PID can output")
-        self.add_argument('--default-damping', type=float, default=80,
+        self.add_argument('--default-damping', type=float, default=10,
                           help="Default damping coefficient for joints")
         self.add_argument('--default-spring', type=float, default=0,
                           help="Default spring stiffness for joints")
