@@ -19,10 +19,10 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         # TODO Unknown if this is airtight, though it probably is...
 
-        with open("assets/mocap/JustJumpPositions_corrected.txt",
+        with open("assets/mocap/walk/WalkPositions_corrected.txt",
                   "rb") as fp:
             self.MotionPositions = np.loadtxt(fp)
-        with open("assets/mocap/JustJumpVelocities_corrected.txt",
+        with open("assets/mocap/walk/WalkVelocities_corrected.txt",
                   "rb") as fp:
             self.MotionVelocities = np.loadtxt(fp)
 
