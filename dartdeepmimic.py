@@ -69,18 +69,18 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
     def __init__(self, skeleton_path,
                  refmotion_path,
-                 policy_query_frequency,
+                 # policy_query_frequency,
                  # refmotion_dt,
                  statemode,
                  actionmode,
-                 p_gain, d_gain,
-                 pos_init_noise, vel_init_noise,
-                 reward_cutoff,
+                 # p_gain, d_gain,
+                 # pos_init_noise, vel_init_noise,
+                 # reward_cutoff,
                  pos_weight, pos_inner_weight,
                  vel_weight, vel_inner_weight,
                  ee_weight, ee_inner_weight,
                  com_weight, com_inner_weight,
-                 max_torque,
+                 # max_torque,
                  # max_angle,
                  default_damping,
                  default_spring,
@@ -97,22 +97,22 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         self.statemode = statemode
         self.actionmode = actionmode
-        self.policy_query_frequency = policy_query_frequency
+        # self.policy_query_frequency = policy_query_frequency
         # TODO Dead variable, re-enable here and in argparse
         # self.refmotion_dt = refmotion_dt
         # self.simsteps_per_dataframe = simsteps_per_dataframe
-        self.pos_init_noise = pos_init_noise
-        self.vel_init_noise = vel_init_noise
+        # self.pos_init_noise = pos_init_noise
+        # self.vel_init_noise = vel_init_noise
         # self.max_torque = max_torque
         # self.max_angle = max_angle
         self.default_damping = default_damping
         self.default_spring = default_spring
         self.default_friction = default_friction
-        self.reward_cutoff = reward_cutoff
+        # self.reward_cutoff = reward_cutoff
         self.gravity = gravity
         self.self_collide = self_collide
-        self.p_gain = p_gain
-        self.d_gain = d_gain
+        # self.p_gain = p_gain
+        # self.d_gain = d_gain
         self.pos_weight = pos_weight
         self.pos_inner_weight = pos_inner_weight
         self.vel_weight = vel_weight
@@ -201,8 +201,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             warnings.warn("Self collisions are disabled, be sure you meant"
                           + " to do this!", RuntimeWarning)
 
-        if (self.p_gain < 0) or (self.d_gain < 0):
-            raise RuntimeError("All PID gains should be positive")
+        # if (self.p_gain < 0) or (self.d_gain < 0):
+        #     raise RuntimeError("All PID gains should be positive")
 
         if (pos_inner_weight > 0) or (vel_inner_weight > 0) or \
            (ee_inner_weight > 0) or (com_inner_weight) > 0:
