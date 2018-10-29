@@ -239,7 +239,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         quat_term = self.vsk_quatreward(skel, framenum)
 
         reward = 0.1 * end_effector_reward + 0.1 * joint_vel_term \
-                 + 0.25 * com_reward + 1.65 * quat_term
+                 + 0.15 * com_reward + .65 * quat_term
 
         return reward
 

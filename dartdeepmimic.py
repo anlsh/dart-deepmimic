@@ -243,7 +243,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             self.ref_quat_frames, self.ref_com_frames, \
             self.ref_ee_frames = self.construct_frames(ref_skel,
                                                        refmotion_path)
-        self.num_frames = len(ref_q_frames)
+        self.num_frames = len(self.ref_q_frames)
 
         action_limits = self.max_angle * np.ones(self.action_dim)
         self.action_limits = np.array([-action_limits, action_limits])
