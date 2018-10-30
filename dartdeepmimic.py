@@ -76,10 +76,10 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                  # p_gain, d_gain,
                  # pos_init_noise, vel_init_noise,
                  # reward_cutoff,
-                 pos_weight, pos_inner_weight,
-                 vel_weight, vel_inner_weight,
-                 ee_weight, ee_inner_weight,
-                 com_weight, com_inner_weight,
+                 # pos_weight, pos_inner_weight,
+                 # vel_weight, vel_inner_weight,
+                 # ee_weight, ee_inner_weight,
+                 # com_weight, com_inner_weight,
                  # max_torque,
                  # max_angle,
                  default_damping,
@@ -113,14 +113,14 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.self_collide = self_collide
         # self.p_gain = p_gain
         # self.d_gain = d_gain
-        self.pos_weight = pos_weight
-        self.pos_inner_weight = pos_inner_weight
-        self.vel_weight = vel_weight
-        self.vel_inner_weight = vel_inner_weight
-        self.ee_weight = ee_weight
-        self.ee_inner_weight = ee_inner_weight
-        self.com_weight = com_weight
-        self.com_inner_weight = com_inner_weight
+        # self.pos_weight = pos_weight
+        # self.pos_inner_weight = pos_inner_weight
+        # self.vel_weight = vel_weight
+        # self.vel_inner_weight = vel_inner_weight
+        # self.ee_weight = ee_weight
+        # self.ee_inner_weight = ee_inner_weight
+        # self.com_weight = com_weight
+        # self.com_inner_weight = com_inner_weight
         self.__visualize = visualize
         self._skeleton_path = skeleton_path
 
@@ -148,13 +148,13 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # Self.parameters for internal use #
         ####################################
 
-        self._outerweights = [self.pos_weight, self.vel_weight,
-                              self.ee_weight, self.com_weight]
+        # self._outerweights = [self.pos_weight, self.vel_weight,
+        #                       self.ee_weight, self.com_weight]
 
-        self._innerweights = [self.pos_inner_weight,
-                              self.vel_inner_weight,
-                              self.ee_inner_weight,
-                              self.com_inner_weight]
+        # self._innerweights = [self.pos_inner_weight,
+        #                       self.vel_inner_weight,
+        #                       self.ee_inner_weight,
+        #                       self.com_inner_weight]
 
         # TODO Re-enable step resolution calculation
         # self.step_resolution = (1 / self.policy_query_frequency) / self.refmotion_dt
@@ -204,12 +204,12 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # if (self.p_gain < 0) or (self.d_gain < 0):
         #     raise RuntimeError("All PID gains should be positive")
 
-        if (pos_inner_weight > 0) or (vel_inner_weight > 0) or \
-           (ee_inner_weight > 0) or (com_inner_weight) > 0:
-            raise RuntimeError("Inner weights should always be <= 0")
-        if (pos_weight < 0) or (vel_weight < 0) or \
-           (ee_weight < 0) or (com_weight) < 0:
-            raise RuntimeError("Outer weights should always be >= 0")
+        # if (pos_inner_weight > 0) or (vel_inner_weight > 0) or \
+        #    (ee_inner_weight > 0) or (com_inner_weight) > 0:
+        #     raise RuntimeError("Inner weights should always be <= 0")
+        # if (pos_weight < 0) or (vel_weight < 0) or \
+        #    (ee_weight < 0) or (com_weight) < 0:
+        #     raise RuntimeError("Outer weights should always be >= 0")
 
         if self.step_resolution % 1 != 0:
             raise RuntimeError("Refmotion dt doesn't divide query dt")
