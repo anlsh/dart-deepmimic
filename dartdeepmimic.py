@@ -293,6 +293,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
     def _step(self, action_vector):
 
+        self.dart_world.y_scale = np.clip(action_vector[6],-2,2)
         nn_angles = self.angles_from_netvector(np.array(action_vector))
 
         # TODO Should be step_resolution instead of 4
