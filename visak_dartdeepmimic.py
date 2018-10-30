@@ -459,18 +459,6 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
                                 LinVel_rfoot,
                                 skel.dq[16:18]))
 
-        ############ ABDOMEN ########################
-
-        RelPos_abdomen = skel.bodynodes[7].com() - skel.bodynodes[0].com()
-        LinVel_abdomen = skel.bodynodes[7].dC
-        quat_abdomen = euler2quat(z=skel.q[20], y=skel.q[19], x=skel.q[18])
-
-        state = np.concatenate((state,
-                                RelPos_abdomen,
-                                quat_abdomen,
-                                LinVel_abdomen,
-                                skel.dq[18:21]))
-
         ###########################################################
         RelPos_larm = skel.bodynodes[12].com() - skel.bodynodes[0].com()
         LinVel_larm = skel.bodynodes[12].dC
@@ -513,7 +501,36 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
                                 LinVel_relbow,
                                 skel.dq[28: 28 + 1]))
 
-        ##################################################################
+        ############ ABDOMEN ########################
+
+        # TODO CODE CONFLICTS
+
+        ###############################
+        # MY CODE WHICH IS CONSISTENT #
+        ###############################
+
+        # RelPos_abdomen = skel.bodynodes[7].com() - skel.bodynodes[0].com()
+        # LinVel_abdomen = skel.bodynodes[7].dC
+        # quat_abdomen = euler2quat(z=skel.q[20], y=skel.q[19], x=skel.q[18])
+
+        # state = np.concatenate((state,
+        #                         RelPos_abdomen,
+        #                         quat_abdomen,
+        #                         LinVel_abdomen,
+        #                         skel.dq[18:21]))
+
+        ##################################
+        # THE CODE HE USES FOR NO REASON #
+        ##################################
+
+        state = np.concatenate((state,
+                                skel.q[18:21],
+                                skel.dq[18:21]))
+
+        ########################
+        # END CONFLICTING CODE #
+        ########################
+
         state = np.concatenate((state, [self.framenum / self.num_frames]))
 
         return state
