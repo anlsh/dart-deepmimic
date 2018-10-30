@@ -159,7 +159,6 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         tau = tau_p - tau_d
 
-        # DIFF I use a more elegant method of clipping, but is equivalent
         TORQUE_LIMITS = np.array([150.0 * 5,
                                   80. * 3,
                                   80. * 3,
