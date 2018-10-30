@@ -246,9 +246,9 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                                                        refmotion_path)
         self.num_frames = len(self.ref_q_frames)
 
-        # TODO Replace the 20 with a max_angle variable
-        action_limits = 20 * np.ones(self.action_dim)
-        action_limits = np.array([-action_limits, action_limits])
+        # TODO Replace the 10 with a max_angle variable
+        action_limits = 10. * np.ones(self.action_dim)
+        action_limits = np.array([action_limits, -action_limits])
 
         # TODO Hardcoded frame skip, pulled from visak's code
         super(DartDeepMimicEnv,
