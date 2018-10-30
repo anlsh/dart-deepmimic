@@ -1,0 +1,557 @@
+__author__ = 'yuwenhao'
+
+import numpy as np
+from gym import utils
+from gym.envs.dart import dart_env
+
+from euclideanSpace import *
+from quaternions import *
+
+class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
+
+    def __init__(self):
+
+        self.obs_dim = 127
+        self.action_dim = 32
+
+        self.control_bounds = np.array([10*np.ones(self.action_dim,),
+                                        -10*np.ones(self.action_dim,)])
+
+        ##################################
+        # Dart Env initialization stuff! #
+        ##################################
+
+        prefix = '/home/anish/Code/deepmimic/'
+
+        dart_env.DartEnv.__init__(self,
+                                  [prefix + 'assets/skel/kima_original.skel'],
+                                  16,
+                                  self.obs_dim,
+                                  self.control_bounds,
+                                  disableViewer=False)
+
+        self.robot_skeleton.set_self_collision_check(True)
+
+        self.robot_skeleton = self.dart_world.skeletons[1]
+        for i in range(self.robot_skeleton.njoints-1):
+            self.robot_skeleton.joint(i).set_position_limit_enforced(True)
+            self.robot_skeleton.dof(i).set_damping_coefficient(10.)
+
+        for body in self.robot_skeleton.bodynodes+self.dart_world.skeletons[0].bodynodes:
+           body.set_friction_coeff(20.)
+
+        for jt in range(0, len(self.robot_skeleton.joints)):
+            if self.robot_skeleton.joints[jt].has_position_limit(0):
+                self.robot_skeleton.joints[jt].set_position_limit_enforced(True)
+
+        #####################################
+        # End dart env initialization stuff #
+        #####################################
+
+        utils.EzPickle.__init__(self)
+
+
+        self.impactCount = 0
+
+        self.framenum = 0
+        prefix = '/home/anish/Code/deepmimic/assets/mocap/walk/'
+        prefix = '/home/anish/Code/deepmimic/assets/mocap/walk/'
+        with open(prefix+"rarm_endeffector.txt","rb") as fp:
+            self.rarm_endeffector = np.loadtxt(fp)[:-1]
+
+        with open(prefix+"larm_endeffector.txt","rb") as fp:
+            self.larm_endeffector = np.loadtxt(fp)[:-1]
+
+        with open(prefix+"lfoot_endeffector.txt","rb") as fp:
+            self.lfoot_endeffector = np.loadtxt(fp)[:-1]
+
+        with open(prefix+"rfoot_endeffector.txt",'rb') as fp:
+            self.rfoot_endeffector = np.loadtxt(fp)[:-1]
+
+        with open(prefix+"com.txt",'rb') as fp:
+            self.com = np.loadtxt(fp)[:-1]
+        with open(prefix+"WalkPositions_corrected.txt","rb") as fp:
+            self.MotionPositions = np.loadtxt(fp)
+
+        with open(prefix+"WalkVelocities_corrected.txt","rb") as fp:
+            self.MotionVelocities = np.loadtxt(fp)
+
+        self.num_frames = len(self.MotionPositions)
+
+        self.tau = np.zeros(29,)
+        self.ndofs = 29
+        self.target = np.zeros(self.ndofs,)
+
+
+    def transformActions(self,actions):
+
+        joint_targets = np.zeros(23,)
+
+        # Left thigh
+        lthigh = actions[:4]
+        euler_lthigh = angle_axis2euler(theta=lthigh[0],vector=lthigh[1:])
+        joint_targets[0] = euler_lthigh[2]
+        joint_targets[1] = euler_lthigh[1]
+        joint_targets[2] = euler_lthigh[0]
+
+        ###### Left Knee
+        joint_targets[3] = actions[4]
+
+        ### left foot
+        lfoot = actions[5:9]
+        euler_lfoot = angle_axis2euler(theta=lfoot[0],vector=lfoot[1:])
+        joint_targets[4] = euler_lfoot[2]
+        joint_targets[5] = euler_lfoot[0]
+
+        # right thigh
+        rthigh = actions[9:13]
+        euler_rthigh = angle_axis2euler(theta=rthigh[0],vector=rthigh[1:])
+        joint_targets[6] = euler_rthigh[2]
+        joint_targets[7] = euler_rthigh[1]
+        joint_targets[8] = euler_rthigh[0]
+
+        ###### right Knee
+        joint_targets[9] = actions[13]
+
+        ### right foot
+        rfoot = actions[14:18]
+        euler_rfoot = angle_axis2euler(theta=rfoot[0],vector=rfoot[1:])
+        joint_targets[10] = euler_rfoot[2]
+        joint_targets[11] = euler_rfoot[0]
+
+        ###thorax
+
+        thorax = actions[18:22]
+        euler_thorax = angle_axis2euler(theta=thorax[0],vector=thorax[1:])
+        joint_targets[12] = euler_thorax[2]
+        joint_targets[13] = euler_thorax[1]
+        joint_targets[14] = euler_thorax[0]
+
+        #### l upper arm
+        l_arm = actions[22:26]
+        euler_larm = angle_axis2euler(theta=l_arm[0],vector=l_arm[1:])
+        joint_targets[15] = euler_larm[2]
+        joint_targets[16] = euler_larm[1]
+        joint_targets[17] = euler_larm[0]
+
+        ## l elbow
+
+        joint_targets[18] = actions[26]
+
+        ## r upper arm
+        r_arm = actions[27:31]
+        euler_rarm = angle_axis2euler(theta=r_arm[0],vector=r_arm[1:])
+        joint_targets[19] = euler_rarm[2]
+        joint_targets[20] = euler_rarm[1]
+        joint_targets[21] = euler_rarm[0]
+
+        ###r elbow
+
+        joint_targets[22] = actions[31]
+
+        return joint_targets
+
+    def quat_reward(self, skel, framenum):
+
+        quaternion_difference = []
+
+        #### lthigh
+        lthigh_euler = skel.q[6:9]
+        lthigh_mocap = self.MotionPositions[framenum,6:9]
+        quat_lthigh = euler2quat(z=lthigh_euler[2],y=lthigh_euler[1],x=lthigh_euler[0])
+        quat_lthigh_mocap = euler2quat(z=lthigh_mocap[2],y=lthigh_mocap[1],x=lthigh_mocap[0])
+        lthigh_diff = mult(inverse(quat_lthigh_mocap),quat_lthigh)
+        scalar_lthigh = 2*np.arccos(lthigh_diff[0])
+        quaternion_difference.append(scalar_lthigh)
+
+        ##### lknee
+        lknee_euler = skel.q[9]
+        lknee_mocap = self.MotionPositions[framenum,9]
+        quat_lknee = euler2quat(z=0.,y=0.,x=lknee_euler)
+        quat_lknee_mocap = euler2quat(z=0.,y=0.,x=lknee_mocap)
+        lknee_diff = mult(inverse(quat_lknee_mocap),quat_lknee)
+        scalar_lknee = 2*np.arccos(lknee_diff[0])
+        quaternion_difference.append(scalar_lknee)
+
+        #### lfoot
+        lfoot_euler = skel.q[10:12]
+        lfoot_mocap = self.MotionPositions[framenum,10:12]
+        quat_lfoot = euler2quat(z=lfoot_euler[1],y=0.,x=lfoot_euler[0])
+        quat_lfoot_mocap = euler2quat(z=lfoot_mocap[1],y=0.,x=lfoot_mocap[0])
+        lfoot_diff = mult(inverse(quat_lfoot_mocap),quat_lfoot)
+        scalar_lfoot = 2*np.arccos(lfoot_diff[0])
+        quaternion_difference.append(scalar_lfoot)
+
+        #### rthigh
+        rthigh_euler = skel.q[12:15]
+        rthigh_mocap = self.MotionPositions[framenum,12:15]
+        quat_rthigh = euler2quat(z=rthigh_euler[2],y=rthigh_euler[1],x=rthigh_euler[0])
+        quat_rthigh_mocap = euler2quat(z=rthigh_mocap[2],y=rthigh_mocap[1],x=rthigh_mocap[0])
+        rthigh_diff = mult(inverse(quat_rthigh_mocap),quat_rthigh)
+        scalar_rthigh = 2*np.arccos(rthigh_diff[0])
+        quaternion_difference.append(scalar_rthigh)
+
+        ##### rknee
+        rknee_euler = skel.q[15]
+        rknee_mocap = self.MotionPositions[framenum,15]
+        quat_rknee = euler2quat(z=0.,y=0.,x=rknee_euler)
+        quat_rknee_mocap = euler2quat(z=0.,y=0.,x=rknee_mocap)
+        rknee_diff = mult(inverse(quat_rknee_mocap),quat_rknee)
+        scalar_rknee = 2*np.arccos(rknee_diff[0])
+        quaternion_difference.append(scalar_rknee)
+
+        #### rfoot
+        rfoot_euler = skel.q[16:18]
+        rfoot_mocap = self.MotionPositions[framenum,16:18]
+        quat_rfoot = euler2quat(z=rfoot_euler[1],y=0.,x=rfoot_euler[0])
+        quat_rfoot_mocap = euler2quat(z=rfoot_mocap[1],y=0.,x=rfoot_mocap[0])
+        rfoot_diff = mult(inverse(quat_rfoot_mocap),quat_rfoot)
+        scalar_rfoot = 2*np.arccos(rfoot_diff[0])
+        quaternion_difference.append(scalar_rfoot)
+
+        scalar_thoraxx = skel.q[18] - self.MotionPositions[framenum,18]
+        quaternion_difference.append(scalar_thoraxx)
+        scalar_thoraxy = skel.q[19] - self.MotionPositions[framenum,19]
+        quaternion_difference.append(scalar_thoraxy)
+        scalar_thoraxz = skel.q[20] - self.MotionPositions[framenum,20]
+        quaternion_difference.append(scalar_thoraxz)
+
+        #### l upper arm
+        larm_euler = skel.q[21:24]
+        larm_mocap = self.MotionPositions[framenum,21:24]
+        quat_larm = euler2quat(z=larm_euler[2],y=larm_euler[1],x=larm_euler[0])
+        quat_larm_mocap = euler2quat(z=larm_mocap[2],y=larm_mocap[1],x=larm_mocap[0])
+        larm_diff = mult(inverse(quat_larm_mocap),quat_larm)
+        scalar_larm = 2*np.arccos(larm_diff[0])
+        quaternion_difference.append(scalar_larm)
+
+        ##### l elbow
+        lelbow_euler = skel.q[24]
+        lelbow_mocap = self.MotionPositions[framenum,24]
+        quat_lelbow = euler2quat(z=0.,y=0.,x=lelbow_euler)
+        quat_lelbow_mocap = euler2quat(z=0.,y=0.,x=lelbow_mocap)
+        lelbow_diff = mult(inverse(quat_lelbow_mocap),quat_lelbow)
+        scalar_lelbow = 2*np.arccos(lelbow_diff[0])
+        quaternion_difference.append(scalar_lelbow)
+
+        #### r upper arm
+        rarm_euler = skel.q[25:28]
+        rarm_mocap = self.MotionPositions[framenum,25:28]
+        quat_rarm = euler2quat(z=rarm_euler[2],y=rarm_euler[1],x=rarm_euler[0])
+        quat_rarm_mocap = euler2quat(z=rarm_mocap[2],y=rarm_mocap[1],x=rarm_mocap[0])
+        rarm_diff = mult(inverse(quat_rarm_mocap),quat_rarm)
+        scalar_rarm = 2*np.arccos(rarm_diff[0])
+        quaternion_difference.append(scalar_rarm)
+
+        ##### r elbow
+        relbow_euler = skel.q[28]
+        relbow_mocap = self.MotionPositions[framenum,28]
+        quat_relbow = euler2quat(z=0.,y=0.,x=relbow_euler)
+        quat_relbow_mocap = euler2quat(z=0.,y=0.,x=relbow_mocap)
+        relbow_diff = mult(inverse(quat_relbow_mocap),quat_relbow)
+        scalar_relbow = 2*np.arccos(relbow_diff[0])
+        quaternion_difference.append(scalar_relbow)
+
+        quat_reward = np.exp(-2*np.sum(np.square(quaternion_difference)))
+
+        return quat_reward
+
+
+    def ClampTorques(self,torques):
+        torqueLimits = np.array([150.0 * 5,
+                                 80 * 3,
+                                 80 * 3,
+                                 100 * 5,
+                                 80 * 5,
+                                 60,
+                                 150.0 * 5,
+                                 80. * 3,
+                                 80. * 3,
+                                 100. * 5,
+                                 80. * 5,
+                                 60.,
+                                 150. * 5,
+                                 150. * 5,
+                                 150. * 5,
+                                 10.,
+                                 5.,
+                                 5.,
+                                 5.,
+                                 10.,
+                                 5.,
+                                 5,
+                                 5.]) * 2
+        for i in range(6,self.ndofs):
+            if torques[i] > torqueLimits[i-6]:
+                torques[i] = torqueLimits[i-6]
+            if torques[i] < -torqueLimits[i-6]:
+                torques[i] = -torqueLimits[i-6]
+
+        return torques
+
+    def PID(self, target):
+        self.kp = np.array([250]*23)
+        self.kd = np.array([0.005]*23)
+
+        self.kp[0] = 600+25
+        self.kp[3] = 225+25
+        self.kp[9] = 225+25
+        self.kp[10] = 200
+        self.kp[16] = 200
+        self.kp[[1,2]] = 150
+        self.kp[[7,8]] = 150
+        self.kp[6] = 600+25
+        self.kp[15:] = 155
+        self.kd[15:]= 0.05
+
+        self.kp = [item / 2 for item in self.kp]
+        self.kd = [item / 2 for item in self.kd]
+
+        q = self.robot_skeleton.q
+        qdot = self.robot_skeleton.dq
+        tau = np.zeros((self.ndofs,))
+
+        for i in range(6, self.ndofs):
+            tau[i] = -self.kp[i - 6] * (q[i] - target[i]) - self.kd[i - 6] * qdot[i]
+
+        torqs = self.ClampTorques(tau)
+
+        return torqs[6:]
+
+    def ee_reward(self, skel, framenum):
+
+        point_rarm = [0.,-0.60,-0.15]
+        point_larm = [0.,-0.60,-0.15]
+        point_rfoot = [0.,0.,-0.20]
+        point_lfoot = [0.,0.,-0.20]
+
+        global_rarm = skel.bodynodes[16].to_world(point_rarm)
+
+        global_larm = skel.bodynodes[13].to_world(point_larm)
+        global_lfoot = skel.bodynodes[4].to_world(point_lfoot)
+        global_rfoot = skel.bodynodes[7].to_world(point_rfoot)
+
+        Joint_weights = np.ones(23,)
+        Joint_weights[[0,3,6,9,16,20,10,16]] = 10
+
+
+        rarm_term = np.sum(np.square(self.rarm_endeffector[framenum,:] - global_rarm))
+        larm_term = np.sum(np.square(self.larm_endeffector[framenum,:] - global_larm))
+        rfoot_term = np.sum(np.square(self.rfoot_endeffector[framenum,:] - global_rfoot))
+        lfoot_term = np.sum(np.square(self.lfoot_endeffector[framenum,:] - global_lfoot))
+
+        return np.exp(-40*(rarm_term+larm_term+rfoot_term+lfoot_term))
+
+    def com_reward(self, skel, framenum):
+        return np.exp(-40*np.sum(np.square(self.com[framenum,:]
+                                           - skel.bodynodes[0].com())))
+
+    def vel_reward(self, skel, framenum):
+        Joint_weights = np.ones(23, )
+        Joint_weights[[0, 3, 6, 9, 16, 20, 10, 16]] = 10
+        Weight_matrix = np.diag(Joint_weights)
+
+        vel_diff = self.MotionVelocities[framenum,6:] - skel.dq[6:]
+
+        vel_pen = np.sum(vel_diff.T*Weight_matrix*vel_diff)
+
+        return 1*np.asarray(np.exp(-1e-1*vel_pen))
+
+    def reward(self, skel, framenum):
+
+        R_ee = self.ee_reward(skel, framenum)
+        R_com = self.com_reward(skel, framenum)
+        R_vel = self.vel_reward(skel, framenum)
+        R_quat = self.quat_reward(skel, framenum)
+
+        return 0.1 * R_ee + 0.1 * R_vel + 0.15 * R_com + .65 * R_quat
+
+    def step(self, a):
+        return self._step(a)
+
+    def _step(self, a):
+
+        self.dart_world.y_scale = np.clip(a[6],-2,2)
+        self.dart_world.plot = False
+
+        clamped_control = np.array(a)
+        self.target[6:] = self.transformActions(clamped_control)
+
+        def advance(a):
+
+            self.tau = np.zeros(self.robot_skeleton.ndofs)
+
+            for i in range(4):
+                self.tau[6:] = self.PID(self.target)
+
+                self.robot_skeleton.set_forces(self.tau)
+                self.dart_world.step()
+
+        advance(a)
+
+        reward = self.reward(self.robot_skeleton, self.framenum)
+
+        ###################################################
+        # TODO No idea what in the world any of this does #
+        ###################################################
+        c = 0
+        head_flag = False
+        total_force_mag = 0
+        contacts = self.dart_world.collision_result.contacts
+
+        for contact in contacts:
+            force = np.sum(contact.force[[1,2]])
+            total_force_mag += force
+            data = np.zeros(11,)
+            data[:10] = contact.state
+            data[10] = self.framenum
+
+        for item in contacts:
+            if item.skel_id1 == 0:
+                if self.robot_skeleton.bodynodes[item.bodynode_id2].name == "head":
+                    head_flag = True
+
+        #################################
+        # End code spawned by the devil #
+        #################################
+
+        s = self.state_vector()
+        done = self.should_terminate(self.robot_skeleton, s)
+
+        if done:
+            reward = 0.
+
+        if head_flag:
+            reward = 0.
+            done = True
+
+        reward_breakup = None
+
+        ob = self._get_obs()
+        self.framenum+=1
+        if self.framenum >= self.num_frames:
+            done = True
+
+        return ob, reward, done,reward_breakup
+
+    def should_terminate(self, skel, obs):
+        height = skel.bodynodes[0].com()[1]
+        done = not (np.isfinite(obs).all()
+                    and (np.abs(obs[2:]) < 200).all()
+                    and (height > -0.7)
+                    and (skel.q[3] > -0.4)
+                    and (skel.q[3]<0.3)
+                    and (abs(skel.q[4]) < 0.30)
+                    and (abs(skel.q[5]) < 0.30))
+        return done
+
+
+    def _get_obs(self):
+
+        phi = np.array([self.framenum/self.num_frames])
+        # observation for left leg thigh##################################################
+        RelPos_lthigh = self.robot_skeleton.bodynodes[2].com() - self.robot_skeleton.bodynodes[0].com()
+        state = RelPos_lthigh.copy()
+        quat_lthigh = euler2quat(z=self.robot_skeleton.q[8],y=self.robot_skeleton.q[7],x=self.robot_skeleton.q[6])
+        state = np.concatenate((state,quat_lthigh))
+        LinVel_lthigh = self.robot_skeleton.bodynodes[2].dC
+        state = np.concatenate((state,LinVel_lthigh))
+        state = np.concatenate((state,self.robot_skeleton.dq[6:9]))
+        ################################################################3
+        RelPos_lknee = self.robot_skeleton.bodynodes[3].com() - self.robot_skeleton.bodynodes[0].com()
+        state = np.concatenate((state,RelPos_lknee))
+        quat_lknee = euler2quat(z=0.,y=0.,x=self.robot_skeleton.q[9])
+        state = np.concatenate((state,quat_lknee))
+        LinVel_lknee = self.robot_skeleton.bodynodes[3].dC
+        state = np.concatenate((state,LinVel_lknee))
+        state = np.concatenate((state,np.array([self.robot_skeleton.dq[9]])))
+        #######################################################################3
+        RelPos_lfoot = self.robot_skeleton.bodynodes[4].com() - self.robot_skeleton.bodynodes[0].com()
+        state = np.concatenate((state,RelPos_lfoot))
+        quat_lfoot = euler2quat(z=self.robot_skeleton.q[11],y=0.,x=self.robot_skeleton.q[10])
+        state = np.concatenate((state,quat_lfoot))
+        LinVel_lfoot = self.robot_skeleton.bodynodes[4].dC
+        state = np.concatenate((state,LinVel_lfoot))
+        state = np.concatenate((state,self.robot_skeleton.dq[10:12]))
+        #######################################################################3
+        RelPos_rthigh = self.robot_skeleton.bodynodes[5].com() - self.robot_skeleton.bodynodes[0].com()
+        state = np.concatenate((state,RelPos_rthigh))
+        quat_rthigh = euler2quat(z=self.robot_skeleton.q[14],y=self.robot_skeleton.q[13],x=self.robot_skeleton.q[12])
+        state = np.concatenate((state,quat_rthigh))
+        LinVel_rthigh = self.robot_skeleton.bodynodes[5].dC
+        state = np.concatenate((state,LinVel_rthigh))
+        state = np.concatenate((state,self.robot_skeleton.dq[12:15]))
+        ###############################################################################3
+        RelPos_rknee = self.robot_skeleton.bodynodes[6].com() - self.robot_skeleton.bodynodes[0].com()
+        state = np.concatenate((state,RelPos_rknee))
+        quat_rknee = euler2quat(z=0.,y=0.,x=self.robot_skeleton.q[15])
+        state = np.concatenate((state,quat_rknee))
+        LinVel_rknee = self.robot_skeleton.bodynodes[6].dC
+        state = np.concatenate((state,LinVel_rknee))
+        state = np.concatenate((state,np.array([self.robot_skeleton.dq[15]])))
+        ################################################################################3
+        RelPos_rfoot = self.robot_skeleton.bodynodes[7].com() - self.robot_skeleton.bodynodes[0].com()
+        state = np.concatenate((state,RelPos_rfoot))
+        quat_rfoot = euler2quat(z=self.robot_skeleton.q[17],y=0.,x=self.robot_skeleton.q[16])
+        state = np.concatenate((state,quat_rfoot))
+        LinVel_rfoot = self.robot_skeleton.bodynodes[7].dC
+        state = np.concatenate((state,LinVel_rfoot))
+        state = np.concatenate((state,self.robot_skeleton.dq[16:18]))
+        ###########################################################
+        RelPos_larm = self.robot_skeleton.bodynodes[12].com() - self.robot_skeleton.bodynodes[0].com()
+        state = np.concatenate((state,RelPos_larm))
+        quat_larm = euler2quat(z=self.robot_skeleton.q[23],y=self.robot_skeleton.q[22],x=self.robot_skeleton.q[21])
+        state = np.concatenate((state,quat_larm))
+        LinVel_larm = self.robot_skeleton.bodynodes[12].dC
+        state = np.concatenate((state,LinVel_larm))
+        state = np.concatenate((state,self.robot_skeleton.dq[21:24]))
+        ##############################################################
+        RelPos_lelbow = self.robot_skeleton.bodynodes[13].com() - self.robot_skeleton.bodynodes[0].com()
+        state = np.concatenate((state,RelPos_lelbow))
+        quat_lelbow = euler2quat(z=0.,y=0.,x=self.robot_skeleton.q[24])
+        state = np.concatenate((state,quat_lelbow))
+        LinVel_lelbow = self.robot_skeleton.bodynodes[13].dC
+        state = np.concatenate((state,LinVel_lelbow))
+        state = np.concatenate((state,np.array([self.robot_skeleton.dq[24]])))
+        ################################################################
+        RelPos_rarm = self.robot_skeleton.bodynodes[15].com() - self.robot_skeleton.bodynodes[0].com()
+        state = np.concatenate((state,RelPos_rarm))
+        quat_rarm = euler2quat(z=self.robot_skeleton.q[27],y=self.robot_skeleton.q[26],x=self.robot_skeleton.q[25])
+        state = np.concatenate((state,quat_rarm))
+        LinVel_rarm = self.robot_skeleton.bodynodes[15].dC
+        state = np.concatenate((state,LinVel_rarm))
+        state = np.concatenate((state,self.robot_skeleton.dq[25:28]))
+        #################################################################3
+        RelPos_relbow = self.robot_skeleton.bodynodes[16].com() - self.robot_skeleton.bodynodes[0].com()
+        state = np.concatenate((state,RelPos_relbow))
+        quat_relbow = euler2quat(z=0.,y=0.,x=self.robot_skeleton.q[28])
+        state = np.concatenate((state,quat_relbow))
+        LinVel_relbow = self.robot_skeleton.bodynodes[16].dC
+        state = np.concatenate((state,LinVel_relbow))
+        state = np.concatenate((state,np.array([self.robot_skeleton.dq[28]])))
+        state = np.concatenate((state,self.robot_skeleton.q[18:21],self.robot_skeleton.dq[18:21],phi))
+        ##################################################################
+
+        return state
+
+    def reset(self, frame=None):
+        return self.reset_model(frame)
+
+    def reset_model(self, frame=None):
+
+        self.dart_world.reset()
+
+        # rand_start = np.random.randint(low=60,high=61,size=1)
+        rand_start = np.random.randint(low=0,high=self.num_frames,size=1) if frame is None else [frame]
+        qpos = self.MotionPositions[rand_start[0],:].reshape(29,)
+        self.framenum =rand_start[0]
+        qvel = self.MotionVelocities[rand_start[0],:].reshape(29,)
+        self.set_state(qpos, qvel)
+        self.impactCount = 0
+        return self._get_obs()
+
+    def viewer_setup(self):
+        if not self.disableViewer:
+            self._get_viewer().scene.tb.trans[0] = 5.0
+            self._get_viewer().scene.tb.trans[2] = -7.5
+            self._get_viewer().scene.tb.trans[1] = 0.0
