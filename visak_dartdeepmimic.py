@@ -45,7 +45,9 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
             com_frames[i] = ref_skel.bodynodes[0].com()
             ee_frames[i] = self._get_ee_positions(ref_skel)
 
-        return pos_frames, vel_frames, quat_frames, com_frames, ee_frames
+        return np.array(pos_frames), np.array(vel_frames), \
+            np.array(quat_frames), np.array(com_frames), \
+            np.array(ee_frames)
 
     def _get_ee_positions(self, skel):
 
