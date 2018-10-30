@@ -9,9 +9,6 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
     def __init__(self, *args, **kwargs):
 
-        self.ref_q_frames = None
-        self.MotionVelocities = None
-
         super(VisakDartDeepMimicEnv, self).__init__(*args, **kwargs)
 
         # TODO The following stuff is probably... wrong
