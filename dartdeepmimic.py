@@ -291,7 +291,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         newstate = self._get_obs()
         reward = self.reward(self.robot_skeleton, self.framenum)
-        done, rude_term = self.should_terminate(reward, newstate)
+        done, rude_term = self.should_terminate(self.state_vector())
         self.framenum += 1
 
         if rude_term:
