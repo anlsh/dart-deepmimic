@@ -279,6 +279,9 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             for body in skel.bodynodes:
                 body.set_friction_coeff(self.default_friction)
 
+    def step(self, a):
+        return self._step(a)
+
     def _step(self, action_vector):
 
         nn_angles = self.targets_from_netvector(action_vector)
