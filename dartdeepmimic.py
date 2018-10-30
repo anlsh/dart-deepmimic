@@ -159,7 +159,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         # TODO Re-enable step resolution calculation
         # self.step_resolution = (1 / self.policy_query_frequency) / self.refmotion_dt
-        self.step_resolution = 4
+        # self.step_resolution = 4
 
         self.angle_to_rep = lambda x: None
         self.angle_from_rep = lambda x: None
@@ -212,10 +212,10 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         #    (ee_weight < 0) or (com_weight) < 0:
         #     raise RuntimeError("Outer weights should always be >= 0")
 
-        if self.step_resolution % 1 != 0:
-            raise RuntimeError("Refmotion dt doesn't divide query dt")
-        else:
-            self.step_resolution = int(self.step_resolution)
+        # if self.step_resolution % 1 != 0:
+        #     raise RuntimeError("Refmotion dt doesn't divide query dt")
+        # else:
+        #     self.step_resolution = int(self.step_resolution)
 
         #################################################################
         # Extract dof data from skeleton and construct reference frames #
@@ -288,7 +288,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         nn_angles = self.targets_from_netvector(action_vector)
 
-        for _ in range(self.step_resolution):
+        # TODO Should be step_resolution instead of 4
+        for _ in range(4):
             tau = self.PID(self.robot_skeleton, nn_angles)
             self.robot_skeleton.set_forces(np.concatenate([np.zeros(6),
                                                            tau]))
