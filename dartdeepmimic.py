@@ -251,14 +251,20 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         action_limits = np.array([action_limits, -action_limits])
 
         # TODO Hardcoded frame skip, pulled from visak's code
-        super(DartDeepMimicEnv,
-              self).__init__(model_paths=[self._skeleton_path],
-                             frame_skip=16,
-                             observation_size=self.obs_dim,
-                             action_bounds=action_limits,
-                             # dt=self.refmotion_dt / self.simsteps_per_dataframe,
-                             visualize=self.__visualize,
-                             disableViewer=not self.__visualize)
+        # TODO bring back my nice keyword :(
+        # dart_env.DartEnv.__init__(self,
+        #                           model_paths=[self._skeleton_path],
+        #                           frame_skip=16,
+        #                           observation_size=self.obs_dim,
+        #                           action_bounds=action_limits,
+        #                           visualize=self.__visualize,
+        #                           disableViewer=not self.__visualize)
+        dart_env.DartEnv.__init__(self,
+                                  [self._skeleton_path],
+                                  16,
+                                  self.obs_dim,
+                                  action_limits,
+                                  disableViewer=False)
 
         #########################################################
         # Set various per joint/body parameters based on inputs #
