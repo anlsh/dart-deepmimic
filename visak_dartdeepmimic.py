@@ -379,8 +379,9 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         quaternion_difference.append(scalar_relbow)
 
         quaternion_difference = np.array(quaternion_difference)
-        quaternion_difference[np.isinf(quaternion_difference)] = 0
-        quaternion_difference[np.isnan(quaternion_difference)] = 0
+        # TODO Re-enable my finiteness checks!!!!
+        # quaternion_difference[np.isinf(quaternion_difference)] = 0
+        # quaternion_difference[np.isnan(quaternion_difference)] = 0
 
         quat_reward = np.exp(-2 * norm(quaternion_difference)**2)
 
