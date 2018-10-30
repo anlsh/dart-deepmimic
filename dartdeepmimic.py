@@ -467,7 +467,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
     #     return target_q
 
 
-    # def should_terminate(self, reward, newstate):
+    # def should_terminate(self, newstate):
     #     done = self.framenum >= self.num_frames
     #     done = done or reward < self.reward_cutoff
     #     return done

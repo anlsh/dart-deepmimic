@@ -63,7 +63,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
                          skel.bodynodes[4].to_world(point_lfoot),
                          skel.bodynodes[7].to_world(point_rfoot)])
 
-    def should_terminate(self, reward, newstate):
+    def should_terminate(self, newstate):
         """
         Returns a tuple of (done, rude_termination)
 
