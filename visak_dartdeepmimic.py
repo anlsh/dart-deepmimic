@@ -398,8 +398,8 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         state = np.array([self.framenum / self.num_frames])
 
         # observation for left leg thigh######################################
-        RelPos_lthigh = skel.bodynodes[1].com() - skel.bodynodes[0].com()
-        LinVel_lthigh = skel.bodynodes[1].dC
+        RelPos_lthigh = skel.bodynodes[2].com() - skel.bodynodes[0].com()
+        LinVel_lthigh = skel.bodynodes[2].dC
         quat_lthigh = euler2quat(z=skel.q[8], y=skel.q[7], x=skel.q[6])
 
         state = np.concatenate((state,
@@ -408,8 +408,8 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
                                 LinVel_lthigh,
                                 skel.dq[6:9]))
         ################################################################3
-        RelPos_lknee = skel.bodynodes[2].com() - skel.bodynodes[0].com()
-        LinVel_lknee = skel.bodynodes[2].dC
+        RelPos_lknee = skel.bodynodes[3].com() - skel.bodynodes[0].com()
+        LinVel_lknee = skel.bodynodes[3].dC
         quat_lknee = euler2quat(z=0., y=0., x=skel.q[9])
 
         state = np.concatenate((state,
@@ -418,8 +418,8 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
                                 LinVel_lknee,
                                 skel.dq[9: 9 + 1]))
         #######################################################################3
-        RelPos_lfoot = skel.bodynodes[3].com() - skel.bodynodes[0].com()
-        LinVel_lfoot = skel.bodynodes[3].dC
+        RelPos_lfoot = skel.bodynodes[4].com() - skel.bodynodes[0].com()
+        LinVel_lfoot = skel.bodynodes[4].dC
         quat_lfoot = euler2quat(z=skel.q[11], y=0, x=skel.q[10])
 
         state = np.concatenate((state,
@@ -428,8 +428,8 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
                             LinVel_lfoot,
                             skel.dq[10:12]))
         #######################################################################3
-        RelPos_rthigh = skel.bodynodes[4].com() - skel.bodynodes[0].com()
-        LinVel_rthigh = skel.bodynodes[4].dC
+        RelPos_rthigh = skel.bodynodes[5].com() - skel.bodynodes[0].com()
+        LinVel_rthigh = skel.bodynodes[5].dC
         quat_rthigh = euler2quat(z=skel.q[14], y=skel.q[13], x=skel.q[12])
 
         state = np.concatenate((state,
@@ -438,8 +438,8 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
                             LinVel_rthigh,
                             skel.dq[12:15]))
         #####################################################################
-        RelPos_rknee = skel.bodynodes[5].com() - skel.bodynodes[0].com()
-        LinVel_rknee = skel.bodynodes[5].dC
+        RelPos_rknee = skel.bodynodes[6].com() - skel.bodynodes[0].com()
+        LinVel_rknee = skel.bodynodes[6].dC
         quat_rknee = euler2quat(z=0., y=0., x=skel.q[15])
 
         state = np.concatenate((state,
@@ -449,8 +449,8 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
                                 skel.dq[15: 15 + 1]))
 
         #####################################################################
-        RelPos_rfoot = skel.bodynodes[6].com() - skel.bodynodes[0].com()
-        LinVel_rfoot = skel.bodynodes[6].dC
+        RelPos_rfoot = skel.bodynodes[7].com() - skel.bodynodes[0].com()
+        LinVel_rfoot = skel.bodynodes[7].dC
         quat_rfoot = euler2quat(z=skel.q[17], y=0, x=skel.q[16])
 
         state = np.concatenate((state,
