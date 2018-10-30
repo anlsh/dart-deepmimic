@@ -383,7 +383,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         # quaternion_difference[np.isinf(quaternion_difference)] = 0
         # quaternion_difference[np.isnan(quaternion_difference)] = 0
 
-        quat_reward = np.exp(-2 * norm(quaternion_difference)**2)
+        quat_reward = np.exp(-2 * np.sum(np.square(quaternion_difference)))
 
         return quat_reward
 
