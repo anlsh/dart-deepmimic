@@ -395,7 +395,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         # DIFF Visak doesn't specify all the information I do for the abdomen
         # but is unlikely to explain performance gap
 
-        state = np.array([self.framenum / self.num_frames])
+        state = np.array([])
 
         # observation for left leg thigh######################################
         RelPos_lthigh = skel.bodynodes[2].com() - skel.bodynodes[0].com()
@@ -514,6 +514,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
                                 skel.dq[28: 28 + 1]))
 
         ##################################################################
+        state = np.concatenate((state, [self.framenum / self.num_frames]))
 
         return state
 
