@@ -23,6 +23,28 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
                   "rb") as fp:
             MotionVelocities = np.loadtxt(fp)
 
+        ####################################################
+        # TODO Useless except to override my mocap parsing #
+
+        prefix = "assets/mocap/walk/"
+
+        with open(prefix+"rarm_endeffector.txt","rb") as fp:
+            rarm_endeffector = np.loadtxt(fp)[:-1]
+
+        with open(prefix+"larm_endeffector.txt","rb") as fp:
+            larm_endeffector = np.loadtxt(fp)[:-1]
+
+        with open(prefix+"lfoot_endeffector.txt","rb") as fp:
+            lfoot_endeffector = np.loadtxt(fp)[:-1]
+
+        with open(prefix+"rfoot_endeffector.txt",'rb') as fp:
+            rfoot_endeffector = np.loadtxt(fp)[:-1]
+
+        with open(prefix+"com.txt",'rb') as fp:
+            com = np.loadtxt(fp)[:-1]
+
+        ####################################################
+
         num_frames = len(ref_q_frames)
 
         pos_frames = [None] * num_frames
@@ -42,8 +64,19 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
             ref_skel.set_positions(pos_frames[i])
             ref_skel.set_velocities(vel_frames[i])
 
-            com_frames[i] = ref_skel.bodynodes[0].com()
-            ee_frames[i] = self._get_ee_positions(ref_skel)
+            ###########################################################
+            # TODO Re-enable my own code parsing
+            # Code conflicts: For some reason, the com / ee frames Visak and I
+            # parse are different, therefore I discard my version of it
+
+            # MY VERSION BELOW
+            # com_frames[i] = ref_skel.bodynodes[0].com()
+            # ee_frames[i] = self._get_ee_positions(ref_skel)
+
+            com_frames[i] = com[i]
+            ee_frames[i] = [rarm_endeffector[i], larm_endeffector[i],
+                            rfoot_endeffector[i], lfoot_endeffector[i]]
+            ##########################################################
 
         return np.array(pos_frames), np.array(vel_frames), \
             np.array(quat_frames), np.array(com_frames), \
