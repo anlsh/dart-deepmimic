@@ -148,7 +148,7 @@ def test_parity_mocap_eepositions(vddm_env, raw_env):
 def test_parity_angle_calculation(vddm_env, raw_env, nn_output):
 
     for nno in nn_output:
-        tmp = vddm_env.targets_from_netvector(nno)
+        tmp = vddm_env.angles_from_netvector(nno)
         assert np.array_equal(tmp, raw_env.transformActions(nno))
         assert(np.isfinite(tmp).all())
 
@@ -159,7 +159,7 @@ def test_parity_torques(vddm_env, raw_env, nn_output):
     # so I can safely use this one method
 
     for nno in nn_output:
-        angles = vddm_env.targets_from_netvector(nno)
+        angles = vddm_env.angles_from_netvector(nno)
         tmp = vddm_env.PID(vddm_env.robot_skeleton, angles)
         np.testing.assert_array_equal(tmp, raw_env.PID(np.concatenate([np.zeros(6),
                                                                        angles])))

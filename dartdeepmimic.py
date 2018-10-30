@@ -293,7 +293,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
     def _step(self, action_vector):
 
-        nn_angles = self.targets_from_netvector(action_vector)
+        nn_angles = self.angles_from_netvector(np.array(action_vector))
 
         # TODO Should be step_resolution instead of 4
         for _ in range(4):
@@ -448,7 +448,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
     #     return reward
 
-    # def targets_from_netvector(self, netvector):
+    # def angles_from_netvector(self, netvector):
 
     #     target_q = np.zeros(len(self.robot_skeleton.q) - 6)
     #     q_index = 0

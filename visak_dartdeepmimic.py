@@ -186,7 +186,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         return np.clip(tau, -TORQUE_LIMITS, TORQUE_LIMITS)
 
-    def targets_from_netvector(self, actions):
+    def angles_from_netvector(self, actions):
 
         joint_targets = np.zeros(23)
 
