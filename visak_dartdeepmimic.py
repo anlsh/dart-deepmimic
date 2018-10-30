@@ -239,35 +239,39 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         return joint_targets
 
-    def reward(self, skel, framenum):
-
-        # DIFF I calcualate reward exactly as Visak does
-
+    def ee_reward(self, skel, framenum):
         ee_positions = self._get_ee_positions(skel)
         ref_ee_positions = self.ref_ee_frames[framenum]
         ee_diffs = ee_positions - ref_ee_positions
-        ee_diffmag = np.sum(np.linalg.norm(k)**2 for k in ee_diffs)
-        end_effector_reward = np.exp(-40 * ee_diffmag)
+        ee_diffmag = np.sum([np.sum(np.square(diff)) for diff in ee_diffs])
+        return np.exp(-40 * ee_diffmag)
 
-        com_reward = np.exp(-40 * norm(self.ref_com_frames[framenum]
-                                       - skel.bodynodes[0].com())**2)
+    def com_reward(self, skel, framenum):
+        return np.exp(-40 * np.sum(np.square(self.ref_com_frames[framenum]
+                                             - skel.bodynodes[0].com())))
 
+    def vel_reward(self, skel, framenum):
         Joint_weights = np.ones(23, )
         Joint_weights[[0, 3, 6, 9, 16, 20, 10, 16]] = 10
         Weight_matrix = np.diag(Joint_weights)
 
         vel_diff = self.ref_dq_frames[framenum][6:] - skel.dq[6:]
         vel_pen = np.sum(vel_diff.T * Weight_matrix * vel_diff)
-        joint_vel_term = np.exp(-0.1 * vel_pen)
+        return np.exp(-0.1 * vel_pen)
 
-        quat_term = self.vsk_quatreward(skel, framenum)
+    def reward(self, skel, framenum):
 
-        reward = 0.1 * end_effector_reward + 0.1 * joint_vel_term \
-                 + 0.15 * com_reward + .65 * quat_term
+        R_ee = self.ee_reward(skel, framenum)
+        R_com = self.com_reward(skel, framenum)
+        R_vel = self.vel_reward(skel, framenum)
+        R_quat = self.quat_reward(skel, framenum)
+
+        reward = 0.1 * R_ee + 0.1 * R_vel \
+                 + 0.15 * R_com + .65 * R_quat
 
         return reward
 
-    def vsk_quatreward(self, skel, framenum):
+    def quat_reward(self, skel, framenum):
 
         # DIFF Quaternion difference (and therefore reward) are computed
         # same as Visak does, but for the fact that I do some finiteness
