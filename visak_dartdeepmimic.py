@@ -93,8 +93,8 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         return np.array([skel.bodynodes[16].to_world(point_rarm),
                          skel.bodynodes[13].to_world(point_larm),
-                         skel.bodynodes[4].to_world(point_lfoot),
-                         skel.bodynodes[7].to_world(point_rfoot)])
+                         skel.bodynodes[7].to_world(point_rfoot),
+                         skel.bodynodes[4].to_world(point_lfoot)])
 
     def should_terminate(self, newstate):
         """
