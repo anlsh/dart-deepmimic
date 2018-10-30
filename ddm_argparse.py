@@ -112,7 +112,7 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
 
 
         return DartDeepMimicArgParse.classes[self.args.environment_mode](
-            skeleton_path="assets/skel/kima_original.skel",
+            skeleton_path=self.args.control_skel_path,
             refmotion_path=None,
             statemode=1, actionmode=2,
             # pos_weight=.65, pos_inner_weight=-2,
