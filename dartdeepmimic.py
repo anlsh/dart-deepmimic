@@ -274,18 +274,19 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # self.dart_world.set_gravity(int(self.gravity) * GRAVITY_VECTOR)
         # self.robot_skeleton.set_self_collision_check(self.self_collide)
 
-        for joint in self.robot_skeleton.joints[1:]:
-            if joint.name == ROOT_KEY:
-                continue
-            if joint.has_position_limit(0):
-                joint.set_position_limit_enforced(True)
-            for index in range(joint.num_dofs()):
-                joint.set_damping_coefficient(index, self.default_damping)
-                joint.set_spring_stiffness(index, self.default_spring)
+        # TODO Re-enable my glorious setting of default values on stuff
+        # for joint in self.robot_skeleton.joints[1:]:
+        #     if joint.name == ROOT_KEY:
+        #         continue
+        #     if joint.has_position_limit(0):
+        #         joint.set_position_limit_enforced(True)
+        #     for index in range(joint.num_dofs()):
+        #         joint.set_damping_coefficient(index, self.default_damping)
+        #         joint.set_spring_stiffness(index, self.default_spring)
 
-        for skel in self.dart_world.skeletons:
-            for body in skel.bodynodes:
-                body.set_friction_coeff(self.default_friction)
+        # for skel in self.dart_world.skeletons:
+        #     for body in skel.bodynodes:
+        #         body.set_friction_coeff(self.default_friction)
 
     def step(self, a):
         return self._step(a)

@@ -14,6 +14,24 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         super(VisakDartDeepMimicEnv, self).__init__(*args, **kwargs)
 
+        # TODO The following stuff is probably... wrong
+        # However it must be done in order to bring us into P A R I T Y
+
+        self.robot_skeleton.set_self_collision_check(True)
+
+        for i in range(self.robot_skeleton.njoints-1):
+            self.robot_skeleton.joint(i).set_position_limit_enforced(True)
+            self.robot_skeleton.dof(i).set_damping_coefficient(10.)
+
+        for body in self.robot_skeleton.bodynodes+self.dart_world.skeletons[0].bodynodes:
+           body.set_friction_coeff(20.)
+
+        for jt in range(0, len(self.robot_skeleton.joints)):
+            if self.robot_skeleton.joints[jt].has_position_limit(0):
+                self.robot_skeleton.joints[jt].set_position_limit_enforced(True)
+
+        # END UNHOLY CODE
+
     def construct_frames(self, ref_skel, ref_motion_path):
 
         with open("assets/mocap/walk/WalkPositions_corrected.txt",
