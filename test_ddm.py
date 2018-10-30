@@ -50,7 +50,8 @@ def vddm_env():
                                  default_friction=20,
                                  visualize=False,
                                  screen_width=80, screen_height=45,
-                                 gravity=True, self_collide=True)
+                                 # gravity=True,
+                                 self_collide=True)
 
 @pytest.fixture(scope="module")
 def raw_env():

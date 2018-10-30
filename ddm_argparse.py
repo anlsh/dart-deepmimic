@@ -123,7 +123,8 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
             default_friction=20,
             visualize=False,
             screen_width=80, screen_height=45,
-            gravity=True, self_collide=True)
+            # gravity=True,
+            self_collide=True)
 
         return DartDeepMimicArgParse.classes[self.args.environment_mode](
             skeleton_path=self.args.control_skel_path,

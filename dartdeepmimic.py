@@ -89,7 +89,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                  # simsteps_per_dataframe,
                  screen_width,
                  screen_height,
-                 gravity, self_collide):
+                 # gravity,
+                 self_collide):
 
         #######################################
         # Just set a bunch of self.parameters #
@@ -109,7 +110,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.default_spring = default_spring
         self.default_friction = default_friction
         # self.reward_cutoff = reward_cutoff
-        self.gravity = gravity
+        # self.gravity = gravity
         self.self_collide = self_collide
         # self.p_gain = p_gain
         # self.d_gain = d_gain
@@ -194,9 +195,9 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # Sanity check the values of certain parameters #
         #################################################
 
-        if not self.gravity:
-            warnings.warn("Gravity is disabled, be sure you meant to do this!",
-                          RuntimeWarning)
+        # if not self.gravity:
+        #     warnings.warn("Gravity is disabled, be sure you meant to do this!",
+                          # RuntimeWarning)
         if not self.self_collide:
             warnings.warn("Self collisions are disabled, be sure you meant"
                           + " to do this!", RuntimeWarning)
@@ -263,8 +264,9 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # Set various per joint/body parameters based on inputs #
         #########################################################
 
-        self.dart_world.set_gravity(int(self.gravity) * GRAVITY_VECTOR)
-        self.robot_skeleton.set_self_collision_check(self.self_collide)
+        # TODO Re-enable setting joint parameters in here
+        # self.dart_world.set_gravity(int(self.gravity) * GRAVITY_VECTOR)
+        # self.robot_skeleton.set_self_collision_check(self.self_collide)
 
         for joint in self.robot_skeleton.joints[1:]:
             if joint.name == ROOT_KEY:
