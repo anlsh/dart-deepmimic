@@ -380,7 +380,8 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         self.dart_world.plot = False
 
         clamped_control = np.array(a)
-        self.target[6:] = self.transformActions(clamped_control)
+        self.target[6:] = self.transformActions(clamped_control) \
+                          + self.MotionPositions[self.framenum][6:]
 
         def advance(a):
 
