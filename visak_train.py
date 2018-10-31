@@ -10,7 +10,7 @@ import random
 from humanoid_redux import DartHumanoid3D_cartesian
 
 
-def make_dart_env(env_id, seed):
+def make_dart_env(seed):
     """
     Create a wrapped, monitored gym.Env for MuJoCo.
     """
@@ -24,13 +24,13 @@ def make_dart_env(env_id, seed):
     return env
 
 
-def train(env_id, num_timesteps, seed):
+def train(num_timesteps, seed):
     from baselines.ppo1 import mlp_policy, pposgd_simple
     #with tf.variable_scope('inclined'):
     U.make_session(num_cpu=1).__enter__()
     #set_global_seeds(seed)
     seed = random.randint(1,10)
-    env = make_dart_env(env_id,seed)#gym.make(env_id)
+    env = make_dart_env(seed)#gym.make(env_id)
     def policy_fn(name, ob_space, ac_space):
         return mlp_policy.MlpPolicy(name=name, ob_space=ob_space, ac_space=ac_space,
                                     hidden_dimension_list=[64,64])
@@ -50,10 +50,11 @@ def train(env_id, num_timesteps, seed):
 def main():
     import argparse
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--env', help='environment ID', default='DartHumanoid3dPIDWalk-v1')
+    # parser.add_argument('--env', help='environment ID', default='DartHumanoid3dPIDWalk-v1')
     parser.add_argument('--seed', help='RNG seed', type=int, default=8)
     args = parser.parse_args()
-    train(args.env, num_timesteps=7e8, seed=args.seed)
+    train(num_timesteps=args.train_num_timesteps,
+          seed=args.seed)
 
 
 if __name__ == '__main__':
