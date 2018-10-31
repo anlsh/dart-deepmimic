@@ -104,24 +104,24 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         self.qpos_node3 = np.zeros(29,)
         #prefix = '../../Balance_getup/'
         prefix = ROOT_DIR + 'assets/mocap/walk/'
-        with open(prefix+"rarm_endeffector_justjump.txt","rb") as fp:
+        with open(prefix+"rarm_endeffector.txt","rb") as fp:
             self.rarm_endeffector = np.loadtxt(fp)
 
-        with open(prefix+"larm_endeffector_justjump.txt","rb") as fp:
+        with open(prefix+"larm_endeffector.txt","rb") as fp:
             self.larm_endeffector = np.loadtxt(fp)
 
-        with open(prefix+"lfoot_endeffector_justjump.txt","rb") as fp:
+        with open(prefix+"lfoot_endeffector.txt","rb") as fp:
             self.lfoot_endeffector = np.loadtxt(fp)
 
-        with open(prefix+"rfoot_endeffector_justjump.txt",'rb') as fp:
+        with open(prefix+"rfoot_endeffector.txt",'rb') as fp:
             self.rfoot_endeffector = np.loadtxt(fp)
 
-        with open(prefix+"com_justjump.txt",'rb') as fp:
+        with open(prefix+"com.txt",'rb') as fp:
             self.com = np.loadtxt(fp)
-        with open(prefix+"JustJumpPositions_corrected.txt","rb") as fp:
+        with open(prefix+"WalkPositions_corrected.txt","rb") as fp:
             self.WalkPositions = np.loadtxt(fp)
 
-        with open(prefix+"JustJumpVelocities_corrected.txt","rb") as fp:
+        with open(prefix+"WalkVelocities_corrected.txt","rb") as fp:
             self.WalkVelocities = np.loadtxt(fp)
 
         #self.WalkPositions[:,1]+=0.013
@@ -843,7 +843,7 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         #print("joint joint_every_diff",min_error)
         #self.count = min_error
         self.count+=1
-        if self.count>= 322:#449
+        if self.count>= 449:
             done = True
 
         self.dart_world.set_text.append(str(done))
@@ -853,7 +853,7 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
     def _get_obs(self):
 
 
-        phi = np.array([self.count/322.])
+        phi = np.array([self.count/449.])
         links = [2,3,4,5,6,7,12,13,15,16]
         # observation for left leg thigh##################################################
         RelPos_lthigh = self.robot_skeleton.bodynodes[2].com() - self.robot_skeleton.bodynodes[0].com()
