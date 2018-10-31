@@ -369,7 +369,7 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         R_vel = self.vel_reward(skel, framenum)
         R_quat = self.quat_reward(skel, framenum)
 
-        return 0.1 * R_ee + 0.1 * R_vel + 0.15 * R_com + .65 * R_quat
+        return 0.1 * R_ee + 0.1 * R_vel + 0.25 * R_com + 1.65 * R_quat
 
     def step(self, a):
         return self._step(a)
