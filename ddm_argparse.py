@@ -121,7 +121,7 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
             # com_weight=.1, com_inner_weight=-10,
             default_damping=10, default_spring=0,
             default_friction=20,
-            visualize=False,
+            visualize=self.args.visualize,
             screen_width=80, screen_height=45,
             # gravity=True,
             self_collide=True)
