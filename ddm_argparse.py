@@ -102,6 +102,16 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
                                         action='store_false')
         self.set_defaults(self_collide=True, help="Whether to enable selfcollisions in the skeleton")
 
+        delta_group = self.add_mutually_exclusive_group()
+        delta_group.add_argument('--delta',
+                                 dest='delta',
+                                 action='store_true')
+        delta_group.add_argument('--no-delta',
+                                   dest='delta',
+                                   action='store_false')
+
+        self.set_defaults(delta=True, help="Are we in delta actions mode?")
+        self.add_argument('--seed', help='RNG seed', type=int, default=8)
         self.args = None
 
     def parse_args(self):
@@ -124,7 +134,8 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
             visualize=self.args.visualize,
             screen_width=80, screen_height=45,
             # gravity=True,
-            self_collide=True)
+            self_collide=True,
+            delta_actions=self.args.delta)
 
         return DartDeepMimicArgParse.classes[self.args.environment_mode](
             skeleton_path=self.args.control_skel_path,

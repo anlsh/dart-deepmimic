@@ -39,19 +39,21 @@ def policy(vddm_env):
 file_prefix = "/home/anish/Code/deepmimic/"
 @pytest.fixture(scope="module")
 def vddm_env():
-    return VisakDartDeepMimicEnv(skeleton_path=file_prefix + "assets/skel/kima_original.skel",
-                                 refmotion_path=None,
-                                 statemode=1, actionmode=2,
-                                 # pos_weight=.65, pos_inner_weight=-2,
-                                 # vel_weight=.1, vel_inner_weight=-.1,
-                                 # ee_weight=.15, ee_inner_weight=-40,
-                                 # com_weight=.1, com_inner_weight=-10,
-                                 default_damping=10, default_spring=0,
-                                 default_friction=20,
-                                 visualize=False,
-                                 screen_width=80, screen_height=45,
-                                 # gravity=True,
-                                 self_collide=True)
+    env = VisakDartDeepMimicEnv(skeleton_path=file_prefix + "assets/skel/kima_original.skel",
+                                refmotion_path=None,
+                                statemode=1, actionmode=2,
+                                # pos_weight=.65, pos_inner_weight=-2,
+                                # vel_weight=.1, vel_inner_weight=-.1,
+                                # ee_weight=.15, ee_inner_weight=-40,
+                                # com_weight=.1, com_inner_weight=-10,
+                                default_damping=10, default_spring=0,
+                                default_friction=20,
+                                visualize=False,
+                                screen_width=80, screen_height=45,
+                                # gravity=True,
+                                self_collide=True,
+                                delta_actions=False)
+    return env
 
 @pytest.fixture(scope="module")
 def raw_env():

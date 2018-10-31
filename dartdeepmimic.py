@@ -82,6 +82,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                  # com_weight, com_inner_weight,
                  # max_torque,
                  # max_angle,
+                 delta_actions,
                  default_damping,
                  default_spring,
                  default_friction,
@@ -124,6 +125,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # self.com_inner_weight = com_inner_weight
         self.__visualize = visualize
         self._skeleton_path = skeleton_path
+        self.delta_actions = delta_actions
 
         self.framenum = 0
 
@@ -288,6 +290,12 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         #     for body in skel.bodynodes:
         #         body.set_friction_coeff(self.default_friction)
 
+    def target_angles(self, actuated_angles):
+        if self.delta_actions:
+            return self.ref_q_frames[self.framenum][6:] + actuated_angles
+        else:
+            return actuated_angles
+
     def step(self, a):
         return self._step(a)
 
@@ -298,7 +306,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         # TODO Should be step_resolution instead of 4
         for _ in range(4):
-            tau = self.PID(self.robot_skeleton, nn_angles)
+            tau = self.PID(self.robot_skeleton,
+                           self.target_angles(nn_angles))
             self.robot_skeleton.set_forces(np.concatenate([np.zeros(6),
                                                            tau]))
             self.dart_world.step()
