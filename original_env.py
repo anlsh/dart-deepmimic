@@ -409,8 +409,8 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         actions = np.zeros(29,)
         # actions[2] = 5
         actions[6:] = copy.deepcopy(self.target[6:])
-        self.action_skel.set_positions(actions)
-        self.action_skel.set_velocities(np.zeros(29,))
+        # self.action_skel.set_positions(actions)
+        # self.action_skel.set_velocities(np.zeros(29,))
 
         for i in range(4):
             self.tau[6:] = self.PID()
@@ -419,12 +419,12 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
             dupq[0] = 0.90
             dupq[2] = 0.5
 
-            self.dupSkel.set_positions(dupq)
+            # self.dupSkel.set_positions(dupq)
 
             dupdq = np.zeros(29,)
             dupdq = copy.deepcopy(self.WalkVelocities[self.count,:])
 
-            self.dupSkel.set_velocities(dupdq)
+            # self.dupSkel.set_velocities(dupdq)
 
             if self.dumpTorques:
                 with open("torques.txt","ab") as fp:
@@ -504,8 +504,8 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         if self.duplicate:
             dupq = self.robot_skeleton.q
             dupq[0] = 1.0
-            self.dupSkel.set_positions(dupq)
-            self.dupskel.set_velocities(np.zeros(self.robot_skeleton.q.shape[0],))
+            # self.dupSkel.set_positions(dupq)
+            # self.dupskel.set_velocities(np.zeros(self.robot_skeleton.q.shape[0],))
 
 
         self.advance(a)
@@ -544,10 +544,10 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         global_lfoot = self.robot_skeleton.bodynodes[4].to_world(point_lfoot)
         global_rfoot = self.robot_skeleton.bodynodes[7].to_world(point_rfoot)
 
-        global_rarmdup = self.dupSkel.bodynodes[16].to_world(point_rarm)
-        global_larmdup = self.dupSkel.bodynodes[13].to_world(point_larm)
-        global_lfootdup = self.dupSkel.bodynodes[4].to_world(point_lfoot)
-        global_rfootdup = self.dupSkel.bodynodes[7].to_world(point_rfoot)
+        # global_rarmdup = self.dupSkel.bodynodes[16].to_world(point_rarm)
+        # global_larmdup = self.dupSkel.bodynodes[13].to_world(point_larm)
+        # global_lfootdup = self.dupSkel.bodynodes[4].to_world(point_lfoot)
+        # global_rfootdup = self.dupSkel.bodynodes[7].to_world(point_rfoot)
 
         self.dart_world.contact_point = []
         self.dart_world.contact_color = 'red'
@@ -555,11 +555,11 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         self.dart_world.contact_point.append(global_larm)
         self.dart_world.contact_point.append(global_rfoot)
         self.dart_world.contact_point.append(global_lfoot)
-        self.dart_world.contact_color = 'green'
-        self.dart_world.contact_point.append(global_rarmdup)
-        self.dart_world.contact_point.append(global_larmdup)
-        self.dart_world.contact_point.append(global_rfootdup)
-        self.dart_world.contact_point.append(global_lfootdup)
+        # self.dart_world.contact_color = 'green'
+        # self.dart_world.contact_point.append(global_rarmdup)
+        # self.dart_world.contact_point.append(global_larmdup)
+        # self.dart_world.contact_point.append(global_rfootdup)
+        # self.dart_world.contact_point.append(global_lfootdup)
 
 
         #print(self.swingFoot)
