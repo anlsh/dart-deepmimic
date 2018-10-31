@@ -967,7 +967,7 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
 
 
         #indexes = [20,60,80,100,140,160,180,220]#,200,220,250,280,310,320]#,270,300,330,360]
-        rand_start = np.random.randint(low=60,high=61,size=1)
+        rand_start = np.random.randint(low=0,high=449,size=1)
         #print("QPOS",self.WalkVelocities[rand_start,:].shape)
         qpos = self.WalkPositions[rand_start[0],:].reshape(29,) #+self.np_random.uniform(low=-0.0050, high=.0050, size=self.robot_skeleton.ndofs)
         ##qpos[12] = np.pi/2
