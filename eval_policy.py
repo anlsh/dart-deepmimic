@@ -74,10 +74,16 @@ if __name__ == "__main__":
                            pos_stdv=0, vel_stdv=0)
 
         done = False
+        cum_reward = 0
+        length = 0
         while (not done) if args.terminate else True:
             if env.framenum == env.num_frames - 1:
                 env.framenum = 0
             action = agent.act(ob, reward, done)
             reward = env.reward(env.robot_skeleton, env.framenum)
             ob, reward, done, _ = env.step(action)
+            cum_reward += reward
+            length += 1
             env.render()
+
+        print("Total-Reward, Length = " + str((cum_reward, length)))
