@@ -15,7 +15,7 @@ NUM_UNSANITIZED_OBS = 50
 NUM_UNSANITIZED_SKELQ = 20
 NUM_RANDOM_FRAMES = 10
 
-set_global_seeds(8)
+NUM_TEST_RESETS = 20
 
 
 class RandomPolicyAgent:
@@ -28,6 +28,13 @@ class RandomPolicyAgent:
         a, _ = self.actor.act(True, observation)
         return a
 
+@pytest.fixture(scope="module")
+def rng_seed():
+    print("Making a random seed!")
+    seed = random.randint(0, 100000)
+    set_global_seeds(seed)
+    return seed
+
 @pytest.fixture
 def policy(vddm_env):
     ret = RandomPolicyAgent(vddm_env.observation_space,
@@ -38,7 +45,7 @@ def policy(vddm_env):
 
 file_prefix = "/home/anish/Code/deepmimic/"
 @pytest.fixture(scope="module")
-def vddm_env():
+def vddm_env(rng_seed):
     env = VisakDartDeepMimicEnv(skeleton_path=file_prefix + "assets/skel/kima_original.skel",
                                 refmotion_path=None,
                                 statemode=1, actionmode=2,
@@ -52,12 +59,18 @@ def vddm_env():
                                 screen_width=80, screen_height=45,
                                 # gravity=True,
                                 self_collide=True,
-                                delta_actions=False)
+                                delta_actions=False,
+                                rng_seed=rng_seed)
+    # TODO Does this need to be enabled?
+    # env.seed(rng_seed)
     return env
 
 @pytest.fixture(scope="module")
-def raw_env():
-    return DartHumanoid3D_cartesian()
+def raw_env(rng_seed):
+    env = DartHumanoid3D_cartesian(rng_seed)
+    # TODO Does this need to be enabled?
+    # env.seed(rng_seed)
+    return env
 
 @pytest.fixture
 def nn_output(vddm_env, raw_env):
@@ -175,6 +188,21 @@ def test_parity_termination(vddm_env, raw_env, random_unsanitized_obs):
         assert(vddm_env.should_terminate(ruo)[0]
                == raw_env.should_terminate(vddm_env.robot_skeleton,
                                            ruo))
+
+def test_parity_reset_framenums(vddm_env, raw_env):
+
+    test_parity_obs(vddm_env, raw_env)
+    for _ in range(NUM_TEST_RESETS):
+        assert(vddm_env.get_random_framenum()
+               == raw_env.get_random_framenum())
+
+def test_parity_reset(vddm_env, raw_env):
+    # IMPURE This test will CHANGE ENVIRONMENT STATE
+    test_parity_obs(vddm_env, raw_env)
+    for i in range(20):
+        vddm_env.reset()
+        raw_env.reset()
+        test_parity_obs(vddm_env, raw_env)
 
 def test_parity_ee_reward(vddm_env, raw_env, random_framenum):
     skel = vddm_env.robot_skeleton

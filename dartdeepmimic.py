@@ -91,7 +91,12 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                  screen_width,
                  screen_height,
                  # gravity,
-                 self_collide):
+                 self_collide,
+                 rng_seed):
+
+        self.random = random.Random()
+        if rng_seed is not None:
+            self.random.seed(rng_seed)
 
         #######################################
         # Just set a bunch of self.parameters #
@@ -327,6 +332,10 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         return newstate, reward, done, {}
 
+    def get_random_framenum(self, default=None):
+        return default if default is not None \
+            else self.random.randint(0, self.num_frames - 1)
+
     def reset(self, framenum=None, pos_stdv=None, vel_stdv=None):
         """
         Unfortunately, I have to provide default arguments for pos, vel_stdv
@@ -338,8 +347,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.dart_world.reset()
 
         # TODO Re-enable noise!
-        self.framenum = framenum if framenum is not None \
-                                 else random.randint(0, self.num_frames-1)
+        self.framenum = self.get_random_framenum(framenum)
 
         self.set_state(self.ref_q_frames[self.framenum],
                        self.ref_dq_frames[self.framenum])

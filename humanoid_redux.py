@@ -6,10 +6,15 @@ from gym.envs.dart import dart_env
 
 from euclideanSpace import *
 from quaternions import *
+import random
 
 class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
 
-    def __init__(self):
+    def __init__(self, rng_seed=None):
+
+        self.random = random.Random()
+        if rng_seed is not None:
+            self.random.seed(rng_seed)
 
         self.obs_dim = 127
         self.action_dim = 32
@@ -534,6 +539,10 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
 
         return state
 
+    def get_random_framenum(self, default=None):
+        return default if default is not None \
+            else self.random.randint(0, self.num_frames - 1)
+
     def reset(self, frame=None):
         return self.reset_model(frame)
 
@@ -542,10 +551,13 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         self.dart_world.reset()
 
         # rand_start = np.random.randint(low=60,high=61,size=1)
-        rand_start = np.random.randint(low=0,high=self.num_frames,size=1) if frame is None else [frame]
-        qpos = self.MotionPositions[rand_start[0],:].reshape(29,)
-        self.framenum =rand_start[0]
-        qvel = self.MotionVelocities[rand_start[0],:].reshape(29,)
+        # rand_start = np.random.randint(low=0,high=self.num_frames,size=1) if frame is None else [frame]
+
+        frame = self.get_random_framenum(frame)
+        self.framenum = frame
+
+        qpos = self.MotionPositions[frame,:].reshape(29,)
+        qvel = self.MotionVelocities[frame,:].reshape(29,)
         self.set_state(qpos, qvel)
         self.impactCount = 0
         return self._get_obs()

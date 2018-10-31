@@ -111,7 +111,8 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
                                    action='store_false')
 
         self.set_defaults(delta=True, help="Are we in delta actions mode?")
-        self.add_argument('--seed', help='RNG seed', type=int, default=8)
+        self.add_argument('--seed', help='RNG seed', type=int,
+                          default=None)
         self.args = None
 
     def parse_args(self):
@@ -135,7 +136,8 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
             screen_width=80, screen_height=45,
             # gravity=True,
             self_collide=True,
-            delta_actions=self.args.delta)
+            delta_actions=self.args.delta,
+            rng_seed=self.args.seed)
 
         return DartDeepMimicArgParse.classes[self.args.environment_mode](
             skeleton_path=self.args.control_skel_path,
@@ -167,4 +169,5 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
             screen_width=self.args.window_width,
             screen_height=self.args.window_height,
             gravity=self.args.gravity,
-            self_collide=self.args.selfcollide)
+            self_collide=self.args.selfcollide,
+            rng_seed=self.args.seed)
