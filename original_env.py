@@ -500,6 +500,9 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         return torqs[6:]
         #return tau[6:]
 
+    def step(self, a):
+        return self._step(a)
+
     def _step(self, a):
 
         self.dart_world.set_text = []
@@ -946,6 +949,9 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         #])
 
         return state
+
+    def reset(self):
+        return self.reset_model()
 
     def reset_model(self):
         if self.firstPass and self.trainRelay:
