@@ -49,6 +49,7 @@ if __name__ == "__main__":
                         help="Whether to initialize from start or randomly")
 
     args = parser.parse_args()
+    parser.args.control_skel_path = "/home/anish/Code/deepmimic/assets/skel/kima_original.skel"
     hidden_dims = [int(i) for i in args.hidden_dims.split(",")]
     env = parser.get_env()
 
