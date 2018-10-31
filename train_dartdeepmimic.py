@@ -5,14 +5,13 @@ import os.path as osp
 import gym, logging
 from baselines.bench import Monitor
 from baselines import logger
+from baselines.ppo1 import mlp_policy, pposgd_simple
 
-from dartdeepmimic import DartDeepMimicEnv
 from ddm_argparse import DartDeepMimicArgParse
 
 def train(env, initial_params_path,
           save_interval, out_prefix, num_timesteps, num_cpus,
           hidden_dimensions):
-    from baselines.ppo1 import mlp_policy, pposgd_simple
     sess = U.make_session(num_cpu=num_cpus).__enter__()
 
     U.initialize()
@@ -27,8 +26,6 @@ def train(env, initial_params_path,
             saver.restore(sess, initial_params_path)
         return policy
 
-    #env = bench.Monitor(env, "results.json")
-    # env.seed(8)
     set_global_seeds(8)
     gym.logger.setLevel(logging.WARN)
 
