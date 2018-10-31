@@ -578,26 +578,26 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         height = self.robot_skeleton.bodynodes[0].com()[1]
         side_deviation = self.robot_skeleton.bodynodes[0].com()[2]
 
-        upward = np.array([0, 1, 0])
-        upward_world = self.robot_skeleton.bodynode('head').to_world(
-            np.array([0, 1, 0])) - self.robot_skeleton.bodynode('head').to_world(np.array([0, 0, 0]))
-        upward_world /= np.linalg.norm(upward_world)
-        ang_cos_uwd = np.dot(upward, upward_world)
-        ang_cos_uwd = np.arccos(ang_cos_uwd)
+        # upward = np.array([0, 1, 0])
+        # upward_world = self.robot_skeleton.bodynode('head').to_world(
+        #     np.array([0, 1, 0])) - self.robot_skeleton.bodynode('head').to_world(np.array([0, 0, 0]))
+        # upward_world /= np.linalg.norm(upward_world)
+        # ang_cos_uwd = np.dot(upward, upward_world)
+        # ang_cos_uwd = np.arccos(ang_cos_uwd)
 
-        forward = np.array([1, 0, 0])
-        forward_world = self.robot_skeleton.bodynode('head').to_world(
-            np.array([1, 0, 0])) - self.robot_skeleton.bodynode('head').to_world(np.array([0, 0, 0]))
-        forward_world /= np.linalg.norm(forward_world)
-        ang_cos_fwd = np.dot(forward, forward_world)
-        ang_cos_fwd = np.arccos(ang_cos_fwd)
+        # forward = np.array([1, 0, 0])
+        # forward_world = self.robot_skeleton.bodynode('head').to_world(
+        #     np.array([1, 0, 0])) - self.robot_skeleton.bodynode('head').to_world(np.array([0, 0, 0]))
+        # forward_world /= np.linalg.norm(forward_world)
+        # ang_cos_fwd = np.dot(forward, forward_world)
+        # ang_cos_fwd = np.arccos(ang_cos_fwd)
 
-        lateral = np.array([0, 0, 1])
-        lateral_world = self.robot_skeleton.bodynode('head').to_world(
-            np.array([0, 0, 1])) - self.robot_skeleton.bodynode('head').to_world(np.array([0, 0, 0]))
-        lateral_world /= np.linalg.norm(lateral_world)
-        ang_cos_ltl = np.dot(lateral, lateral_world)
-        ang_cos_ltl = np.arccos(ang_cos_ltl)
+        # lateral = np.array([0, 0, 1])
+        # lateral_world = self.robot_skeleton.bodynode('head').to_world(
+        #     np.array([0, 0, 1])) - self.robot_skeleton.bodynode('head').to_world(np.array([0, 0, 0]))
+        # lateral_world /= np.linalg.norm(lateral_world)
+        # ang_cos_ltl = np.dot(lateral, lateral_world)
+        # ang_cos_ltl = np.arccos(ang_cos_ltl)
 
         contacts = self.dart_world.collision_result.contacts
 
