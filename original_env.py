@@ -19,6 +19,8 @@ from gym import wrappers,spaces
 from euclideanSpace import *
 from quaternions import *
 
+ROOT_DIR = "/home/anish/Code/deepmimic/"
+
 class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
     def __init__(self):
         #self.control_bounds = np.array([[3*np.pi/4,  0.01,       0.01,       1.601560,  0.35228,  0.30125,
@@ -101,7 +103,7 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         self.qpos_node2 = np.zeros(29,)
         self.qpos_node3 = np.zeros(29,)
         #prefix = '../../Balance_getup/'
-        prefix = './'
+        prefix = ROOT_DIR + 'assets/mocap/walk/'
         with open(prefix+"rarm_endeffector_justjump.txt","rb") as fp:
             self.rarm_endeffector = np.loadtxt(fp)
 
@@ -194,7 +196,7 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
             self.preverror[i] = (self.init[i] - self.target[i])
         self.t = 0
 
-        dart_env.DartEnv.__init__(self, ['kima_human_box.skel'],16, obs_dim, self.control_bounds, disableViewer=False)
+        dart_env.DartEnv.__init__(self, [ROOT_DIR + 'assets/skel/kima_original.skel'],16, obs_dim, self.control_bounds, disableViewer=False)
 
         self.robot_skeleton.set_self_collision_check(True)
 
