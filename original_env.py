@@ -414,7 +414,7 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
 
 
         #if self.swingFoot == "Right":
-        self.target[6:]=  self.transformActions(clamped_control)# + self.WalkPositions[self.count,6:] #*self.action_scale# + self.ref_trajectory_right[self.count_right,6:]# +
+        self.target[6:]=  self.transformActions(clamped_control) + self.WalkPositions[self.count, 6:]# + self.WalkPositions[self.count,6:] #*self.action_scale# + self.ref_trajectory_right[self.count_right,6:]# +
 
         # self.target[[6,9,10]] = self.target[[12,15,16]]
         actions = np.zeros(29,)
