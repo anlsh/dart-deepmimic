@@ -282,7 +282,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         R_quat = self.quat_reward(skel, framenum)
 
         reward = 0.1 * R_ee + 0.1 * R_vel \
-                 + 0.15 * R_com + .65 * R_quat
+                 + 0.25 * R_com + 1.65 * R_quat
 
         return reward
 
