@@ -19,12 +19,15 @@ from baselines.ppo1.mlp_policy import MlpPolicy
 from gym import wrappers,spaces
 from euclideanSpace import *
 from quaternions import *
+import random
 
 class DartHumanoid3D_cartesian_jesus(dart_env.DartEnv, utils.EzPickle):
 
-    def __init__(self, rng_seed):
+    def __init__(self, rng_seed=None):
 
-        # TODO THE RNG_SEED ARGUMENT DOES NOTHIGN!!!!
+        self.random = random.Random()
+        if rng_seed is not None:
+            self.random.seed(rng_seed)
 
         self.obs_dim = 127
         self.action_dim = 32
@@ -537,21 +540,22 @@ class DartHumanoid3D_cartesian_jesus(dart_env.DartEnv, utils.EzPickle):
 
         return state
 
+    def get_random_framenum(self, default = None):
+        return default if default is not None \
+            else self.random.randint(0, self.num_frames - 1)
+
     def reset_model(self):
 
         self.dart_world.reset()
 
-        rand_start = np.random.randint(low=1,
-                                       high=self.num_frames,
-                                       size=1)
-
-        qpos = self.WalkPositions[rand_start[0],:].reshape(29,) \
+        rand_start = self.get_random_framenum()
+        qpos = self.MotionPositions[rand_start[0],:].reshape(29,) \
                + self.np_random.uniform(low=-0.0050,
                                         high=.0050,
                                         size=self.robot_skeleton.ndofs)
 
         self.count =rand_start[0]
-        qvel = self.WalkVelocities[rand_start[0],:].reshape(29,) \
+        qvel = self.MotionVelocities[rand_start[0],:].reshape(29,) \
                + self.np_random.uniform(low=-0.0050,
                                         high=.0050,
                                         size=self.robot_skeleton.ndofs)
