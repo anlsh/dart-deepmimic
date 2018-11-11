@@ -32,7 +32,7 @@ class DartHumanoid3D_cartesian_jesus(dart_env.DartEnv, utils.EzPickle):
         self.obs_dim = 127
         self.action_dim = 32
 
-        self.count = 0
+        self.framenum = 0
         self.qpos_node0 = np.zeros(29,)
         self.qpos_node1 = np.zeros(29,)
         self.qpos_node2 = np.zeros(29,)
@@ -295,7 +295,7 @@ class DartHumanoid3D_cartesian_jesus(dart_env.DartEnv, utils.EzPickle):
         trans = np.zeros(6,)
 
         self.target[6:] = self.transformActions(clamped_control) \
-                          + self.MotionPositions[self.count,6:]
+                          + self.MotionPositions[self.framenum,6:]
 
         for i in range(4):
             self.tau[6:] = self.PID(self.robot_skeleton, self.target)
@@ -470,7 +470,7 @@ class DartHumanoid3D_cartesian_jesus(dart_env.DartEnv, utils.EzPickle):
 
         vel = (posafter - posbefore) / self.dt
 
-        R_total = self.reward(self.robot_skeleton, self.count)
+        R_total = self.reward(self.robot_skeleton, self.framenum)
 
         contacts = self.dart_world.collision_result.contacts
         head_flag = False
@@ -493,15 +493,15 @@ class DartHumanoid3D_cartesian_jesus(dart_env.DartEnv, utils.EzPickle):
             done = True
 
         ob = self._get_obs()
-        self.count += 1
-        if self.count >= self.num_frames-1:
+        self.framenum += 1
+        if self.framenum >= self.num_frames-1:
             done = True
 
         return ob, R_total, done, {}
 
     def _get_obs(self):
 
-        phi = np.array([self.count/self.num_frames])
+        phi = np.array([self.framenum/self.num_frames])
 
         ###################################################
         RelPos_lthigh = self.robot_skeleton.bodynodes[2].com() - self.robot_skeleton.bodynodes[0].com()
@@ -600,7 +600,7 @@ class DartHumanoid3D_cartesian_jesus(dart_env.DartEnv, utils.EzPickle):
         self.dart_world.reset()
 
         rand_start = self.get_random_framenum(frame)
-        self.count = rand_start
+        self.framenum = rand_start
 
         qpos = self.MotionPositions[rand_start,:].reshape(29,) \
                + self.np_random.uniform(low=-0.0050,
