@@ -319,7 +319,7 @@ class DartHumanoid3D_cartesian_jesus(dart_env.DartEnv, utils.EzPickle):
 
         return torques
 
-    def PID(self):
+    def PID(self, skel, actuated_angle_targets):
         self.kp = np.array([250]*23)
         self.kd = np.array([0.005]*23)
 
@@ -330,23 +330,22 @@ class DartHumanoid3D_cartesian_jesus(dart_env.DartEnv, utils.EzPickle):
         self.kp[16] = 200
         self.kp[[1,2]] = 150
         self.kp[[7,8]] = 150
-        self.kp[6] =600+25
+        self.kp[6] = 600+25
         self.kp[15:] = 155
         self.kd[15:]= 0.05
 
         self.kp = [item/2 for item in self.kp]
         self.kd = [item/2 for item in self.kd]
 
-        q = self.robot_skeleton.q
-        qdot = self.robot_skeleton.dq
+        q = skel.q
+        qdot = skel.dq
         tau = np.zeros((self.ndofs,))
         for i in range(6, self.ndofs):
             self.edot[i] = ((q[i] - self.target[i]) -
-                self.preverror[i]) / self.dt
-            tau[i] = -self.kp[i - 6] * \
-                (q[i] - self.target[i]) - \
-                self.kd[i - 6] *qdot[i]
-            self.preverror[i] = (q[i] - self.target[i])
+                            self.preverror[i]) / self.dt
+            tau[i] = -self.kp[i - 6] * (q[i] - actuated_angle_targets[i - 6]) \
+                     - self.kd[i - 6] * qdot[i]
+            self.preverror[i] = (q[i] - actuated_angle_targets[i - 6])
 
         torqs = self.ClampTorques(tau)
 
