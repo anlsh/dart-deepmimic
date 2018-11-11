@@ -31,31 +31,32 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
     def construct_frames(self, ref_skel, ref_motion_path):
 
-        with open("assets/mocap/walk/WalkPositions_corrected.txt",
+        prefix = "assets/mocap/jump/"
+
+        with open(prefix + "positions.txt",
                   "rb") as fp:
             ref_q_frames = np.loadtxt(fp)
-        with open("assets/mocap/walk/WalkVelocities_corrected.txt",
+        with open(prefix + "velocities.txt",
                   "rb") as fp:
             MotionVelocities = np.loadtxt(fp)
 
         ####################################################
         # TODO Useless except to override my mocap parsing #
 
-        prefix = "assets/mocap/walk/"
 
-        with open(prefix+"rarm_endeffector.txt","rb") as fp:
+        with open(prefix + "rarm_endeffector.txt","rb") as fp:
             rarm_endeffector = np.loadtxt(fp)[:-1]
 
-        with open(prefix+"larm_endeffector.txt","rb") as fp:
+        with open(prefix + "larm_endeffector.txt","rb") as fp:
             larm_endeffector = np.loadtxt(fp)[:-1]
 
-        with open(prefix+"lfoot_endeffector.txt","rb") as fp:
+        with open(prefix + "lfoot_endeffector.txt","rb") as fp:
             lfoot_endeffector = np.loadtxt(fp)[:-1]
 
-        with open(prefix+"rfoot_endeffector.txt",'rb') as fp:
+        with open(prefix + "rfoot_endeffector.txt",'rb') as fp:
             rfoot_endeffector = np.loadtxt(fp)[:-1]
 
-        with open(prefix+"com.txt",'rb') as fp:
+        with open(prefix + "com.txt",'rb') as fp:
             com = np.loadtxt(fp)[:-1]
 
         ####################################################
