@@ -31,25 +31,27 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         self.qpos_node2 = np.zeros(29,)
         self.qpos_node3 = np.zeros(29,)
 
-        prefix = None
-        with open("rarm_endeffector_jump.txt","rb") as fp:
+        skel_prefix = "assets/skel/"
+        mocap_prefix = "assets/mocap/jump/"
+
+        with open(mocap_prefix + "rarm_endeffector.txt","rb") as fp:
             self.rarm_endeffector = np.loadtxt(fp)
 
-        with open("larm_endeffector_jump.txt","rb") as fp:
+        with open(mocap_prefix + "larm_endeffector.txt","rb") as fp:
             self.larm_endeffector = np.loadtxt(fp)
 
-        with open("lfoot_endeffector_jump.txt","rb") as fp:
+        with open(mocap_prefix + "lfoot_endeffector.txt","rb") as fp:
             self.lfoot_endeffector = np.loadtxt(fp)
 
-        with open("rfoot_endeffector_jump.txt",'rb') as fp:
+        with open(mocap_prefix + "rfoot_endeffector.txt",'rb') as fp:
             self.rfoot_endeffector = np.loadtxt(fp)
 
-        with open("com_jump.txt",'rb') as fp:
+        with open(mocap_prefix + "com.txt",'rb') as fp:
             self.com = np.loadtxt(fp)
-        with open("jump.txt","rb") as fp:
+        with open("positions.txt","rb") as fp:
             self.WalkPositions = np.loadtxt(fp)
 
-        with open("jumpvel.txt","rb") as fp:
+        with open("velocities.txt","rb") as fp:
             self.WalkVelocities = np.loadtxt(fp)
 
         self.tau = np.zeros(29,)
@@ -64,7 +66,7 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         self.control_bounds = np.array([10*np.ones(32,), -10*np.ones(32,)])
 
         dart_env.DartEnv.__init__(self,
-                                  ['kima_original.skel'],
+                                  [skel_prefix + 'kima_original.skel'],
                                   32,
                                   obs_dim,
                                   self.control_bounds,
