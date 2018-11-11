@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import random
 from visak_dartdeepmimic import VisakDartDeepMimicEnv
-from humanoid_redux import DartHumanoid3D_cartesian
+from Humanoid3D_cartesian_jesus import DartHumanoid3D_cartesian_jesus
 from baselines.ppo1 import mlp_policy
 import itertools
 from baselines.common import set_global_seeds, tf_util as U
@@ -69,7 +69,7 @@ def vddm_env(rng_seed):
 
 @pytest.fixture(scope="module")
 def raw_env(rng_seed):
-    env = DartHumanoid3D_cartesian(rng_seed)
+    env = DartHumanoid3D_cartesian_jesus(rng_seed)
     # TODO Does this need to be enabled?
     # env.seed(rng_seed)
     return env
@@ -178,7 +178,8 @@ def test_parity_torques(vddm_env, raw_env, nn_output):
     for nno in nn_output:
         angles = vddm_env.angles_from_netvector(nno)
         tmp = vddm_env.PID(vddm_env.robot_skeleton, angles)
-        np.testing.assert_array_equal(tmp, raw_env.PID(np.concatenate([np.zeros(6),
+        np.testing.assert_array_equal(tmp, raw_env.PID(raw_env.robot_skeleton,
+                                                       np.concatenate([np.zeros(6),
                                                                        angles])))
         assert(np.isfinite(tmp).all())
 
