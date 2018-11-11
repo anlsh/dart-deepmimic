@@ -82,7 +82,27 @@ class DartHumanoid3D_cartesian_jesus(dart_env.DartEnv, utils.EzPickle):
                                   self.control_bounds,
                                   disableViewer=False)
 
+        #################################################
+        # DART INITALIZATION STUFF #
+        ############################
+
+        self.robot_skeleton = self.dart_world.skeletons[1]
+
         self.robot_skeleton.set_self_collision_check(True)
+
+        for i in range(self.robot_skeleton.njoints-1):
+            self.robot_skeleton.joint(i).set_position_limit_enforced(True)
+            self.robot_skeleton.dof(i).set_damping_coefficient(10.)
+
+        for body in self.robot_skeleton.bodynodes \
+            + self.dart_world.skeletons[0].bodynodes:
+           body.set_friction_coeff(20.)
+
+        for jt in range(0, len(self.robot_skeleton.joints)):
+            if self.robot_skeleton.joints[jt].has_position_limit(0):
+                self.robot_skeleton.joints[jt].set_position_limit_enforced(True)
+
+        #################################################
 
         utils.EzPickle.__init__(self)
 
@@ -350,7 +370,8 @@ class DartHumanoid3D_cartesian_jesus(dart_env.DartEnv, utils.EzPickle):
 
 
     def com_reward(self, skel, framenum):
-        com_reward = np.exp(-40*np.sum(np.square(self.com[framenum,:] - skel.bodynodes[0].com())))
+        return np.exp(-40*np.sum(np.square(self.com[framenum,:] \
+                                           - skel.bodynodes[0].com())))
 
     def ee_reward(self, skel, framenum):
 
@@ -387,16 +408,28 @@ class DartHumanoid3D_cartesian_jesus(dart_env.DartEnv, utils.EzPickle):
 
         vel_pen = np.sum(vel_diff.T*Weight_matrix*vel_diff)
 
-        joint_vel_term = 1*np.asarray(np.exp(-1e-1*vel_pen))
+        return 1*np.asarray(np.exp(-1e-1*vel_pen))
 
     def reward(self, skel, framenum):
 
-        ee_r = self.ee_reward(skel, framenum)
-        com_r = self.com_reward(skel, framenum)
-        vel_r = self.vel_reward(skel, framenum)
-        quat_r = self.quat_reward(skel, framenum)
+        R_ee = self.ee_reward(skel, framenum)
+        R_com = self.com_reward(skel, framenum)
+        R_vel = self.vel_reward(skel, framenum)
+        R_quat = self.quat_reward(skel, framenum)
 
-        return 0.10*ee_r + 0.10*vel_r + 0.25*com_r + 1.65*quat_r
+        return 0.10*R_ee + 0.10*R_vel + 0.25*R_com + 1.65*R_quat
+
+    def should_terminate(self, skel, obs):
+
+        height = skel.bodynodes[0].com()[1]
+
+        return not (np.isfinite(obs).all()
+                    and (np.abs(obs[2:]) < 200).all()
+                    and (height > -0.70) and (height < 0.40)
+                    and (abs(skel.q[4]) < 0.30)
+                    and (abs(skel.q[5]) < 0.50)
+                    and (skel.q[3] > -0.4)
+                    and (skel.q[3] < 0.3))
 
 
     def _step(self, a):
@@ -416,11 +449,10 @@ class DartHumanoid3D_cartesian_jesus(dart_env.DartEnv, utils.EzPickle):
         self.dart_world.contact_point.append(global_lfoot)
 
         posafter = self.robot_skeleton.bodynodes[0].com()[0]
-        height = self.robot_skeleton.bodynodes[0].com()[1]
 
         vel = (posafter - posbefore) / self.dt
 
-        r = self.reward(self.robot_skeleton, self.count)
+        R_total = self.reward(self.robot_skeleton, self.count)
 
         contacts = self.dart_world.collision_result.contacts
         head_flag = False
@@ -430,15 +462,11 @@ class DartHumanoid3D_cartesian_jesus(dart_env.DartEnv, utils.EzPickle):
                     head_flag = True
 
         s = self.state_vector()
-        done = not (np.isfinite(s).all() and (np.abs(s[2:]) < 200).all()
-                    and (height > -0.70) and (height < 0.40)
-                    and (abs(self.robot_skeleton.q[4]) < 0.30)
-                    and (abs(self.robot_skeleton.q[5]) < 0.50)
-                    and (self.robot_skeleton.q[3] > -0.4)
-                    and (self.robot_skeleton.q[3] < 0.3))
+        done = self.should_terminate(self.robot_skeleton,
+                                     self.state_vector())
 
         if done:
-            r = 0.
+            R_total = 0.
 
         ob = self._get_obs()
 
@@ -451,10 +479,11 @@ class DartHumanoid3D_cartesian_jesus(dart_env.DartEnv, utils.EzPickle):
         if self.count >= self.num_frames-1:
             done = True
 
-        return ob, r, done, {"end_effector_reward": end_effector_reward,
-                             "joint_vel_term": joint_vel_term,
-                             "joint_term":quat_term,
-                             "com_reward":com_reward}
+        return ob, R_total, \
+            done, {"end_effector_reward": end_effector_reward,
+                   "joint_vel_term": joint_vel_term,
+                   "joint_term":quat_term,
+                   "com_reward":com_reward}
 
     def _get_obs(self):
 
@@ -557,12 +586,13 @@ class DartHumanoid3D_cartesian_jesus(dart_env.DartEnv, utils.EzPickle):
         self.dart_world.reset()
 
         rand_start = self.get_random_framenum(frame)
+        self.count = rand_start
+
         qpos = self.MotionPositions[rand_start,:].reshape(29,) \
                + self.np_random.uniform(low=-0.0050,
                                         high=.0050,
                                         size=self.robot_skeleton.ndofs)
 
-        self.count =rand_start[0]
         qvel = self.MotionVelocities[rand_start,:].reshape(29,) \
                + self.np_random.uniform(low=-0.0050,
                                         high=.0050,
