@@ -19,7 +19,7 @@ from gym import wrappers,spaces
 from euclideanSpace import *
 from quaternions import *
 
-class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
+class DartHumanoid3D_cartesian_jesus(dart_env.DartEnv, utils.EzPickle):
 
     def __init__(self):
 
