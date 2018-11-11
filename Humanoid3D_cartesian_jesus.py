@@ -274,11 +274,11 @@ class DartHumanoid3D_cartesian_jesus(dart_env.DartEnv, utils.EzPickle):
         self.tau = np.zeros(self.robot_skeleton.ndofs)
         trans = np.zeros(6,)
 
-        self.target[6:]=  self.transformActions(clamped_control) \
+        self.target[6:] = self.transformActions(clamped_control) \
                           + self.MotionPositions[self.count,6:]
 
         for i in range(4):
-            self.tau[6:] = self.PID()
+            self.tau[6:] = self.PID(self.robot_skeleton, self.target)
 
             self.robot_skeleton.set_forces(self.tau)
             self.dart_world.step()
@@ -338,7 +338,7 @@ class DartHumanoid3D_cartesian_jesus(dart_env.DartEnv, utils.EzPickle):
         qdot = skel.dq
         tau = np.zeros((self.ndofs,))
         for i in range(6, self.ndofs):
-            self.edot[i] = ((q[i] - self.target[i]) -
+            self.edot[i] = ((q[i] - actuated_angle_targets[i - 6]) -
                             self.preverror[i]) / self.dt
             tau[i] = -self.kp[i - 6] * (q[i] - actuated_angle_targets[i - 6]) \
                      - self.kd[i - 6] * qdot[i]
