@@ -5,14 +5,18 @@ from baselines.ppo1 import mlp_policy, pposgd_simple
 import numpy as np
 import tensorflow as tf
 import random
+from test_ddm import raw_env
+import argparse
 
 class PolicyLoaderAgent(object):
     """The world's simplest agent!"""
-    def __init__(self, param_path, obs_space, action_space, hidden_dims):
+    def __init__(self, param_path, obs_space, action_space, hid_size,
+                 num_hid_layers):
         self.action_space = action_space
 
         self.actor = mlp_policy.MlpPolicy("pi", obs_space, action_space,
-                                          hidden_dimension_list=hidden_dims)
+                                          hid_size=hid_size,
+                                          num_hid_layers=num_hid_layers)
         U.initialize()
         saver = tf.train.Saver()
         saver.restore(tf.get_default_session(), param_path)
@@ -24,11 +28,14 @@ class PolicyLoaderAgent(object):
 
 if __name__ == "__main__":
 
-    parser = ddm_argparse.DartDeepMimicArgParse()
+    # parser = ddm_argparse.DartDeepMimicArgParse()
+    parser = argparse.ArgumentParser()
     parser.add_argument("--params-prefix", required=True, type=str)
-    parser.add_argument('--hidden-dims', type=str, default="64,64",
-                        help="Within quotes, sizes of each hidden layer "
-                        + "seperated by commas [also, no whitespace]")
+    # parser.add_argument('--hidden-dims', type=str, default="64,64",
+    #                     help="Within quotes, sizes of each hidden layer "
+    #                     + "seperated by commas [also, no whitespace]")
+    parser.add_argument('--hid-size', default=64, type=int)
+    parser.add_argument('--num-hid-layers', default=2, type=int)
     terminate_group = parser.add_mutually_exclusive_group()
     terminate_group.add_argument('--use-env-done',
                                 dest='terminate',
@@ -49,9 +56,10 @@ if __name__ == "__main__":
                         help="Whether to initialize from start or randomly")
 
     args = parser.parse_args()
-    parser.args.control_skel_path = "/home/anish/Code/deepmimic/assets/skel/kima_original.skel"
-    hidden_dims = [int(i) for i in args.hidden_dims.split(",")]
-    env = parser.get_env()
+    # parser.args.control_skel_path = "/home/anish/Code/deepmimic/assets/skel/kima_original.skel"
+    # hidden_dims = [int(i) for i in args.hidden_dims.split(",")]
+    # env = parser.get_env()
+    env = raw_env(0)
 
     U.make_session(num_cpu=1).__enter__()
 
@@ -60,7 +68,8 @@ if __name__ == "__main__":
     agent = PolicyLoaderAgent(args.params_prefix,
                               env.observation_space,
                               env.action_space,
-                              hidden_dims=hidden_dims)
+                              hid_size=args.hid_size,
+                              num_hid_layers=args.num_hid_layers)
 
     episode_count = 100
     reward = 0
@@ -68,10 +77,12 @@ if __name__ == "__main__":
 
     while True:
         if not args.randinit:
-            ob = env.reset(0, pos_stdv=0, vel_stdv=0)
+            # ob = env.reset(0, pos_stdv=0, vel_stdv=0)
+            ob = env.reset(0)
         else:
-            ob = env.reset(random.randint(0, env.num_frames - 1),
-                           pos_stdv=0, vel_stdv=0)
+            # ob = env.reset(random.randint(0, env.num_frames - 1),
+            #                pos_stdv=0, vel_stdv=0)
+            ob = env.reset(random.randint(0, env.num_frames - 1))
 
         done = False
         cum_reward = 0

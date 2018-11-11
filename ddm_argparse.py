@@ -2,6 +2,7 @@ import argparse
 from dartdeepmimic import DartDeepMimicEnv
 import visak_dartdeepmimic
 import amc_dartdeepmimic
+import os
 
 class DartDeepMimicArgParse(argparse.ArgumentParser):
 
@@ -121,9 +122,10 @@ class DartDeepMimicArgParse(argparse.ArgumentParser):
 
     def get_env(self):
 
+        dir_prefix = os.path.dirname(os.path.realpath(__file__)) + "/"
 
         return DartDeepMimicArgParse.classes[self.args.environment_mode](
-            skeleton_path=self.args.control_skel_path,
+            skeleton_path=dir_prefix + self.args.control_skel_path,
             refmotion_path=None,
             statemode=1, actionmode=2,
             # pos_weight=.65, pos_inner_weight=-2,

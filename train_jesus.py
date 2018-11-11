@@ -25,7 +25,8 @@ def train(num_timesteps, seed,
         # TODO Ensure that multiple-layers implementation is really solid
         return mlp_policy.MlpPolicy(name=name,
                                     ob_space=ob_space, ac_space=ac_space,
-                                    hidden_dimension_list=[128,128])
+                                    hid_size=128,
+                                    num_hid_layers=2)
 
     def callback_fn(local_vars, global_vars):
         iters = local_vars["iters_so_far"]
