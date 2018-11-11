@@ -6,6 +6,7 @@ from humanoid_redux import DartHumanoid3D_cartesian
 from baselines.ppo1 import mlp_policy
 import itertools
 from baselines.common import set_global_seeds, tf_util as U
+import os
 
 #################################################
 # Number of random test samples to fuzz against #
@@ -43,10 +44,11 @@ def policy(vddm_env):
     U.initialize()
     return ret
 
-file_prefix = "/home/anish/Code/deepmimic/"
 @pytest.fixture(scope="module")
 def vddm_env(rng_seed):
-    env = VisakDartDeepMimicEnv(skeleton_path=file_prefix + "assets/skel/kima_original.skel",
+    dir_prefix = os.path.dirname(os.path.realpath(__file__)) + "/"
+    env = VisakDartDeepMimicEnv(skeleton_path=dir_prefix \
+                                + "assets/skel/kima_original.skel",
                                 refmotion_path=None,
                                 statemode=1, actionmode=2,
                                 # pos_weight=.65, pos_inner_weight=-2,
