@@ -11,6 +11,7 @@ import pickle
 from scipy import signal
 import numpy.linalg as la
 import copy
+import os
 
 import baselines.common.tf_util as U
 import tensorflow as tf
@@ -21,9 +22,12 @@ from quaternions import *
 
 class DartHumanoid3D_cartesian_jesus(dart_env.DartEnv, utils.EzPickle):
 
-    def __init__(self):
+    def __init__(self, rng_seed):
 
-        obs_dim = 127
+        # TODO THE RNG_SEED ARGUMENT DOES NOTHIGN!!!!
+
+        self.obs_dim = 127
+        self.action_dim = 32
 
         self.count = 0
         self.qpos_node0 = np.zeros(29,)
@@ -31,8 +35,9 @@ class DartHumanoid3D_cartesian_jesus(dart_env.DartEnv, utils.EzPickle):
         self.qpos_node2 = np.zeros(29,)
         self.qpos_node3 = np.zeros(29,)
 
-        skel_prefix = "assets/skel/"
-        mocap_prefix = "assets/mocap/jump/"
+        dir_prefix = os.path.dirname(os.path.realpath(__file__)) + "/"
+        skel_prefix = dir_prefix + "assets/skel/"
+        mocap_prefix = dir_prefix + "assets/mocap/jump/"
 
         with open(mocap_prefix + "rarm_endeffector.txt","rb") as fp:
             self.rarm_endeffector = np.loadtxt(fp)
@@ -48,11 +53,13 @@ class DartHumanoid3D_cartesian_jesus(dart_env.DartEnv, utils.EzPickle):
 
         with open(mocap_prefix + "com.txt",'rb') as fp:
             self.com = np.loadtxt(fp)
-        with open("positions.txt","rb") as fp:
+        with open(mocap_prefix + "positions.txt","rb") as fp:
             self.WalkPositions = np.loadtxt(fp)
 
-        with open("velocities.txt","rb") as fp:
+        with open(mocap_prefix + "velocities.txt","rb") as fp:
             self.WalkVelocities = np.loadtxt(fp)
+
+        self.num_frames = self.WalkPositions.shape[0]
 
         self.tau = np.zeros(29,)
         self.ndofs = 29
@@ -67,8 +74,8 @@ class DartHumanoid3D_cartesian_jesus(dart_env.DartEnv, utils.EzPickle):
 
         dart_env.DartEnv.__init__(self,
                                   [skel_prefix + 'kima_original.skel'],
-                                  32,
-                                  obs_dim,
+                                  self.action_dim,
+                                  self.obs_dim,
                                   self.control_bounds,
                                   disableViewer=False)
 
@@ -534,14 +541,20 @@ class DartHumanoid3D_cartesian_jesus(dart_env.DartEnv, utils.EzPickle):
 
         self.dart_world.reset()
 
-        rand_start = np.random.randint(low=1,high=self.WalkPositions.shape[0],size=1)
+        rand_start = np.random.randint(low=1,
+                                       high=self.num_frames,
+                                       size=1)
 
         qpos = self.WalkPositions[rand_start[0],:].reshape(29,) \
-               + self.np_random.uniform(low=-0.0050, high=.0050, size=self.robot_skeleton.ndofs)
+               + self.np_random.uniform(low=-0.0050,
+                                        high=.0050,
+                                        size=self.robot_skeleton.ndofs)
 
         self.count =rand_start[0]
         qvel = self.WalkVelocities[rand_start[0],:].reshape(29,) \
-               + self.np_random.uniform(low=-0.0050, high=.0050, size=self.robot_skeleton.ndofs)
+               + self.np_random.uniform(low=-0.0050,
+                                        high=.0050,
+                                        size=self.robot_skeleton.ndofs)
 
         self.set_state(qpos, qvel)
 
