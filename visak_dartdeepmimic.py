@@ -45,19 +45,19 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
 
         with open(prefix + "rarm_endeffector.txt","rb") as fp:
-            rarm_endeffector = np.loadtxt(fp)[:-1]
+            rarm_endeffector = np.loadtxt(fp)
 
         with open(prefix + "larm_endeffector.txt","rb") as fp:
-            larm_endeffector = np.loadtxt(fp)[:-1]
+            larm_endeffector = np.loadtxt(fp)
 
         with open(prefix + "lfoot_endeffector.txt","rb") as fp:
-            lfoot_endeffector = np.loadtxt(fp)[:-1]
+            lfoot_endeffector = np.loadtxt(fp)
 
         with open(prefix + "rfoot_endeffector.txt",'rb') as fp:
-            rfoot_endeffector = np.loadtxt(fp)[:-1]
+            rfoot_endeffector = np.loadtxt(fp)
 
         with open(prefix + "com.txt",'rb') as fp:
-            com = np.loadtxt(fp)[:-1]
+            com = np.loadtxt(fp)
 
         ####################################################
 
