@@ -381,7 +381,6 @@ class DartHumanoid3D_cartesian_jesus(dart_env.DartEnv, utils.EzPickle):
         point_lfoot = [0.,0.,-0.20]
 
         global_rarm = skel.bodynodes[16].to_world(point_rarm)
-
         global_larm = skel.bodynodes[13].to_world(point_larm)
         global_lfoot = skel.bodynodes[4].to_world(point_lfoot)
         global_rfoot = skel.bodynodes[7].to_world(point_rfoot)
@@ -431,8 +430,27 @@ class DartHumanoid3D_cartesian_jesus(dart_env.DartEnv, utils.EzPickle):
                     and (skel.q[3] > -0.4)
                     and (skel.q[3] < 0.3))
 
+    def step(self, a):
+        return self._step(a)
 
     def _step(self, a):
+
+
+        ##################################################################
+        # Warning! Duplicated code
+
+        point_rarm = [0.,-0.60,-0.15]
+        point_larm = [0.,-0.60,-0.15]
+        point_rfoot = [0.,0.,-0.20]
+        point_lfoot = [0.,0.,-0.20]
+
+        global_rarm=self.robot_skeleton.bodynodes[16].to_world(point_rarm)
+        global_larm=self.robot_skeleton.bodynodes[13].to_world(point_larm)
+        global_lfoot=self.robot_skeleton.bodynodes[4].to_world(point_lfoot)
+        global_rfoot=self.robot_skeleton.bodynodes[7].to_world(point_rfoot)
+
+        # End duplicated code
+        ##################################################################
 
         self.dart_world.set_text = []
         self.dart_world.y_scale = np.clip(a[6],-2,2)
@@ -479,11 +497,7 @@ class DartHumanoid3D_cartesian_jesus(dart_env.DartEnv, utils.EzPickle):
         if self.count >= self.num_frames-1:
             done = True
 
-        return ob, R_total, \
-            done, {"end_effector_reward": end_effector_reward,
-                   "joint_vel_term": joint_vel_term,
-                   "joint_term":quat_term,
-                   "com_reward":com_reward}
+        return ob, R_total, done, {}
 
     def _get_obs(self):
 
@@ -579,7 +593,7 @@ class DartHumanoid3D_cartesian_jesus(dart_env.DartEnv, utils.EzPickle):
             else self.random.randint(0, self.num_frames - 1)
 
     def reset(self, frame=None):
-        self.reset_model(frame)
+        return self.reset_model(frame)
 
     def reset_model(self, frame=None):
 
