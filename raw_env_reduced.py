@@ -23,11 +23,7 @@ import random
 
 class raw_env_reduced(dart_env.DartEnv, utils.EzPickle):
 
-    def __init__(self, rng_seed=None):
-
-        self.random = random.Random()
-        if rng_seed is not None:
-            self.random.seed(rng_seed)
+    def __init__(self):
 
         self.obs_dim = 127
         self.action_dim = 32
@@ -430,9 +426,6 @@ class raw_env_reduced(dart_env.DartEnv, utils.EzPickle):
                     and (skel.q[3] > -0.4)
                     and (skel.q[3] < 0.3))
 
-    def step(self, a):
-        return self._step(a)
-
     def _step(self, a):
 
 
@@ -588,18 +581,16 @@ class raw_env_reduced(dart_env.DartEnv, utils.EzPickle):
 
         return state
 
-    def get_random_framenum(self, default = None):
-        return default if default is not None \
-            else self.random.randint(0, self.num_frames - 1)
+    def get_random_framenum(self):
+        return np.random.randint(low=1,
+                                 high=self.num_frames - 1,
+                                 size=1)[0]
 
-    def reset(self, frame=None):
-        return self.reset_model(frame)
-
-    def reset_model(self, frame=None):
+    def reset_model(self):
 
         self.dart_world.reset()
 
-        rand_start = self.get_random_framenum(frame)
+        rand_start = self.get_random_framenum()
         self.framenum = rand_start
 
         qpos = self.MotionPositions[rand_start,:].reshape(29,) \
