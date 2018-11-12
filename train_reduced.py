@@ -5,11 +5,11 @@ from baselines.bench import Monitor
 from baselines import logger
 import tensorflow as tf
 
-from Humanoid3D_cartesian_jesus import DartHumanoid3D_cartesian_jesus
+from raw_env_reduced import raw_env_reduced
 from baselines.ppo1 import mlp_policy, pposgd_simple
 
 def make_dart_env(seed):
-    env = DartHumanoid3D_cartesian_jesus(seed)
+    env = raw_env_reduced(seed)
     env = Monitor(env, logger.get_dir())
     return env
 

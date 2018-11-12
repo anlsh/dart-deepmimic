@@ -21,7 +21,7 @@ from euclideanSpace import *
 from quaternions import *
 import random
 
-class DartHumanoid3D_cartesian_jesus(dart_env.DartEnv, utils.EzPickle):
+class raw_env_reduced(dart_env.DartEnv, utils.EzPickle):
 
     def __init__(self, rng_seed=None):
 

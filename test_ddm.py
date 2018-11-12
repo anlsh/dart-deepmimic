@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import random
 from visak_dartdeepmimic import VisakDartDeepMimicEnv
-from Humanoid3D_cartesian_jesus import DartHumanoid3D_cartesian_jesus
+from raw_env_reduced import raw_env_reduced
 from baselines.ppo1 import mlp_policy
 import itertools
 from baselines.common import set_global_seeds, tf_util as U
@@ -69,7 +69,7 @@ def vddm_env(rng_seed):
 
 @pytest.fixture(scope="module")
 def raw_env(rng_seed):
-    env = DartHumanoid3D_cartesian_jesus(rng_seed)
+    env = raw_env_reduced(rng_seed)
     # TODO Does this need to be enabled?
     # env.seed(rng_seed)
     return env
