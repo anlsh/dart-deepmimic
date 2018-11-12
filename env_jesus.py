@@ -302,45 +302,20 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
 
         return quat_reward
 
-
     def advance(self, a):
-
-
-
 
         clamped_control = np.array(a)
 
-
-
         self.tau = np.zeros(self.robot_skeleton.ndofs)
-        trans = np.zeros(6,)
 
-
-        #if self.swingFoot == "Right":
-        self.target = np.zeros()
-        self.target[6:]=  self.transformActions(clamped_control) + self.MotionPositions[self.framenum,6:] #*self.action_scale# + self.ref_trajectory_right[self.framenum_right,6:]# +
-
-
+        self.target[6:] = self.transformActions(clamped_control) \
+                          + self.MotionPositions[self.framenum,6:]
 
         for i in range(4):
-            self.tau[6:] = self.PID()
-
-
-
-            if self.dumpTorques:
-                with open("torques.txt","ab") as fp:
-                    np.savetxt(fp,np.array([self.tau]),fmt='%1.5f')
-
-            if self.dumpActions:
-                with open("targets_from_net.txt",'ab') as fp:
-                    np.savetxt(fp,np.array([[self.target[6],self.robot_skeleton.q[6]]]),fmt='%1.5f')
-
+            self.tau[6:] = self.PID(self.robot_skeleton, self.target)
 
             self.robot_skeleton.set_forces(self.tau)
-            #print("torques",self.tau[22])
             self.dart_world.step()
-
-
 
     def ClampTorques(self,torques):
         torqueLimits = np.array([150.0*5,80.*3,80.*3,100.*5,80.*5,60.,150.0*5,80.*3,80.*3,100.*5,80.*5,60.,150.*5,150.*5,150.*5,10.,5.,5.,5.,10.,5.,5,5.])*2
@@ -353,7 +328,7 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
 
         return torques
 
-    def PID(self):
+    def PID(self, skel, target):
         #print("#########################################################################3")
         self.kp = np.array([250]*23)#350
         self.kd = np.array([0.005]*23)
@@ -373,17 +348,17 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         self.kp = [item/2  for item in self.kp]
         self.kd = [item/2  for item in self.kd]
 
-        q = self.robot_skeleton.q
-        qdot = self.robot_skeleton.dq
+        q = skel.q
+        qdot = skel.dq
         tau = np.zeros((self.ndofs,))
         for i in range(6, self.ndofs):
             #print(q.shape)
-            self.edot[i] = ((q[i] - self.target[i]) -
+            self.edot[i] = ((q[i] - target[i]) -
                 self.preverror[i]) / self.dt
             tau[i] = -self.kp[i - 6] * \
-                (q[i] - self.target[i]) - \
+                (q[i] - target[i]) - \
                 self.kd[i - 6] *qdot[i]
-            self.preverror[i] = (q[i] - self.target[i])
+            self.preverror[i] = (q[i] - target[i])
 
         torqs = self.ClampTorques(tau)
 
