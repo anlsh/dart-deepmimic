@@ -203,11 +203,11 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
 
         return joint_targets
 
-    def ComputeReward(self,):
+    def quat_reward(self,skel, framenum):
         quaternion_difference = []
         #### lthigh
-        lthigh_euler = self.robot_skeleton.q[6:9]
-        lthigh_mocap = self.MotionPositions[self.framenum,6:9]
+        lthigh_euler = skel.q[6:9]
+        lthigh_mocap = self.MotionPositions[framenum,6:9]
         quat_lthigh = euler2quat(z=lthigh_euler[2],y=lthigh_euler[1],x=lthigh_euler[0])
         quat_lthigh_mocap = euler2quat(z=lthigh_mocap[2],y=lthigh_mocap[1],x=lthigh_mocap[0])
         lthigh_diff = mult(inverse(quat_lthigh_mocap),quat_lthigh)
@@ -215,24 +215,24 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         quaternion_difference.append(scalar_lthigh)
         #print("scaler",scalar_lthigh)
         ##### lknee
-        lknee_euler = self.robot_skeleton.q[9]
-        lknee_mocap = self.MotionPositions[self.framenum,9]
+        lknee_euler = skel.q[9]
+        lknee_mocap = self.MotionPositions[framenum,9]
         quat_lknee = euler2quat(z=0.,y=0.,x=lknee_euler)
         quat_lknee_mocap = euler2quat(z=0.,y=0.,x=lknee_mocap)
         lknee_diff = mult(inverse(quat_lknee_mocap),quat_lknee)
         scalar_lknee = 2*np.arccos(lknee_diff[0])
         quaternion_difference.append(scalar_lknee)
         #### lfoot
-        lfoot_euler = self.robot_skeleton.q[10:12]
-        lfoot_mocap = self.MotionPositions[self.framenum,10:12]
+        lfoot_euler = skel.q[10:12]
+        lfoot_mocap = self.MotionPositions[framenum,10:12]
         quat_lfoot = euler2quat(z=lfoot_euler[1],y=0.,x=lfoot_euler[0])
         quat_lfoot_mocap = euler2quat(z=lfoot_mocap[1],y=0.,x=lfoot_mocap[0])
         lfoot_diff = mult(inverse(quat_lfoot_mocap),quat_lfoot)
         scalar_lfoot = 2*np.arccos(lfoot_diff[0])
         quaternion_difference.append(scalar_lfoot)
         #### rthigh
-        rthigh_euler = self.robot_skeleton.q[12:15]
-        rthigh_mocap = self.MotionPositions[self.framenum,12:15]
+        rthigh_euler = skel.q[12:15]
+        rthigh_mocap = self.MotionPositions[framenum,12:15]
         quat_rthigh = euler2quat(z=rthigh_euler[2],y=rthigh_euler[1],x=rthigh_euler[0])
         quat_rthigh_mocap = euler2quat(z=rthigh_mocap[2],y=rthigh_mocap[1],x=rthigh_mocap[0])
         rthigh_diff = mult(inverse(quat_rthigh_mocap),quat_rthigh)
@@ -240,31 +240,31 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         quaternion_difference.append(scalar_rthigh)
         #print("scaler",scalar_lthigh)
         ##### rknee
-        rknee_euler = self.robot_skeleton.q[15]
-        rknee_mocap = self.MotionPositions[self.framenum,15]
+        rknee_euler = skel.q[15]
+        rknee_mocap = self.MotionPositions[framenum,15]
         quat_rknee = euler2quat(z=0.,y=0.,x=rknee_euler)
         quat_rknee_mocap = euler2quat(z=0.,y=0.,x=rknee_mocap)
         rknee_diff = mult(inverse(quat_rknee_mocap),quat_rknee)
         scalar_rknee = 2*np.arccos(rknee_diff[0])
         quaternion_difference.append(scalar_rknee)
         #### rfoot
-        rfoot_euler = self.robot_skeleton.q[16:18]
-        rfoot_mocap = self.MotionPositions[self.framenum,16:18]
+        rfoot_euler = skel.q[16:18]
+        rfoot_mocap = self.MotionPositions[framenum,16:18]
         quat_rfoot = euler2quat(z=rfoot_euler[1],y=0.,x=rfoot_euler[0])
         quat_rfoot_mocap = euler2quat(z=rfoot_mocap[1],y=0.,x=rfoot_mocap[0])
         rfoot_diff = mult(inverse(quat_rfoot_mocap),quat_rfoot)
         scalar_rfoot = 2*np.arccos(rfoot_diff[0])
         quaternion_difference.append(scalar_rfoot)
 
-        scalar_thoraxx = self.robot_skeleton.q[18] - self.MotionPositions[self.framenum,18]
+        scalar_thoraxx = skel.q[18] - self.MotionPositions[framenum,18]
         quaternion_difference.append(scalar_thoraxx)
-        scalar_thoraxy = self.robot_skeleton.q[19] - self.MotionPositions[self.framenum,19]
+        scalar_thoraxy = skel.q[19] - self.MotionPositions[framenum,19]
         quaternion_difference.append(scalar_thoraxy)
-        scalar_thoraxz = self.robot_skeleton.q[20] - self.MotionPositions[self.framenum,20]
+        scalar_thoraxz = skel.q[20] - self.MotionPositions[framenum,20]
         quaternion_difference.append(scalar_thoraxz)
         #### l upper arm
-        larm_euler = self.robot_skeleton.q[21:24]
-        larm_mocap = self.MotionPositions[self.framenum,21:24]
+        larm_euler = skel.q[21:24]
+        larm_mocap = self.MotionPositions[framenum,21:24]
         quat_larm = euler2quat(z=larm_euler[2],y=larm_euler[1],x=larm_euler[0])
         quat_larm_mocap = euler2quat(z=larm_mocap[2],y=larm_mocap[1],x=larm_mocap[0])
         larm_diff = mult(inverse(quat_larm_mocap),quat_larm)
@@ -272,16 +272,16 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         quaternion_difference.append(scalar_larm)
         #print("scaler",scalar_lthigh)
         ##### l elbow
-        lelbow_euler = self.robot_skeleton.q[24]
-        lelbow_mocap = self.MotionPositions[self.framenum,24]
+        lelbow_euler = skel.q[24]
+        lelbow_mocap = self.MotionPositions[framenum,24]
         quat_lelbow = euler2quat(z=0.,y=0.,x=lelbow_euler)
         quat_lelbow_mocap = euler2quat(z=0.,y=0.,x=lelbow_mocap)
         lelbow_diff = mult(inverse(quat_lelbow_mocap),quat_lelbow)
         scalar_lelbow = 2*np.arccos(lelbow_diff[0])
         quaternion_difference.append(scalar_lelbow)
         #### r upper arm
-        rarm_euler = self.robot_skeleton.q[25:28]
-        rarm_mocap = self.MotionPositions[self.framenum,25:28]
+        rarm_euler = skel.q[25:28]
+        rarm_mocap = self.MotionPositions[framenum,25:28]
         quat_rarm = euler2quat(z=rarm_euler[2],y=rarm_euler[1],x=rarm_euler[0])
         quat_rarm_mocap = euler2quat(z=rarm_mocap[2],y=rarm_mocap[1],x=rarm_mocap[0])
         rarm_diff = mult(inverse(quat_rarm_mocap),quat_rarm)
@@ -289,8 +289,8 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         quaternion_difference.append(scalar_rarm)
         #print("scaler",scalar_lthigh)
         ##### r elbow
-        relbow_euler = self.robot_skeleton.q[28]
-        relbow_mocap = self.MotionPositions[self.framenum,28]
+        relbow_euler = skel.q[28]
+        relbow_mocap = self.MotionPositions[framenum,28]
         quat_relbow = euler2quat(z=0.,y=0.,x=relbow_euler)
         quat_relbow_mocap = euler2quat(z=0.,y=0.,x=relbow_mocap)
         relbow_diff = mult(inverse(quat_relbow_mocap),quat_relbow)
@@ -317,6 +317,7 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
 
 
         #if self.swingFoot == "Right":
+        self.target = np.zeros()
         self.target[6:]=  self.transformActions(clamped_control) + self.MotionPositions[self.framenum,6:] #*self.action_scale# + self.ref_trajectory_right[self.framenum_right,6:]# +
 
 
@@ -389,44 +390,93 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         return torqs[6:]
 
 
-    def _step(self, a):
 
-        self.dart_world.set_text = []
-        self.dart_world.y_scale = np.clip(a[6],-2,2)
-        self.dart_world.plot = False
-        count_str = "count :"+str(self.framenum)
-        a_from_net = "a[6] : %f and a[12] : %f"%(a[16],a[20])
-        #self.dart_world.set_text.append(a_from_net)
-        self.dart_world.set_text.append(count_str)
-        posbefore = self.robot_skeleton.bodynodes[0].com()[0]
+    def com_reward(self, skel, framenum):
+        return np.exp(-40*np.sum(np.square(self.com[framenum,:] \
+                                           - skel.bodynodes[0].com())))
 
+    def ee_reward(self, skel, framenum):
 
-        if self.duplicate:
-            dupq = self.robot_skeleton.q
-            dupq[0] = 1.0
-            self.dupSkel.set_positions(dupq)
-            self.dupskel.set_velocities(np.zeros(self.robot_skeleton.q.shape[0],))
-
-
-        self.advance(a)
-        if self.dumpActions:
-            with open("a_from_net.txt","ab") as fp:
-                np.savetxt(fp,np.array([a]),fmt='%1.5f')
-
-
-        #print("torques",self.tau[[6,12]])
         point_rarm = [0.,-0.60,-0.15]
         point_larm = [0.,-0.60,-0.15]
         point_rfoot = [0.,0.,-0.20]
         point_lfoot = [0.,0.,-0.20]
 
-        global_rarm = self.robot_skeleton.bodynodes[16].to_world(point_rarm)
+        global_rarm = skel.bodynodes[16].to_world(point_rarm)
+        global_larm = skel.bodynodes[13].to_world(point_larm)
+        global_lfoot = skel.bodynodes[4].to_world(point_lfoot)
+        global_rfoot = skel.bodynodes[7].to_world(point_rfoot)
 
-        global_larm = self.robot_skeleton.bodynodes[13].to_world(point_larm)
-        global_lfoot = self.robot_skeleton.bodynodes[4].to_world(point_lfoot)
-        global_rfoot = self.robot_skeleton.bodynodes[7].to_world(point_rfoot)
+        rarm_term = np.sum(np.square(self.rarm_endeffector[framenum,:] \
+                                     - global_rarm))
+        larm_term = np.sum(np.square(self.larm_endeffector[framenum,:] \
+                                     - global_larm))
+        rfoot_term = np.sum(np.square(self.rfoot_endeffector[framenum,:] \
+                                      - global_rfoot))
+        lfoot_term = np.sum(np.square(self.lfoot_endeffector[framenum,:] \
+                                      - global_lfoot))
+
+        return np.exp(-40*(rarm_term + larm_term + \
+                           rfoot_term + lfoot_term))
+
+    def vel_reward(self, skel, framenum):
+
+        Joint_weights = np.ones(23,)
+        Joint_weights[[0,3,6,9,16,20,10,16]] = 10
+        Weight_matrix = np.diag(Joint_weights)
+
+        vel_diff = self.MotionVelocities[framenum,6:] - skel.dq[6:]
+
+        vel_pen = np.sum(vel_diff.T*Weight_matrix*vel_diff)
+
+        return 1*np.asarray(np.exp(-1e-1*vel_pen))
+
+    def reward(self, skel, framenum):
+
+        R_ee = self.ee_reward(skel, framenum)
+        R_com = self.com_reward(skel, framenum)
+        R_vel = self.vel_reward(skel, framenum)
+        R_quat = self.quat_reward(skel, framenum)
+
+        return 0.10*R_ee + 0.10*R_vel + 0.25*R_com + 1.65*R_quat
+
+    def should_terminate(self, skel, obs):
+
+        height = skel.bodynodes[0].com()[1]
+
+        return not (np.isfinite(obs).all()
+                    and (np.abs(obs[2:]) < 200).all()
+                    and (height > -0.70) and (height < 0.40)
+                    and (abs(skel.q[4]) < 0.30)
+                    and (abs(skel.q[5]) < 0.50)
+                    and (skel.q[3] > -0.4)
+                    and (skel.q[3] < 0.3))
+
+    def _step(self, a):
 
 
+        ##################################################################
+        # Warning! Duplicated code
+
+        point_rarm = [0.,-0.60,-0.15]
+        point_larm = [0.,-0.60,-0.15]
+        point_rfoot = [0.,0.,-0.20]
+        point_lfoot = [0.,0.,-0.20]
+
+        global_rarm=self.robot_skeleton.bodynodes[16].to_world(point_rarm)
+        global_larm=self.robot_skeleton.bodynodes[13].to_world(point_larm)
+        global_lfoot=self.robot_skeleton.bodynodes[4].to_world(point_lfoot)
+        global_rfoot=self.robot_skeleton.bodynodes[7].to_world(point_rfoot)
+
+        # End duplicated code
+        ##################################################################
+
+        self.dart_world.set_text = []
+        self.dart_world.y_scale = np.clip(a[6],-2,2)
+        self.dart_world.plot = False
+        posbefore = self.robot_skeleton.bodynodes[0].com()[0]
+
+        self.advance(a)
 
         self.dart_world.contact_point = []
         self.dart_world.contact_color = 'red'
@@ -435,259 +485,38 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         self.dart_world.contact_point.append(global_rfoot)
         self.dart_world.contact_point.append(global_lfoot)
 
-
-
-        #print(self.swingFoot)
         posafter = self.robot_skeleton.bodynodes[0].com()[0]
-        height = self.robot_skeleton.bodynodes[0].com()[1]
-        side_deviation = self.robot_skeleton.bodynodes[0].com()[2]
 
-        upward_world = self.robot_skeleton.bodynodes[0].to_world(np.array([1, 0, 0]))
-        init_axis = [  1.22906906e+00,  -3.59145383e-02 ,  1.24547289e-04]
-        ang_cos_uwd = np.dot(upward_world,init_axis)/(np.linalg.norm(upward_world)*np.linalg.norm(init_axis))
-        ang_cos_uwd = np.arccos(ang_cos_uwd)
-        if np.isnan(ang_cos_uwd):
-            ang_cos_uwd = 0.
-        self.angle_buf[0] = self.angle_buf[1]
-        self.angle_buf[1] = ang_cos_uwd
+        vel = (posafter - posbefore) / self.dt
 
-        or_vel = (self.angle_buf[1] - self.angle_buf[0])/0.016
+        R_total = self.reward(self.robot_skeleton, self.framenum)
 
         contacts = self.dart_world.collision_result.contacts
-
-        if contacts == []:
-            self.switch = 0
-
-        if contacts != []:
-            self.switch = 1
-
-
-        self.ComputeReward()
-
-        total_force_mag = 0
-        for contact in contacts:
-
-
-            force = np.sum(contact.force[[1,2]])
-
-
-
-            total_force_mag += force
-            data = np.zeros(11,)
-            data[:10] = contact.state
-            data[10] = self.framenum
-
-
-        if self.dumpCOM:
-            with open("COM_fromPolicy_walk.txt","ab") as fp:
-                np.savetxt(fp,np.asarray(self.robot_skeleton.q[:3]),fmt="%1.5f")
-
-            with open("Joint_fromPolicy_walk.txt","ab") as fp:
-                np.savetxt(fp,np.asarray(self.robot_skeleton.q),fmt="%1.5f")
-
-
-
-        alive_bonus = 4
-        vel = (posafter - posbefore) / self.dt
-        #print("a shape",a[-1])
-        action_pen = np.sqrt(np.square(a[:23]).sum())
-
-        reward = 0
-
-
-        W_joint = 2.
-        W_joint_vel = 2.
-        W_trans = 2.
-        W_orient = 1.
-
-        #W_theta = 0.5
-        W_joint_vel = 1.
-        W_trans_vel = 0.5
-        W_orient_vel = 0.5
-        W_balance = 5.0
-
-        Joint_weights = np.ones(23,)#
-        Joint_weights[[0,3,6,9,16,20,10,16]] = 10
-
-        Weight_matrix = np.diag(Joint_weights)
-        Weight_matrix_1 = np.diag(np.ones(4,))
-
-        veldq = np.copy(self.robot_skeleton.dq)
-        #print("ve",veldq)
-        acc = (veldq - self.prevdq)/0.008
-
-
-        com_height = np.square(0 - self.robot_skeleton.bodynodes[0].com()[1])
-        com_height_reward = 10*np.exp(-5*com_height)
-        right_foot = np.square(0 - self.robot_skeleton.bodynodes[7].com()[1])
-        right_foot_reward = 10*np.exp(-5*right_foot)
-
-
-
-        done = False
-
-
-        rarm_term = np.sum(np.square(self.rarm_endeffector[self.framenum,:] - global_rarm))
-        larm_term = np.sum(np.square(self.larm_endeffector[self.framenum,:] - global_larm))
-        rfoot_term = np.sum(np.square(self.rfoot_endeffector[self.framenum,:] - global_rfoot))
-        lfoot_term = np.sum(np.square(self.lfoot_endeffector[self.framenum,:] - global_lfoot))
-
-        end_effector_reward = np.exp(-40*(rarm_term+larm_term+rfoot_term+lfoot_term))
-        com_reward = np.exp(-40*np.sum(np.square(self.com[self.framenum,:] - self.robot_skeleton.bodynodes[0].com())))
-
-        s = self.state_vector()
-
-
-
-
-
-
-
-        joint_diff = self.MotionPositions[self.framenum,6:] - self.robot_skeleton.q[6:]#hmm[[6,9,12,15,22,26,10,16]] - self.robot_skeleton.q[[6,9,12,15,22,26,10,16]]
-        #joint_diff_unimp = hmm[[7,8,13,14]] - self.robot_skeleton.q[[7,8,13,14]]
-        joint_pen = np.sum(joint_diff.T*Weight_matrix*joint_diff)
-        #joint_pen_unimp = np.sum(joint_diff_unimp.T*Weight_matrix_1*joint_diff_unimp)
-
-        vel_diff = self.MotionVelocities[self.framenum,6:] - self.robot_skeleton.dq[6:]
-
-        vel_pen = np.sum(vel_diff.T*Weight_matrix*vel_diff)
-
-        node1_trans = np.array([0,-0.25,0])
-        node1_root_orient = np.array([-np.pi/5,0,0])
-        node0_trans = self.qpos_node0[:3]
-
-        trans_pen = np.sum(np.square(node0_trans[:3] - self.robot_skeleton.q[:3]))
-        trans_vel_pen = np.sum(np.square(np.zeros(3,) - self.robot_skeleton.dq[:3]))
-        root_orient_pen = np.sum(np.square(self.MotionPositions[self.framenum,:3] - self.robot_skeleton.q[:3]))
-        root_orient_vel =np.sum(np.square(self.MotionVelocities[self.framenum,:3] - self.robot_skeleton.dq[:3]))
-
-
-        root_trans_term = 10/(1+ 100*trans_pen)#np.asarray(W_trans*np.exp(-10*trans_pen))
-        #
-        root_trans_vel = 100/(1+ 100*trans_vel_pen)#np.asarray(W_joint*np.exp(-10*trans_vel_pen))
-        #
-        joint_term = 1*np.asarray(np.exp(-2e-1*joint_pen))#np.asarray(W_joint*np.exp(-1e-2*joint_pen)) #100
-        #joint_term_unimp = np.asarray(W_joint*np.exp(-joint_pen_unimp))
-        #
-        joint_vel_term = 1*np.asarray(np.exp(-1e-1*vel_pen))# W_joint_vel*np.exp(-1e-3*vel_pen)
-
-
-
-
-        quat_term = self.ComputeReward()
-        reward = 0.10*end_effector_reward + 0.10*joint_vel_term+ 0.25*com_reward+ 1.65*quat_term# + 0.75*body_orient + 0.45*body_orient_vel)/2.0 #+ 2.00*orient_term + 1.5*orient_vel                                                                                        # + contact_reward#  + joint_term + joint_vel_term #0.1*self.robot_skeleton.bodynodes[0].com()[1] + joint_term + joint_vel_term +
-        eerew_str = "End Effector :"+str(end_effector_reward)
-        self.dart_world.set_text.append(eerew_str)
-
-        vel_str = "Joint Vel :"+str(joint_vel_term)
-        self.dart_world.set_text.append(vel_str)
-
-        com_str = "Com  :"+str(com_reward)
-        self.dart_world.set_text.append(com_str)
-
-        joint_str = "Joint :"+str(quat_term)
-        self.dart_world.set_text.append(joint_str)
-
-
-        lthigh_str = "Left Thigh target:"+str(self.MotionPositions[self.framenum,6])+" thigh Position :"+str(self.robot_skeleton.q[6])
-        self.dart_world.set_text.append(lthigh_str)
-        rthigh_str = "right Thigh target:"+str(self.MotionPositions[self.framenum,12])+" thigh Position :"+str(self.robot_skeleton.q[12])
-        self.dart_world.set_text.append(rthigh_str)
-
-        lthigh_torque = "Left Thigh torque:"+str(self.tau[6])
-        self.dart_world.set_text.append(lthigh_torque)
-        rthigh_torque = "right Thigh torque:"+str(self.tau[12])
-        self.dart_world.set_text.append(rthigh_torque)
-
-        com_vel = "com_vel:"+str(self.robot_skeleton.q[1])
-        self.dart_world.set_text.append(com_vel)
-
-        tar_vel = "tar_com_vel:"+str(self.MotionVelocities[self.framenum,1])
-        self.dart_world.set_text.append(tar_vel)
-
-        h = "height:"+str(height)
-        self.dart_world.set_text.append(h)
-
-        c = 0
         head_flag = False
         for item in contacts:
-            #c = 0
             if item.skel_id1 == 0:
                 if self.robot_skeleton.bodynodes[item.bodynode_id2].name == "head":
-                    #print("Headddddddd")
                     head_flag = True
-                if self.robot_skeleton.bodynodes[item.bodynode_id2].name == "l-lowerarm":
-                    c+=1
-                if self.robot_skeleton.bodynodes[item.bodynode_id2].name == "r-lowerarm":
-                    #print("true")
-                    c+=1
-                if self.robot_skeleton.bodynodes[item.bodynode_id2].name == "r-foot":
-                    c+=1
 
-                if self.robot_skeleton.bodynodes[item.bodynode_id2].name == "l-foot":
-                    c+=1
-
-
-
-
-
-
-        done = not (np.isfinite(s).all() and (np.abs(s[2:]) < 200).all() and# (abs(L_angle - self.foot_angles[self.framenum]) < 10) and (abs(R_angle - self.foot_angles[self.framenum]) < 10) and
-                (height > -0.70) and (height < 0.40) and (abs(self.robot_skeleton.q[4]) < 0.30) and (abs(self.robot_skeleton.q[5]) < 0.50) and (self.robot_skeleton.q[3] > -0.4) and (self.robot_skeleton.q[3] < 0.3))
-
-        flag = 0
+        s = self.state_vector()
+        done = self.should_terminate(self.robot_skeleton,
+                                     self.state_vector())
 
         if done:
-            reward = 0.
-            flag = 1
-
+            R_total = 0.
 
         ob = self._get_obs()
-        #print("here")
-        if self.dumpStates:
-            with open("states_from_net.txt","ab") as fp:
-                np.savetxt(fp,np.array([ob]),fmt='%1.5f')
-        if self.trainRelay:
-            ac,vpred = self.pol.act(False,ob)
-            #print("vpred",vpred)
-            if vpred > 4000:
-                print("yipeee",vpred)
-                reward =  10*vpred#/100
-                done = True
 
         if head_flag:
             reward = 0.
             done = True
 
-        self.prevdq = np.copy(self.robot_skeleton.dq)
-
-
-        self.t += self.dt
-
-
-        reward_breakup = {'r':np.array([flag])}#,-total_force_mag/1000., -1e-2*np.sum(self.robot_skeleton.dq[[6,12,9,15,10,16]]), 10*self.robot_skeleton.dq[2], 10*self.robot_skeleton.dq[1],flag])}#{'r':np.array([right_foot_reward])}#
-        if self.dumpRewards:
-            with open("reward_terms.txt","ab") as fp:
-                np.savetxt(fp,np.array([[root_trans_term,root_trans_vel,joint_term,orient_term,joint_vel_term,0.1*com_height_reward,flag]]),fmt="%1.5f")
-
-            with open("reward.txt","ab") as fp:
-                np.savetxt(fp,np.array([[reward]]),fmt='%1.5f')
-
-
-
-        self.prev_a = a
         ob = self._get_obs()
-        joint_every_diff = np.sum(np.square(self.MotionPositions[:,6:] - self.robot_skeleton.q[6:]),axis=1)
-        min_error = np.argmin(joint_every_diff)
-        #print(self.framenum)
-        self.framenum+=1
-        if self.framenum>= self.MotionPositions.shape[0]-1:#449
+        self.framenum += 1
+        if self.framenum >= self.num_frames-1:
             done = True
 
-        self.dart_world.set_text.append(str(done))
-        #done = False
-        return ob, reward, done, {"end_effector_reward":end_effector_reward,"joint_vel_term":joint_vel_term,"joint_term":quat_term,
-        "com_reward":com_reward}
+        return ob, R_total, done, {}
 
     def _get_obs(self):
 
