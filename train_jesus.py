@@ -11,6 +11,10 @@ register(
     id='raw-v0',
     entry_point='env_jesus:DartHumanoid3D_cartesian',
 )
+register(
+    id='refined-v0',
+    entry_point='raw_env_reduced:raw_env_reduced',
+)
 
 def make_dart_env(env_id, seed):
     print("#####################################")

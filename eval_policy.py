@@ -7,6 +7,8 @@ import tensorflow as tf
 import random
 from test_ddm import raw_env
 import argparse
+from train_jesus import make_dart_env
+from gym.envs.registration import register
 
 class PolicyLoaderAgent(object):
     """The world's simplest agent!"""
@@ -59,7 +61,8 @@ if __name__ == "__main__":
     # parser.args.control_skel_path = "/home/anish/Code/deepmimic/assets/skel/kima_original.skel"
     # hidden_dims = [int(i) for i in args.hidden_dims.split(",")]
     # env = parser.get_env()
-    env = raw_env(0)
+    # env = raw_env(0)
+    env = make_dart_env("raw-v0", 5)
 
     U.make_session(num_cpu=1).__enter__()
 
@@ -75,10 +78,13 @@ if __name__ == "__main__":
     reward = 0
     done = False
 
+    env = env.env
+    env.num_frames = 300
+
     while True:
         if not args.randinit:
             # ob = env.reset(0, pos_stdv=0, vel_stdv=0)
-            ob = env.reset(0)
+            ob = env.reset()
         else:
             # ob = env.reset(random.randint(0, env.num_frames - 1),
             #                pos_stdv=0, vel_stdv=0)
@@ -91,10 +97,10 @@ if __name__ == "__main__":
             if env.framenum == env.num_frames - 1:
                 env.framenum = 0
             action = agent.act(ob, reward, done)
-            reward = env.reward(env.robot_skeleton, env.framenum)
+            # reward = env.reward(env.robot_skeleton, env.framenum)
             ob, reward, done, _ = env.step(action)
             cum_reward += reward
             length += 1
-            env.render()
+            env.render("human")
 
         print("Total-Reward, Length = " + str((cum_reward, length)))
