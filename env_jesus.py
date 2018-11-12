@@ -781,38 +781,30 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
 
         return state
 
+    def get_random_framenum(self):
+        return np.random.randint(low=1,
+                                 high=self.num_frames - 1,
+                                 size=1)[0]
+
     def reset_model(self):
-        if self.firstPass and self.trainRelay:
-            print("yes")
-            sess = tf.get_default_session()
-            for item in tf.global_variables():
-                name = str(item.name)
-                if 'node_0' in name:
-                    #print(name)
-                    obj = item.assign(self.par[item.name])
-                    sess.run(obj)
-            self.firstPass = False
+
         self.dart_world.reset()
 
-        phases = [0,1,2]
-        phase_index = np.random.choice(phases,1,p=[0.5,0.25,0.25])
+        rand_start = self.get_random_framenum()
+        self.framenum = rand_start
 
-        phase_index = 0
+        qpos = self.MotionPositions[rand_start,:].reshape(29,) \
+               + self.np_random.uniform(low=-0.0050,
+                                        high=.0050,
+                                        size=self.robot_skeleton.ndofs)
 
-
-
-        rand_start = np.random.randint(low=1,high=self.MotionPositions.shape[0],size=1)#self.MotionPositions.shape[0]
-
-        qpos = self.MotionPositions[rand_start[0],:].reshape(29,) +self.np_random.uniform(low=-0.0050, high=.0050, size=self.robot_skeleton.ndofs)
-
-        self.framenum =rand_start[0]
-        qvel = self.MotionVelocities[rand_start[0],:].reshape(29,) + self.np_random.uniform(low=-0.0050, high=.0050, size=self.robot_skeleton.ndofs)
+        qvel = self.MotionVelocities[rand_start,:].reshape(29,) \
+               + self.np_random.uniform(low=-0.0050,
+                                        high=.0050,
+                                        size=self.robot_skeleton.ndofs)
 
         self.set_state(qpos, qvel)
-        self.t = 0
 
-        self.framenum2 = 0
-        self.impactCount = 0
         return self._get_obs()
 
     def viewer_setup(self):
