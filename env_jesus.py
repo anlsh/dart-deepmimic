@@ -22,72 +22,18 @@ import os
 import random
 
 class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
+
     def __init__(self):
 
-
-        self.control_bounds = np.array([10*np.ones(32,), -10*np.ones(32,)])
-
-        obs_dim = 127#+3#for phase
-        ### POINTS ON THE FOOT PLANE
-        self.P = np.array([0.,0.,-0.0525])
-        self.Q = np.array([-0.05,0.,-0.05])
-        self.R = np.array([-0.05,0.,0.])
-
-        self.duplicate = False
-        self.switch = -1
-        self.impactCount = 0
-        self.storeState = False
-        self.init_q = np.zeros(29,)
-        self.init_dq = np.zeros(29,)
-        ### LOGGING
-        self.dumpTorques = False
-        self.dumpRewards = False
-        self.dumpActions = False
-        self.dumpCOM = False
-        self.dumpStates = False
-        #### PRINTING
-        self.printTorques = False
-        self.printRewards = False
-        self.printActions = False
-        self.balance_PID = False
-        self.swingFoot = 'Right'
+        self.obs_dim = 127
+        self.action_dim = 32
         self.random = random.Random()
 
         self.framenum = 0
-        self.framenum2 = 1
-        self.framenum_left = self.framenum_right = 0
-        self.prev_a = np.zeros(23,)
-        self.init_count = 0
-        self.balance = False
-        self.trainRelay = False
-        self.firstPass =  False
         self.qpos_node0 = np.zeros(29,)
         self.qpos_node1 = np.zeros(29,)
         self.qpos_node2 = np.zeros(29,)
         self.qpos_node3 = np.zeros(29,)
-
-        #prefix = '../../Balance_getup/'
-        # prefix = None
-        # with open("rarm_endeffector_jump.txt","rb") as fp:
-        #     self.rarm_endeffector = np.loadtxt(fp)
-
-        # with open("larm_endeffector_jump.txt","rb") as fp:
-        #     self.larm_endeffector = np.loadtxt(fp)
-
-        # with open("lfoot_endeffector_jump.txt","rb") as fp:
-        #     self.lfoot_endeffector = np.loadtxt(fp)
-
-        # with open("rfoot_endeffector_jump.txt",'rb') as fp:
-        #     self.rfoot_endeffector = np.loadtxt(fp)
-
-        # with open("com_jump.txt",'rb') as fp:
-        #     self.com = np.loadtxt(fp)
-        # with open("jump.txt","rb") as fp:
-        #     self.MotionPositions = np.loadtxt(fp)
-
-        # with open("jumpvel.txt","rb") as fp:
-        #     self.MotionVelocities = np.loadtxt(fp)
-
 
         dir_prefix = os.path.dirname(os.path.realpath(__file__)) + "/"
         skel_prefix = dir_prefix + "assets/skel/"
@@ -113,26 +59,47 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         with open(mocap_prefix + "velocities.txt","rb") as fp:
             self.MotionVelocities = np.loadtxt(fp)
 
-        self.num_frames = len(self.MotionPositions)
+        self.num_frames = self.MotionPositions.shape[0]
 
-        self.prevdq = np.zeros(29,)
         self.tau = np.zeros(29,)
         self.ndofs = 29
         self.target = np.zeros(self.ndofs,)
         self.init = np.zeros(self.ndofs,)
         self.edot = np.zeros(self.ndofs,)
         self.preverror = np.zeros(self.ndofs,)
-        self.angle_buf = np.zeros(2)
-        self.stance = None
-        self.target_vel = 1.0
         for i in range(6, self.ndofs):
             self.preverror[i] = (self.init[i] - self.target[i])
-        self.t = 0
 
-        dart_env.DartEnv.__init__(self, [skel_prefix + 'kima_original.skel'],
-                                  32, obs_dim, self.control_bounds, disableViewer=False)
+        self.control_bounds = np.array([10*np.ones(32,), -10*np.ones(32,)])
+
+        dart_env.DartEnv.__init__(self,
+                                  [skel_prefix + 'kima_original.skel'],
+                                  self.action_dim,
+                                  self.obs_dim,
+                                  self.control_bounds,
+                                  disableViewer=False)
+
+        #################################################
+        # DART INITALIZATION STUFF #
+        ############################
+
+        self.robot_skeleton = self.dart_world.skeletons[1]
 
         self.robot_skeleton.set_self_collision_check(True)
+
+        for i in range(self.robot_skeleton.njoints-1):
+            self.robot_skeleton.joint(i).set_position_limit_enforced(True)
+            self.robot_skeleton.dof(i).set_damping_coefficient(10.)
+
+        for body in self.robot_skeleton.bodynodes \
+            + self.dart_world.skeletons[0].bodynodes:
+           body.set_friction_coeff(20.)
+
+        for jt in range(0, len(self.robot_skeleton.joints)):
+            if self.robot_skeleton.joints[jt].has_position_limit(0):
+                self.robot_skeleton.joints[jt].set_position_limit_enforced(True)
+
+        #################################################
 
         utils.EzPickle.__init__(self)
 
