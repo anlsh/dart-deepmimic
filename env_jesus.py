@@ -135,15 +135,19 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         utils.EzPickle.__init__(self)
 
     def transformActions(self,actions):
+
         joint_targets = np.zeros(23,)
+
         # Left thigh
         lthigh = actions[:4]
         euler_lthigh = angle_axis2euler(theta=lthigh[0],vector=lthigh[1:])
         joint_targets[0] = euler_lthigh[2]
         joint_targets[1] = euler_lthigh[1]
         joint_targets[2] = euler_lthigh[0]
+
         ###### Left Knee
         joint_targets[3] = actions[4]
+
         ### left foot
         lfoot = actions[5:9]
         euler_lfoot = angle_axis2euler(theta=lfoot[0],vector=lfoot[1:])
@@ -156,8 +160,10 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         joint_targets[6] = euler_rthigh[2]
         joint_targets[7] = euler_rthigh[1]
         joint_targets[8] = euler_rthigh[0]
+
         ###### right Knee
         joint_targets[9] = actions[13]
+
         ### right foot
         rfoot = actions[14:18]
         euler_rfoot = angle_axis2euler(theta=rfoot[0],vector=rfoot[1:])
@@ -165,7 +171,6 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         joint_targets[11] = euler_rfoot[0]
 
         ###thorax
-
         thorax = actions[18:22]
         euler_thorax = angle_axis2euler(theta=thorax[0],vector=thorax[1:])
         joint_targets[12] = euler_thorax[2]
@@ -174,14 +179,12 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
 
         #### l upper arm
         l_arm = actions[22:26]
-        #print("LARM",actions.shape)
         euler_larm = angle_axis2euler(theta=l_arm[0],vector=l_arm[1:])
         joint_targets[15] = euler_larm[2]
         joint_targets[16] = euler_larm[1]
         joint_targets[17] = euler_larm[0]
 
         ## l elbow
-
         joint_targets[18] = actions[26]
 
         ## r upper arm
@@ -192,14 +195,7 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         joint_targets[21] = euler_rarm[0]
 
         ###r elbow
-
         joint_targets[22] = actions[31]
-
-
-
-
-
-
 
         return joint_targets
 
