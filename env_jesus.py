@@ -318,8 +318,30 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
             self.dart_world.step()
 
     def ClampTorques(self,torques):
-        torqueLimits = np.array([150.0*5,80.*3,80.*3,100.*5,80.*5,60.,150.0*5,80.*3,80.*3,100.*5,80.*5,60.,150.*5,150.*5,150.*5,10.,5.,5.,5.,10.,5.,5,5.])*2
-        #print("tau",torqueLimits[4])
+        torqueLimits = np.array([150.0*5,
+                                 80.*3,
+                                 80.*3,
+                                 100.*5,
+                                 80.*5,
+                                 60.,
+                                 150.0*5,
+                                 80.*3,
+                                 80.*3,
+                                 100.*5,
+                                 80.*5,
+                                 60.,
+                                 150.*5,
+                                 150.*5,
+                                 150.*5,
+                                 10.,
+                                 5.,
+                                 5.,
+                                 5.,
+                                 10.,
+                                 5.,
+                                 5,
+                                 5.])*2
+
         for i in range(6,self.ndofs):
             if torques[i] > torqueLimits[i-6]:
                 torques[i] = torqueLimits[i-6]
@@ -363,8 +385,6 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         torqs = self.ClampTorques(tau)
 
         return torqs[6:]
-
-
 
     def com_reward(self, skel, framenum):
         return np.exp(-40*np.sum(np.square(self.com[framenum,:] \
