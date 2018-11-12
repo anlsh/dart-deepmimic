@@ -18,6 +18,7 @@ from baselines.ppo1.mlp_policy import MlpPolicy
 from gym import wrappers,spaces
 from euclideanSpace import *
 from quaternions import *
+import os
 
 class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
     def __init__(self):
