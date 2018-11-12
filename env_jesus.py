@@ -64,11 +64,6 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         self.tau = np.zeros(29,)
         self.ndofs = 29
         self.target = np.zeros(self.ndofs,)
-        self.init = np.zeros(self.ndofs,)
-        self.edot = np.zeros(self.ndofs,)
-        self.preverror = np.zeros(self.ndofs,)
-        for i in range(6, self.ndofs):
-            self.preverror[i] = (self.init[i] - self.target[i])
 
         self.control_bounds = np.array([10*np.ones(32,), -10*np.ones(32,)])
 
@@ -357,12 +352,9 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         tau = np.zeros((self.ndofs,))
         for i in range(6, self.ndofs):
             #print(q.shape)
-            self.edot[i] = ((q[i] - target[i]) -
-                self.preverror[i]) / self.dt
             tau[i] = -self.kp[i - 6] * \
                 (q[i] - target[i]) - \
                 self.kd[i - 6] *qdot[i]
-            self.preverror[i] = (q[i] - target[i])
 
         torqs = self.ClampTorques(tau)
 
