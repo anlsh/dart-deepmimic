@@ -528,10 +528,9 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
 
     def _get_obs(self):
 
+        phi = np.array([self.framenum/self.num_frames])
 
-        phi = np.array([self.framenum/self.MotionPositions.shape[0]])
-        links = [2,3,4,5,6,7,12,13,15,16]
-        # observation for left leg thigh##################################################
+        ###################################################
         RelPos_lthigh = self.robot_skeleton.bodynodes[2].com() - self.robot_skeleton.bodynodes[0].com()
         state = copy.deepcopy(RelPos_lthigh)
         quat_lthigh = euler2quat(z=self.robot_skeleton.q[8],y=self.robot_skeleton.q[7],x=self.robot_skeleton.q[6])
@@ -613,8 +612,6 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         state = np.concatenate((state,np.array([self.robot_skeleton.dq[28]])))
         state = np.concatenate((state,self.robot_skeleton.q[18:21],self.robot_skeleton.dq[18:21],phi))
         ##################################################################
-
-
 
         return state
 
