@@ -19,6 +19,7 @@ from gym import wrappers,spaces
 from euclideanSpace import *
 from quaternions import *
 import os
+import random
 
 class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
     def __init__(self):
@@ -50,6 +51,7 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         self.printActions = False
         self.balance_PID = False
         self.swingFoot = 'Right'
+        self.random = random.Random()
 
         self.framenum = 0
         self.framenum2 = 1
@@ -615,10 +617,9 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
 
         return state
 
-    def get_random_framenum(self):
-        return np.random.randint(low=1,
-                                 high=self.num_frames - 1,
-                                 size=1)[0]
+    def get_random_framenum(self, default=None):
+        return default if default is not None \
+            else self.random.randint(1, self.num_frames - 1)
 
     def reset_model(self):
 
