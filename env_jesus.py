@@ -199,17 +199,23 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
 
         return joint_targets
 
-    def quat_reward(self,skel, framenum):
+    def quat_reward(self, skel, framenum):
+
         quaternion_difference = []
+
         #### lthigh
         lthigh_euler = skel.q[6:9]
         lthigh_mocap = self.MotionPositions[framenum,6:9]
-        quat_lthigh = euler2quat(z=lthigh_euler[2],y=lthigh_euler[1],x=lthigh_euler[0])
-        quat_lthigh_mocap = euler2quat(z=lthigh_mocap[2],y=lthigh_mocap[1],x=lthigh_mocap[0])
+        quat_lthigh = euler2quat(z=lthigh_euler[2],
+                                 y=lthigh_euler[1],
+                                 x=lthigh_euler[0])
+        quat_lthigh_mocap = euler2quat(z=lthigh_mocap[2],
+                                       y=lthigh_mocap[1],
+                                       x=lthigh_mocap[0])
         lthigh_diff = mult(inverse(quat_lthigh_mocap),quat_lthigh)
         scalar_lthigh = 2*np.arccos(lthigh_diff[0])
         quaternion_difference.append(scalar_lthigh)
-        #print("scaler",scalar_lthigh)
+
         ##### lknee
         lknee_euler = skel.q[9]
         lknee_mocap = self.MotionPositions[framenum,9]
@@ -218,6 +224,7 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         lknee_diff = mult(inverse(quat_lknee_mocap),quat_lknee)
         scalar_lknee = 2*np.arccos(lknee_diff[0])
         quaternion_difference.append(scalar_lknee)
+
         #### lfoot
         lfoot_euler = skel.q[10:12]
         lfoot_mocap = self.MotionPositions[framenum,10:12]
@@ -226,15 +233,20 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         lfoot_diff = mult(inverse(quat_lfoot_mocap),quat_lfoot)
         scalar_lfoot = 2*np.arccos(lfoot_diff[0])
         quaternion_difference.append(scalar_lfoot)
+
         #### rthigh
         rthigh_euler = skel.q[12:15]
         rthigh_mocap = self.MotionPositions[framenum,12:15]
-        quat_rthigh = euler2quat(z=rthigh_euler[2],y=rthigh_euler[1],x=rthigh_euler[0])
-        quat_rthigh_mocap = euler2quat(z=rthigh_mocap[2],y=rthigh_mocap[1],x=rthigh_mocap[0])
+        quat_rthigh = euler2quat(z=rthigh_euler[2],
+                                 y=rthigh_euler[1],
+                                 x=rthigh_euler[0])
+        quat_rthigh_mocap = euler2quat(z=rthigh_mocap[2],
+                                       y=rthigh_mocap[1],
+                                       x=rthigh_mocap[0])
         rthigh_diff = mult(inverse(quat_rthigh_mocap),quat_rthigh)
         scalar_rthigh = 2*np.arccos(rthigh_diff[0])
         quaternion_difference.append(scalar_rthigh)
-        #print("scaler",scalar_lthigh)
+
         ##### rknee
         rknee_euler = skel.q[15]
         rknee_mocap = self.MotionPositions[framenum,15]
@@ -243,6 +255,7 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         rknee_diff = mult(inverse(quat_rknee_mocap),quat_rknee)
         scalar_rknee = 2*np.arccos(rknee_diff[0])
         quaternion_difference.append(scalar_rknee)
+
         #### rfoot
         rfoot_euler = skel.q[16:18]
         rfoot_mocap = self.MotionPositions[framenum,16:18]
@@ -252,21 +265,25 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         scalar_rfoot = 2*np.arccos(rfoot_diff[0])
         quaternion_difference.append(scalar_rfoot)
 
+        ### Thorax
         scalar_thoraxx = skel.q[18] - self.MotionPositions[framenum,18]
-        quaternion_difference.append(scalar_thoraxx)
         scalar_thoraxy = skel.q[19] - self.MotionPositions[framenum,19]
-        quaternion_difference.append(scalar_thoraxy)
         scalar_thoraxz = skel.q[20] - self.MotionPositions[framenum,20]
+        quaternion_difference.append(scalar_thoraxx)
+        quaternion_difference.append(scalar_thoraxy)
         quaternion_difference.append(scalar_thoraxz)
+
         #### l upper arm
         larm_euler = skel.q[21:24]
         larm_mocap = self.MotionPositions[framenum,21:24]
         quat_larm = euler2quat(z=larm_euler[2],y=larm_euler[1],x=larm_euler[0])
-        quat_larm_mocap = euler2quat(z=larm_mocap[2],y=larm_mocap[1],x=larm_mocap[0])
+        quat_larm_mocap = euler2quat(z=larm_mocap[2],
+                                     y=larm_mocap[1],
+                                     x=larm_mocap[0])
         larm_diff = mult(inverse(quat_larm_mocap),quat_larm)
         scalar_larm = 2*np.arccos(larm_diff[0])
         quaternion_difference.append(scalar_larm)
-        #print("scaler",scalar_lthigh)
+
         ##### l elbow
         lelbow_euler = skel.q[24]
         lelbow_mocap = self.MotionPositions[framenum,24]
@@ -275,15 +292,18 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         lelbow_diff = mult(inverse(quat_lelbow_mocap),quat_lelbow)
         scalar_lelbow = 2*np.arccos(lelbow_diff[0])
         quaternion_difference.append(scalar_lelbow)
+
         #### r upper arm
         rarm_euler = skel.q[25:28]
         rarm_mocap = self.MotionPositions[framenum,25:28]
         quat_rarm = euler2quat(z=rarm_euler[2],y=rarm_euler[1],x=rarm_euler[0])
-        quat_rarm_mocap = euler2quat(z=rarm_mocap[2],y=rarm_mocap[1],x=rarm_mocap[0])
+        quat_rarm_mocap = euler2quat(z=rarm_mocap[2],
+                                     y=rarm_mocap[1],
+                                     x=rarm_mocap[0])
         rarm_diff = mult(inverse(quat_rarm_mocap),quat_rarm)
         scalar_rarm = 2*np.arccos(rarm_diff[0])
         quaternion_difference.append(scalar_rarm)
-        #print("scaler",scalar_lthigh)
+
         ##### r elbow
         relbow_euler = skel.q[28]
         relbow_mocap = self.MotionPositions[framenum,28]
@@ -293,10 +313,7 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         scalar_relbow = 2*np.arccos(relbow_diff[0])
         quaternion_difference.append(scalar_relbow)
 
-        quat_reward = np.exp(-2*np.sum(np.square(quaternion_difference)))
-        #print("reward",quat_reward)
-
-        return quat_reward
+        return np.exp(-2*np.sum(np.square(quaternion_difference)))
 
     def advance(self, a):
 
