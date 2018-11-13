@@ -307,34 +307,40 @@ class DartDeepMimicEnv(dart_env.DartEnv):
     def step(self, a):
         return self._step(a)
 
-    # def _step(self, action_vector):
+    def _step(self, nvec):
 
-    #     self.dart_world.y_scale = np.clip(action_vector[6],-2,2)
-    #     nn_angles = self.angles_from_netvector(np.array(action_vector))
+        # TODO Do I need to clamp anything in this range?
+        tau = np.zeros(self.robot_skeleton.ndofs)
+        target = np.zeros(self.robot_skeleton.ndofs,)
+        target[6:] = self.transformActions(nvec) \
+                     + self.MotionPositions[self.framenum,6:]
 
-    #     # TODO Should be step_resolution instead of 4
-    #     for _ in range(4):
-    #         tau = self.PID(self.robot_skeleton,
-    #                        np.concatenate([np.zeros(6),
-    #                                        self.target_angles(nn_angles)]))
-    #         self.robot_skeleton.set_forces(np.concatenate([np.zeros(6),
-    #                                                        tau]))
-    #         self.dart_world.step()
+        # TODO Should be step_resolution instead of 4
+        for i in range(4):
+            tau[6:] = self.PID(self.robot_skeleton, target)
 
-    #     newstate = self._get_obs()
-    #     reward = self.reward(self.robot_skeleton, self.framenum)
-    #     done, rude_term = self.should_terminate(self.state_vector())
-    #     self.framenum += 1
+            self.robot_skeleton.set_forces(tau)
+            self.dart_world.step()
 
-    #     if rude_term:
-    #         reward = 0
+        R_total = self.reward(self.robot_skeleton, self.framenum)
 
-    #     if not np.isfinite(newstate).all():
-    #         raise RuntimeError("Ran into an infinite state")
-    #     if not np.isfinite(reward):
-    #         raise RuntimeError("Obtained infinite reward")
+        s = self.state_vector()
+        done = self.should_terminate()
 
-    #     return newstate, reward, done, {}
+        # TODO Implement proper rude termination
+        if done:
+            R_total = 0.
+
+        # TODO Implement finiteness check on obs by uncommenting below
+        ob = self._get_obs()
+        # if not np.isfinite(ob).all():
+        #     raise RuntimeError("Ran into an infinite state")
+
+        self.framenum += 1
+        if self.framenum >= self.num_frames-1:
+            done = True
+
+        return ob, R_total, done, {}
 
     def get_random_framenum(self, default=None):
         return default if default is not None \

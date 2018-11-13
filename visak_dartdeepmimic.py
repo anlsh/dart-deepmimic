@@ -382,35 +382,6 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
                     and (skel.q[3] > -0.4)
                     and (skel.q[3] < 0.3))
 
-    def _step(self, nvec):
-
-        tau = np.zeros(self.robot_skeleton.ndofs)
-        target = np.zeros(self.robot_skeleton.ndofs,)
-        target[6:] = self.transformActions(nvec) \
-                     + self.MotionPositions[self.framenum,6:]
-
-        for i in range(4):
-            tau[6:] = self.PID(self.robot_skeleton, target)
-
-            self.robot_skeleton.set_forces(tau)
-            self.dart_world.step()
-
-
-        R_total = self.reward(self.robot_skeleton, self.framenum)
-
-        s = self.state_vector()
-        done = self.should_terminate()
-
-        if done:
-            R_total = 0.
-
-        ob = self._get_obs()
-        self.framenum += 1
-        if self.framenum >= self.num_frames-1:
-            done = True
-
-        return ob, R_total, done, {}
-
     def _get_obs(self):
 
         phi = np.array([self.framenum/self.num_frames])
