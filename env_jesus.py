@@ -63,9 +63,7 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
 
         self.num_frames = self.MotionPositions.shape[0]
 
-        self.tau = np.zeros(29,)
         self.ndofs = 29
-        self.target = np.zeros(self.ndofs,)
 
         self.control_bounds = np.array([10*np.ones(32,), -10*np.ones(32,)])
 
@@ -285,15 +283,16 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
 
         clamped_control = np.array(a)
 
-        self.tau = np.zeros(self.robot_skeleton.ndofs)
+        tau = np.zeros(self.robot_skeleton.ndofs)
+        target = np.zeros(self.ndofs,)
 
-        self.target[6:] = self.transformActions(clamped_control) \
-                          + self.MotionPositions[self.framenum,6:]
+        target[6:] = self.transformActions(clamped_control) \
+                     + self.MotionPositions[self.framenum,6:]
 
         for i in range(4):
-            self.tau[6:] = self.PID(self.robot_skeleton, self.target)
+            tau[6:] = self.PID(self.robot_skeleton, target)
 
-            self.robot_skeleton.set_forces(self.tau)
+            self.robot_skeleton.set_forces(tau)
             self.dart_world.step()
 
     def ClampTorques(self,torques):
