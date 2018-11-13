@@ -76,7 +76,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                  # policy_query_frequency,
                  # refmotion_dt,
                  statemode,
-                 # actionmode,
+                 actionmode,
                  # p_gain, d_gain,
                  pos_noise, vel_noise,
                  # reward_cutoff,
@@ -106,8 +106,10 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         ##############################################
 
         self.statemode = statemode
+        self.actionmode = actionmode
 
         self.angle_to_rep = lambda x: None
+        self.angle_from_rep = lambda x: None
 
         if self.statemode == StateMode.GEN_EULER:
             self.angle_to_rep = lambda x: x
@@ -117,6 +119,17 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                                                          x=theta[0])
         elif self.statemode == StateMode.GEN_AXIS:
             raise NotImplementedError()
+
+        if self.actionmode == ActionMode.GEN_EULER:
+            self.angle_from_rep = lambda x: x
+
+        elif self.actionmode == ActionMode.GEN_QUAT:
+            raise NotImplementedError()
+
+        elif self.actionmode == ActionMode.GEN_AXIS:
+            self.angle_from_rep = lambda aa: angle_axis2euler(theta=aa[0],
+                                                             vector=aa[1:])[::-1]
+
 
         self.pos_noise, self.vel_noise = pos_noise, vel_noise
         if self.pos_noise < 0 or self.vel_noise < 0:
@@ -166,7 +179,26 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                                                  self.mocap_path)
         self.num_frames = len(self.RefQs)
 
+        ############################################
+        # Calculate observation, action dimensions #
+        ############################################
+
         self.obs_dim = len(self._get_obs(ref_skel))
+        self.action_dim = sum([ActionMode.lengths[self.actionmode]
+                               if len(self.metadict[name][0]) > 1 else 1
+                               for name in self._actuated_dof_names])
+
+        # The control bounds don't actually do anything lol, they're just
+        # there to give the environment dimensions (according to Visak)
+        control_bounds = np.array([10*np.ones(self.action_dim,),
+                                   -10*np.ones(self.action_dim,)])
+
+        dart_env.DartEnv.__init__(self,
+                                  [self.skel_path],
+                                  self.action_dim,
+                                  self.obs_dim,
+                                  control_bounds,
+                                  disableViewer=False)
 
         #######################################
         # Just set a bunch of self.parameters #
@@ -221,29 +253,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         ##############################################
         # Set angle conversion methods appropriately #
         ##############################################
-
-        # Type of angles in state space
-
-        # if self.statemode == StateMode.GEN_EULER:
-        #     self.angle_to_rep = lambda x: x
-
-        # elif self.statemode == StateMode.GEN_QUAT:
-        #     self.angle_to_rep = lambda x: euler2quat(*(x[::-1]))
-
-        # elif self.statemode == StateMode.GEN_AXIS:
-        #     self.angle_to_rep = lambda x: axisangle_from_euler(*(x[::-1]), axes="rxyz")
-
         # Type of angles in action space
-
-        # if self.actionmode == ActionMode.GEN_EULER:
-        #     self.angle_from_rep = lambda x: x
-
-        # elif self.actionmode == ActionMode.GEN_QUAT:
-        #     raise NotImplementedError()
-
-        # elif self.actionmode == ActionMode.GEN_AXIS:
-        #     self.angle_from_rep = lambda x: angle_axis2euler(theta=x[0],
-        #                                                      vector=x[1:])[::-1]
 
         #################################################
         # Sanity check the values of certain parameters #
@@ -273,9 +283,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         #                                in enumerate(ref_skel.bodynodes)
         #                              if len(node.child_bodynodes) == 0]
 
-        # self.action_dim = sum([ActionMode.lengths[self.actionmode]
-        #                        if len(self.metadict[name][0]) > 1 else 1
-        #                        for name in self._actuated_dof_names])
 
         # TODO Replace the 10 with a max_angle variable
         # action_limits = 10. * np.ones(self.action_dim)
@@ -400,8 +407,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # TODO Do I need to clamp anything in this range?
         tau = np.zeros(self.robot_skeleton.ndofs)
         target = np.zeros(self.robot_skeleton.ndofs,)
-        target[6:] = self.transformActions(nvec) \
-                     + self.RefQs[self.framenum,6:]
+        target[6:] = self.angles_from_netvector(nvec) \
+                     + self.RefQs[self.framenum, 6:]
 
         # TODO Should be step_resolution instead of 4
         for i in range(4):
@@ -574,37 +581,42 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
     #     return reward
 
-    # def angles_from_netvector(self, netvector):
+    def angles_from_netvector(self, netvector):
+        """
+        Given a neural network output, return a set of target angle for
+        the actuated rotational degrees of freedom
+        """
+        # TODO Eventually should allow targets for translational dofs too?
 
-    #     target_q = np.zeros(len(self.robot_skeleton.q) - 6)
-    #     q_index = 0
-    #     nv_index = 0
+        target_q = np.zeros(len(self.robot_skeleton.q) - 6)
+        q_index = 0
+        nv_index = 0
 
-    #     for dof_name in self._actuated_dof_names:
-    #         indices, _ = self.metadict[dof_name]
+        for dof_name in self._actuated_dof_names:
+            indices, _, __ = self.metadict[dof_name]
 
-    #         if len(indices) == 1:
-    #             target_q[q_index] = netvector[nv_index:nv_index+1]
-    #             q_index += 1
-    #             nv_index += 1
+            if len(indices) == 1:
+                target_q[q_index] = netvector[nv_index:nv_index+1]
+                q_index += 1
+                nv_index += 1
 
-    #         else:
-    #             raw_angle = netvector[nv_index:nv_index \
-    #                                   + ActionMode.lengths[self.actionmode]]
-    #             euler_angle = np.array(self.angle_from_rep(raw_angle))
-    #             target_q[q_index:q_index + len(indices)] \
-    #                 = euler_angle[:len(indices)]
+            else:
+                raw_angle = netvector[nv_index:nv_index \
+                                      + ActionMode.lengths[self.actionmode]]
+                euler_angle = np.array(self.angle_from_rep(raw_angle))
+                target_q[q_index:q_index + len(indices)] \
+                    = euler_angle[:len(indices)]
 
-    #             q_index += len(indices)
-    #             nv_index += ActionMode.lengths[self.actionmode]
+                q_index += len(indices)
+                nv_index += ActionMode.lengths[self.actionmode]
 
-    #     if q_index != len(self.robot_skeleton.q) - 6:
-    #         raise RuntimeError("Not all dofs mapped over")
-    #     if nv_index != len(netvector):
-    #         raise RuntimeError("Not all net outputs used")
+        # TODO This check has never failed on me, so can prolly delete it
+        if q_index != len(self.robot_skeleton.q) - 6:
+            raise RuntimeError("Not all dofs mapped over")
+        if nv_index != len(netvector):
+            raise RuntimeError("Not all net outputs used")
 
-    #     return target_q
-
+        return target_q
 
     # def should_terminate(self, newstate):
     #     done = self.framenum >= self.num_frames

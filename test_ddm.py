@@ -51,7 +51,7 @@ def vddm_env(rng_seed):
         skel_path=dir_prefix + "assets/skel/kima_original.skel",
         mocap_path=dir_prefix + "assets/mocap/jump/positions.txt",
         statemode=1,
-        # actionmode=2,
+        actionmode=2,
         pos_noise=0.005, vel_noise=0.005,
         pos_weight=1.65, pos_decay=-2,
         vel_weight=0.1, vel_decay=-1e-1,
