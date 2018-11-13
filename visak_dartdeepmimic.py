@@ -17,7 +17,6 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         self.obs_dim = 127
         self.action_dim = 32
 
-        self.framenum = 0
         self.ndofs = 29
 
         dir_prefix = os.path.dirname(os.path.realpath(__file__)) + "/"

@@ -100,6 +100,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         if seed is not None:
             self.random.seed(seed)
 
+        self.framenum = 0
+
         #######################################
         # Just set a bunch of self.parameters #
         #######################################
@@ -134,7 +136,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # self._skeleton_path = skeleton_path
         # self.delta_actions = delta_actions
 
-        # self.framenum = 0
 
         # Set later, simply declaring up front
         # self.robot_skeleton = None
