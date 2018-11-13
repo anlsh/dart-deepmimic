@@ -137,6 +137,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
 
         self.skel_path = skel_path
+        # TODO Make sure that -1 is the right skel to use: CLI parameter?
         ref_skel = pydart.World(.0001, self.skel_path).skeletons[-1]
 
         # The lambda should, given a joint name, return a JointType code
@@ -152,6 +153,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             if joint_type != JointType.ROT:
                 # TODO Support non-rotational actuated joints?
                 raise NotImplementedError("Non-rot actuated joints unsupported")
+        self.obs_dim = len(self._get_obs(ref_skel))
 
         #######################################
         # Just set a bunch of self.parameters #
@@ -258,7 +260,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         #                                in enumerate(ref_skel.bodynodes)
         #                              if len(node.child_bodynodes) == 0]
 
-        # self.obs_dim = len(self._get_obs(ref_skel))
         # self.action_dim = sum([ActionMode.lengths[self.actionmode]
         #                        if len(self.metadict[name][0]) > 1 else 1
         #                        for name in self._actuated_dof_names])

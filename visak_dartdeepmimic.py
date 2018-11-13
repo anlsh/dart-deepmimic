@@ -13,14 +13,17 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
     def __init__(self, *args, **kwargs):
 
-        DartDeepMimicEnv.__init__(self, *args, **kwargs)
-
-        self.obs_dim = 127
-        self.action_dim = 32
-
         dir_prefix = os.path.dirname(os.path.realpath(__file__)) + "/"
         skel_prefix = dir_prefix + "assets/skel/"
         mocap_prefix = dir_prefix + "assets/mocap/jump/"
+
+        with open(mocap_prefix + "positions.txt","rb") as fp:
+            mp = np.loadtxt(fp)
+            self.num_frames = mp.shape[0]
+
+        DartDeepMimicEnv.__init__(self, *args, **kwargs)
+
+        self.action_dim = 32
 
         with open(mocap_prefix + "rarm_endeffector.txt","rb") as fp:
             self.rarm_endeffector = np.loadtxt(fp)
@@ -377,94 +380,6 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
                     and (skel.q[3] > -0.4)
                     and (skel.q[3] < 0.3))
 
-    def _get_obs(self):
-
-        phi = np.array([self.framenum/self.num_frames])
-
-        ###################################################
-        RelPos_lthigh = self.robot_skeleton.bodynodes[2].com() - self.robot_skeleton.bodynodes[0].com()
-        state = copy.deepcopy(RelPos_lthigh)
-        quat_lthigh = euler2quat(z=self.robot_skeleton.q[8],y=self.robot_skeleton.q[7],x=self.robot_skeleton.q[6])
-        state = np.concatenate((state,quat_lthigh))
-        LinVel_lthigh = self.robot_skeleton.bodynodes[2].dC
-        state = np.concatenate((state,LinVel_lthigh))
-        state = np.concatenate((state,self.robot_skeleton.dq[6:9]))
-        ################################################################3
-        RelPos_lknee = self.robot_skeleton.bodynodes[3].com() - self.robot_skeleton.bodynodes[0].com()
-        state = np.concatenate((state,RelPos_lknee))
-        quat_lknee = euler2quat(z=0.,y=0.,x=self.robot_skeleton.q[9])
-        state = np.concatenate((state,quat_lknee))
-        LinVel_lknee = self.robot_skeleton.bodynodes[3].dC
-        state = np.concatenate((state,LinVel_lknee))
-        state = np.concatenate((state,np.array([self.robot_skeleton.dq[9]])))
-        #######################################################################3
-        RelPos_lfoot = self.robot_skeleton.bodynodes[4].com() - self.robot_skeleton.bodynodes[0].com()
-        state = np.concatenate((state,RelPos_lfoot))
-        quat_lfoot = euler2quat(z=self.robot_skeleton.q[11],y=0.,x=self.robot_skeleton.q[10])
-        state = np.concatenate((state,quat_lfoot))
-        LinVel_lfoot = self.robot_skeleton.bodynodes[4].dC
-        state = np.concatenate((state,LinVel_lfoot))
-        state = np.concatenate((state,self.robot_skeleton.dq[10:12]))
-        #######################################################################3
-        RelPos_rthigh = self.robot_skeleton.bodynodes[5].com() - self.robot_skeleton.bodynodes[0].com()
-        state = np.concatenate((state,RelPos_rthigh))
-        quat_rthigh = euler2quat(z=self.robot_skeleton.q[14],y=self.robot_skeleton.q[13],x=self.robot_skeleton.q[12])
-        state = np.concatenate((state,quat_rthigh))
-        LinVel_rthigh = self.robot_skeleton.bodynodes[5].dC
-        state = np.concatenate((state,LinVel_rthigh))
-        state = np.concatenate((state,self.robot_skeleton.dq[12:15]))
-        ###############################################################################3
-        RelPos_rknee = self.robot_skeleton.bodynodes[6].com() - self.robot_skeleton.bodynodes[0].com()
-        state = np.concatenate((state,RelPos_rknee))
-        quat_rknee = euler2quat(z=0.,y=0.,x=self.robot_skeleton.q[15])
-        state = np.concatenate((state,quat_rknee))
-        LinVel_rknee = self.robot_skeleton.bodynodes[6].dC
-        state = np.concatenate((state,LinVel_rknee))
-        state = np.concatenate((state,np.array([self.robot_skeleton.dq[15]])))
-        ################################################################################3
-        RelPos_rfoot = self.robot_skeleton.bodynodes[7].com() - self.robot_skeleton.bodynodes[0].com()
-        state = np.concatenate((state,RelPos_rfoot))
-        quat_rfoot = euler2quat(z=self.robot_skeleton.q[17],y=0.,x=self.robot_skeleton.q[16])
-        state = np.concatenate((state,quat_rfoot))
-        LinVel_rfoot = self.robot_skeleton.bodynodes[7].dC
-        state = np.concatenate((state,LinVel_rfoot))
-        state = np.concatenate((state,self.robot_skeleton.dq[16:18]))
-        ###########################################################
-        RelPos_larm = self.robot_skeleton.bodynodes[12].com() - self.robot_skeleton.bodynodes[0].com()
-        state = np.concatenate((state,RelPos_larm))
-        quat_larm = euler2quat(z=self.robot_skeleton.q[23],y=self.robot_skeleton.q[22],x=self.robot_skeleton.q[21])
-        state = np.concatenate((state,quat_larm))
-        LinVel_larm = self.robot_skeleton.bodynodes[12].dC
-        state = np.concatenate((state,LinVel_larm))
-        state = np.concatenate((state,self.robot_skeleton.dq[21:24]))
-        ##############################################################
-        RelPos_lelbow = self.robot_skeleton.bodynodes[13].com() - self.robot_skeleton.bodynodes[0].com()
-        state = np.concatenate((state,RelPos_lelbow))
-        quat_lelbow = euler2quat(z=0.,y=0.,x=self.robot_skeleton.q[24])
-        state = np.concatenate((state,quat_lelbow))
-        LinVel_lelbow = self.robot_skeleton.bodynodes[13].dC
-        state = np.concatenate((state,LinVel_lelbow))
-        state = np.concatenate((state,np.array([self.robot_skeleton.dq[24]])))
-        ################################################################
-        RelPos_rarm = self.robot_skeleton.bodynodes[15].com() - self.robot_skeleton.bodynodes[0].com()
-        state = np.concatenate((state,RelPos_rarm))
-        quat_rarm = euler2quat(z=self.robot_skeleton.q[27],y=self.robot_skeleton.q[26],x=self.robot_skeleton.q[25])
-        state = np.concatenate((state,quat_rarm))
-        LinVel_rarm = self.robot_skeleton.bodynodes[15].dC
-        state = np.concatenate((state,LinVel_rarm))
-        state = np.concatenate((state,self.robot_skeleton.dq[25:28]))
-        #################################################################3
-        RelPos_relbow = self.robot_skeleton.bodynodes[16].com() - self.robot_skeleton.bodynodes[0].com()
-        state = np.concatenate((state,RelPos_relbow))
-        quat_relbow = euler2quat(z=0.,y=0.,x=self.robot_skeleton.q[28])
-        state = np.concatenate((state,quat_relbow))
-        LinVel_relbow = self.robot_skeleton.bodynodes[16].dC
-        state = np.concatenate((state,LinVel_relbow))
-        state = np.concatenate((state,np.array([self.robot_skeleton.dq[28]])))
-        state = np.concatenate((state,self.robot_skeleton.q[18:21],self.robot_skeleton.dq[18:21],phi))
-        ##################################################################
-
-        return state
 
     def reset(self):
         return self.reset_model()
