@@ -17,8 +17,6 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         self.obs_dim = 127
         self.action_dim = 32
 
-        self.ndofs = 29
-
         dir_prefix = os.path.dirname(os.path.realpath(__file__)) + "/"
         skel_prefix = dir_prefix + "assets/skel/"
         mocap_prefix = dir_prefix + "assets/mocap/jump/"
@@ -262,7 +260,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         clamped_control = np.array(a)
 
         tau = np.zeros(self.robot_skeleton.ndofs)
-        target = np.zeros(self.ndofs,)
+        target = np.zeros(self.robot_skeleton.ndofs,)
 
         target[6:] = self.transformActions(clamped_control) \
                      + self.MotionPositions[self.framenum,6:]
@@ -298,7 +296,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
                                  5,
                                  5.])*2
 
-        for i in range(6,self.ndofs):
+        for i in range(6,self.robot_skeleton.ndofs):
             if torques[i] > torqueLimits[i-6]:
                 torques[i] = torqueLimits[i-6]
             if torques[i] < -torqueLimits[i-6]:
@@ -326,8 +324,8 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         q = skel.q
         qdot = skel.dq
-        tau = np.zeros((self.ndofs,))
-        for i in range(6, self.ndofs):
+        tau = np.zeros((self.robot_skeleton.ndofs,))
+        for i in range(6, self.robot_skeleton.ndofs):
             tau[i] = -self.kp[i - 6] * \
                 (q[i] - target[i]) - \
                 self.kd[i - 6] *qdot[i]
