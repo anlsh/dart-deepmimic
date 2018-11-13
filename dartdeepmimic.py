@@ -67,12 +67,13 @@ def get_metadict(skel):
 
 class DartDeepMimicEnv(dart_env.DartEnv):
 
-    def __init__(self, skeleton_path,
-                 refmotion_path,
+    def __init__(self,
+                 # skeleton_path,
+                 # refmotion_path,
                  # policy_query_frequency,
                  # refmotion_dt,
-                 statemode,
-                 actionmode,
+                 # statemode,
+                 # actionmode,
                  # p_gain, d_gain,
                  # pos_init_noise, vel_init_noise,
                  # reward_cutoff,
@@ -82,28 +83,31 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                  # com_weight, com_inner_weight,
                  # max_torque,
                  # max_angle,
-                 delta_actions,
-                 default_damping,
-                 default_spring,
-                 default_friction,
-                 visualize,
+                 # delta_actions,
+                 # default_damping,
+                 # default_spring,
+                 # default_friction,
+                 # visualize,
                  # simsteps_per_dataframe,
-                 screen_width,
-                 screen_height,
+                 # screen_width,
+                 # screen_height,
                  # gravity,
-                 self_collide,
-                 rng_seed):
+                 # self_collide,
+                 # rng_seed,
+    ):
 
-        self.random = random.Random()
-        if rng_seed is not None:
-            self.random.seed(rng_seed)
+        pass
+
+        # self.random = random.Random()
+        # if rng_seed is not None:
+        #     self.random.seed(rng_seed)
 
         #######################################
         # Just set a bunch of self.parameters #
         #######################################
 
-        self.statemode = statemode
-        self.actionmode = actionmode
+        # self.statemode = statemode
+        # self.actionmode = actionmode
         # self.policy_query_frequency = policy_query_frequency
         # TODO Dead variable, re-enable here and in argparse
         # self.refmotion_dt = refmotion_dt
@@ -112,12 +116,12 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # self.vel_init_noise = vel_init_noise
         # self.max_torque = max_torque
         # self.max_angle = max_angle
-        self.default_damping = default_damping
-        self.default_spring = default_spring
-        self.default_friction = default_friction
+        # self.default_damping = default_damping
+        # self.default_spring = default_spring
+        # self.default_friction = default_friction
         # self.reward_cutoff = reward_cutoff
         # self.gravity = gravity
-        self.self_collide = self_collide
+        # self.self_collide = self_collide
         # self.p_gain = p_gain
         # self.d_gain = d_gain
         # self.pos_weight = pos_weight
@@ -128,29 +132,29 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # self.ee_inner_weight = ee_inner_weight
         # self.com_weight = com_weight
         # self.com_inner_weight = com_inner_weight
-        self.__visualize = visualize
-        self._skeleton_path = skeleton_path
-        self.delta_actions = delta_actions
+        # self.__visualize = visualize
+        # self._skeleton_path = skeleton_path
+        # self.delta_actions = delta_actions
 
-        self.framenum = 0
+        # self.framenum = 0
 
         # Set later, simply declaring up front
-        self.robot_skeleton = None
-        self.obs_dim = None
-        self.action_dim = None
-        self.metadict = None
-        self._end_effector_indices = None
-        self.obs_dim = None
-        self.action_dim = None
-        self._dof_names = None
-        self._actuated_dof_names = None
+        # self.robot_skeleton = None
+        # self.obs_dim = None
+        # self.action_dim = None
+        # self.metadict = None
+        # self._end_effector_indices = None
+        # self.obs_dim = None
+        # self.action_dim = None
+        # self._dof_names = None
+        # self._actuated_dof_names = None
 
-        self.num_frames = -1
-        self.RefQs = None
-        self.RefDQs = None
-        self.ref_quat_frames = None
-        self.ref_com_frames = None
-        self.ref_ee_frames = None
+        # self.num_frames = -1
+        # self.RefQs = None
+        # self.RefDQs = None
+        # self.ref_quat_frames = None
+        # self.ref_com_frames = None
+        # self.ref_ee_frames = None
 
         ####################################
         # Self.parameters for internal use #
@@ -168,8 +172,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # self.step_resolution = (1 / self.policy_query_frequency) / self.refmotion_dt
         # self.step_resolution = 4
 
-        self.angle_to_rep = lambda x: None
-        self.angle_from_rep = lambda x: None
+        # self.angle_to_rep = lambda x: None
+        # self.angle_from_rep = lambda x: None
 
         ##############################################
         # Set angle conversion methods appropriately #
@@ -177,26 +181,26 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         # Type of angles in state space
 
-        if self.statemode == StateMode.GEN_EULER:
-            self.angle_to_rep = lambda x: x
+        # if self.statemode == StateMode.GEN_EULER:
+        #     self.angle_to_rep = lambda x: x
 
-        elif self.statemode == StateMode.GEN_QUAT:
-            self.angle_to_rep = lambda x: euler2quat(*(x[::-1]))
+        # elif self.statemode == StateMode.GEN_QUAT:
+        #     self.angle_to_rep = lambda x: euler2quat(*(x[::-1]))
 
-        elif self.statemode == StateMode.GEN_AXIS:
-            self.angle_to_rep = lambda x: axisangle_from_euler(*(x[::-1]), axes="rxyz")
+        # elif self.statemode == StateMode.GEN_AXIS:
+        #     self.angle_to_rep = lambda x: axisangle_from_euler(*(x[::-1]), axes="rxyz")
 
         # Type of angles in action space
 
-        if self.actionmode == ActionMode.GEN_EULER:
-            self.angle_from_rep = lambda x: x
+        # if self.actionmode == ActionMode.GEN_EULER:
+        #     self.angle_from_rep = lambda x: x
 
-        elif self.actionmode == ActionMode.GEN_QUAT:
-            raise NotImplementedError()
+        # elif self.actionmode == ActionMode.GEN_QUAT:
+        #     raise NotImplementedError()
 
-        elif self.actionmode == ActionMode.GEN_AXIS:
-            self.angle_from_rep = lambda x: angle_axis2euler(theta=x[0],
-                                                             vector=x[1:])[::-1]
+        # elif self.actionmode == ActionMode.GEN_AXIS:
+        #     self.angle_from_rep = lambda x: angle_axis2euler(theta=x[0],
+        #                                                      vector=x[1:])[::-1]
 
         #################################################
         # Sanity check the values of certain parameters #
@@ -205,9 +209,9 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # if not self.gravity:
         #     warnings.warn("Gravity is disabled, be sure you meant to do this!",
                           # RuntimeWarning)
-        if not self.self_collide:
-            warnings.warn("Self collisions are disabled, be sure you meant"
-                          + " to do this!", RuntimeWarning)
+        # if not self.self_collide:
+        #     warnings.warn("Self collisions are disabled, be sure you meant"
+        #                   + " to do this!", RuntimeWarning)
 
         # if (self.p_gain < 0) or (self.d_gain < 0):
         #     raise RuntimeError("All PID gains should be positive")
@@ -228,34 +232,34 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # Extract dof data from skeleton and construct reference frames #
         #################################################################
 
-        ref_skel = pydart.World(.0001,
-                                self._skeleton_path).skeletons[-1]
+        # ref_skel = pydart.World(.0001,
+        #                         self._skeleton_path).skeletons[-1]
 
-        self.metadict = get_metadict(ref_skel)
+        # self.metadict = get_metadict(ref_skel)
 
-        self._dof_names = [key for key in self.metadict]
-        self._dof_names.sort(key=lambda x:self.metadict[x][0][0])
-        self._actuated_dof_names = [name for name in self._dof_names
-                                    if not name.startswith(ROOT_KEY)]
+        # self._dof_names = [key for key in self.metadict]
+        # self._dof_names.sort(key=lambda x:self.metadict[x][0][0])
+        # self._actuated_dof_names = [name for name in self._dof_names
+        #                             if not name.startswith(ROOT_KEY)]
 
         # self._end_effector_indices = [i for i, node
         #                                in enumerate(ref_skel.bodynodes)
         #                              if len(node.child_bodynodes) == 0]
 
-        self.obs_dim = len(self._get_obs(ref_skel))
-        self.action_dim = sum([ActionMode.lengths[self.actionmode]
-                               if len(self.metadict[name][0]) > 1 else 1
-                               for name in self._actuated_dof_names])
+        # self.obs_dim = len(self._get_obs(ref_skel))
+        # self.action_dim = sum([ActionMode.lengths[self.actionmode]
+        #                        if len(self.metadict[name][0]) > 1 else 1
+        #                        for name in self._actuated_dof_names])
 
-        self.RefQs, self.RefDQs, \
-            self.ref_quat_frames, self.ref_com_frames, \
-            self.ref_ee_frames = self.construct_frames(ref_skel,
-                                                       refmotion_path)
-        self.num_frames = len(self.RefQs)
+        # self.RefQs, self.RefDQs, \
+            # self.ref_quat_frames, self.ref_com_frames, \
+            # self.ref_ee_frames = self.construct_frames(ref_skel,
+            #                                            refmotion_path)
+        # self.num_frames = len(self.RefQs)
 
         # TODO Replace the 10 with a max_angle variable
-        action_limits = 10. * np.ones(self.action_dim)
-        action_limits = np.array([action_limits, -action_limits])
+        # action_limits = 10. * np.ones(self.action_dim)
+        # action_limits = np.array([action_limits, -action_limits])
 
         # TODO Hardcoded frame skip, pulled from visak's code
         # TODO bring back my nice keyword :(
@@ -266,12 +270,12 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         #                           action_bounds=action_limits,
         #                           visualize=self.__visualize,
         #                           disableViewer=not self.__visualize)
-        dart_env.DartEnv.__init__(self,
-                                  [self._skeleton_path],
-                                  16,
-                                  self.obs_dim,
-                                  action_limits,
-                                  disableViewer=False)
+        # dart_env.DartEnv.__init__(self,
+        #                           [self._skeleton_path],
+        #                           16,
+        #                           self.obs_dim,
+        #                           action_limits,
+        #                           disableViewer=False)
 
         #########################################################
         # Set various per joint/body parameters based on inputs #
