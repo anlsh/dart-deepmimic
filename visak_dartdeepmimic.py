@@ -255,14 +255,12 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         return np.exp(-2*np.sum(np.square(quaternion_difference)))
 
-    def advance(self, a):
-
-        clamped_control = np.array(a)
+    def advance(self, nvec):
 
         tau = np.zeros(self.robot_skeleton.ndofs)
         target = np.zeros(self.robot_skeleton.ndofs,)
 
-        target[6:] = self.transformActions(clamped_control) \
+        target[6:] = self.transformActions(nvec) \
                      + self.MotionPositions[self.framenum,6:]
 
         for i in range(4):
