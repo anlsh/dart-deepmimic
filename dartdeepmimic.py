@@ -68,7 +68,7 @@ def get_metadict(skel):
 class DartDeepMimicEnv(dart_env.DartEnv):
 
     def __init__(self,
-                 # skeleton_path,
+                 skel_path,
                  # refmotion_path,
                  # policy_query_frequency,
                  # refmotion_dt,
@@ -115,6 +115,17 @@ class DartDeepMimicEnv(dart_env.DartEnv):
            (ee_decay > 0) or (com_decay) > 0:
             raise RuntimeError("Decay rates should be nonpositive")
 
+
+        self.skel_path = skel_path
+        ref_skel = pydart.World(.0001, self.skel_path).skeletons[-1]
+
+        self.metadict = get_metadict(ref_skel)
+
+        self._dof_names = [key for key in self.metadict]
+        self._dof_names.sort(key=lambda x:self.metadict[x][0][0])
+        self._actuated_dof_names = [name for name in self._dof_names
+                                    if not name.startswith(ROOT_KEY)]
+
         #######################################
         # Just set a bunch of self.parameters #
         #######################################
@@ -134,7 +145,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # self.gravity = gravity
         # self.self_collide = self_collide
         # self.__visualize = visualize
-        # self._skeleton_path = skeleton_path
         # self.delta_actions = delta_actions
 
 
@@ -217,16 +227,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         #################################################################
         # Extract dof data from skeleton and construct reference frames #
         #################################################################
-
-        # ref_skel = pydart.World(.0001,
-        #                         self._skeleton_path).skeletons[-1]
-
-        # self.metadict = get_metadict(ref_skel)
-
-        # self._dof_names = [key for key in self.metadict]
-        # self._dof_names.sort(key=lambda x:self.metadict[x][0][0])
-        # self._actuated_dof_names = [name for name in self._dof_names
-        #                             if not name.startswith(ROOT_KEY)]
 
         # self._end_effector_indices = [i for i, node
         #                                in enumerate(ref_skel.bodynodes)

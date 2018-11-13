@@ -48,7 +48,7 @@ def policy(vddm_env):
 def vddm_env(rng_seed):
     dir_prefix = os.path.dirname(os.path.realpath(__file__)) + "/"
     env = VisakDartDeepMimicEnv(
-        # skeleton_path=dir_prefix + "assets/skel/kima_original.skel",
+        skel_path=dir_prefix + "assets/skel/kima_original.skel",
         # refmotion_path=None,
         # statemode=1, actionmode=2,
         pos_noise=0.005, vel_noise=0.005,
