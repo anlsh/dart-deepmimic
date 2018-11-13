@@ -551,9 +551,3 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         elif mode == 'human':
             self._get_viewer().runSingleStep()
 
-
-def py_ang(v1, v2):
-    """ Returns the angle in radians between vectors 'v1' and 'v2'    """
-    cosang = np.dot(v1, v2)
-    sinang = la.norm(np.cross(v1, v2))
-    return np.arctan2(sinang, cosang)
