@@ -75,7 +75,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                  # statemode,
                  # actionmode,
                  # p_gain, d_gain,
-                 # pos_init_noise, vel_init_noise,
+                 pos_noise, vel_noise,
                  # reward_cutoff,
                  pos_weight, pos_decay,
                  vel_weight, vel_decay,
@@ -100,6 +100,10 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         if seed is not None:
             self.random.seed(seed)
 
+        self.pos_noise, self.vel_noise = pos_noise, vel_noise
+        if self.pos_noise < 0 or self.vel_noise < 0:
+            raise RuntimeError("Noise spread should be nonnegative")
+
         self.framenum = 0
 
         self.pos_weight, self.pos_decay = pos_weight, pos_decay
@@ -123,8 +127,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # TODO Dead variable, re-enable here and in argparse
         # self.refmotion_dt = refmotion_dt
         # self.simsteps_per_dataframe = simsteps_per_dataframe
-        # self.pos_init_noise = pos_init_noise
-        # self.vel_init_noise = vel_init_noise
         # self.max_torque = max_torque
         # self.max_angle = max_angle
         # self.default_damping = default_damping

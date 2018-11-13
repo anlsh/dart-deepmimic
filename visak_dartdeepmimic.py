@@ -466,17 +466,18 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         self.dart_world.reset()
 
-        rand_start = self.get_random_framenum()
-        self.framenum = rand_start
+        self.framenum = self.get_random_framenum()
 
-        qpos = self.MotionPositions[rand_start,:].reshape(29,) \
-               + self.np_random.uniform(low=-0.0050,
-                                        high=.0050,
+        qpos = self.MotionPositions[self.framenum,
+                                    :].reshape(self.robot_skeleton.ndofs) \
+               + self.np_random.uniform(low=-self.pos_noise,
+                                        high=self.pos_noise,
                                         size=self.robot_skeleton.ndofs)
 
-        qvel = self.MotionVelocities[rand_start,:].reshape(29,) \
-               + self.np_random.uniform(low=-0.0050,
-                                        high=.0050,
+        qvel = self.MotionVelocities[self.framenum,
+                                     :].reshape(self.robot_skeleton.ndofs) \
+               + self.np_random.uniform(low=-self.vel_noise,
+                                        high=self.vel_noise,
                                         size=self.robot_skeleton.ndofs)
 
         self.set_state(qpos, qvel)
