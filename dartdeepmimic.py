@@ -72,7 +72,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
     def __init__(self,
                  skel_path,
-                 # refmotion_path,
+                 mocap_path,
                  # policy_query_frequency,
                  # refmotion_dt,
                  statemode,
@@ -137,6 +137,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
 
         self.skel_path = skel_path
+        self.mocap_path = mocap_path
         # TODO Make sure that -1 is the right skel to use: CLI parameter?
         ref_skel = pydart.World(.0001, self.skel_path).skeletons[-1]
 
@@ -145,6 +146,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         self._dof_names = [key for key in self.metadict]
         self._dof_names.sort(key=lambda x:self.metadict[x][0][0])
+        self._rotational_dof_names = [name for name in self._dof_names
+                                      if self.type_lambda(name) == JointType.ROT]
         # TODO Find a better way to distinguish actuated joints?
         self._actuated_dof_names = [name for name in self._dof_names
                                     if not name.startswith(ROOT_KEY)]
@@ -153,6 +156,16 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             if joint_type != JointType.ROT:
                 # TODO Support non-rotational actuated joints?
                 raise NotImplementedError("Non-rot actuated joints unsupported")
+
+        #####################################
+        # Parse reference mocap information #
+        #####################################
+
+        self.RefQs, self.RefDQs, self.RefQuats, self.RefEEs, \
+            self.RefComs = self.construct_frames(ref_skel,
+                                                 self.mocap_path)
+        self.num_frames = len(self.RefQs)
+
         self.obs_dim = len(self._get_obs(ref_skel))
 
         #######################################
@@ -264,12 +277,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         #                        if len(self.metadict[name][0]) > 1 else 1
         #                        for name in self._actuated_dof_names])
 
-        # self.RefQs, self.RefDQs, \
-            # self.ref_quat_frames, self.ref_com_frames, \
-            # self.ref_ee_frames = self.construct_frames(ref_skel,
-            #                                            refmotion_path)
-        # self.num_frames = len(self.RefQs)
-
         # TODO Replace the 10 with a max_angle variable
         # action_limits = 10. * np.ones(self.action_dim)
         # action_limits = np.array([action_limits, -action_limits])
@@ -312,6 +319,35 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         #     for body in skel.bodynodes:
         #         body.set_friction_coeff(self.default_friction)
 
+    def construct_frames(self, ref_skel, ref_motion_path):
+
+        with open(ref_motion_path, "rb") as fp:
+            RefQs = np.loadtxt(fp)
+
+        num_frames = len(RefQs)
+
+        # TODO I need to parse velocities from the motion capture data!!
+        # TODO Also, figure out why info I parse doesn't line w/ Visak's
+        RefDQs = [-1] * num_frames
+        RefQuats = [None] * num_frames
+        RefComs = [None] * num_frames
+        RefEEs = [None] * num_frames
+
+        for i in range(num_frames):
+
+            ref_skel.set_positions(RefQs[i])
+
+            RefQuats[i] = self.quaternion_angles(ref_skel)
+            RefComs[i] = ref_skel.bodynodes[0].com()
+            RefEEs[i] = self._get_ee_positions(ref_skel)
+
+        # TODO Should I use np.array on RefQs?
+        return (RefQs,
+                np.array(RefDQs),
+                np.array(RefQuats),
+                np.array(RefEEs),
+                np.array(RefComs))
+
     def type_lambda(self, joint_name):
         raise NotImplementedError()
 
@@ -342,7 +378,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         tau = np.zeros(self.robot_skeleton.ndofs)
         target = np.zeros(self.robot_skeleton.ndofs,)
         target[6:] = self.transformActions(nvec) \
-                     + self.MotionPositions[self.framenum,6:]
+                     + self.RefQs[self.framenum,6:]
 
         # TODO Should be step_resolution instead of 4
         for i in range(4):
@@ -386,22 +422,19 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         self.framenum = self.get_random_framenum(framenum)
 
-        qpos = self.MotionPositions[self.framenum,
-                                    :].reshape(self.robot_skeleton.ndofs) \
+        qpos = self.RefQs[self.framenum,
+                          :].reshape(self.robot_skeleton.ndofs) \
                + self.np_random.uniform(low=-pnoise, high=pnoise,
                                         size=self.robot_skeleton.ndofs)
 
-        qvel = self.MotionVelocities[self.framenum,
-                                     :].reshape(self.robot_skeleton.ndofs) \
+        qvel = self.RefDQs[self.framenum,
+                           :].reshape(self.robot_skeleton.ndofs) \
                + self.np_random.uniform(low=-vnoise, high=vnoise,
                                         size=self.robot_skeleton.ndofs)
 
         self.set_state(qpos, qvel)
 
         return self._get_obs()
-
-    def construct_frames(self, ref_motion_path):
-        raise NotImplementedError()
 
     def _get_ee_positions(self, skel):
         raise NotImplementedError()
@@ -445,23 +478,22 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         return state
 
-    # def quaternion_angles(self, skel):
+    def quaternion_angles(self, skel):
 
-    #     angles = [None] * len(self._dof_names)
+        angles = [None] * len(self._rotational_dof_names)
 
-    #     for dof_index, dof_name in enumerate(self._dof_names):
+        for quat_index, dof_name in enumerate(self._rotational_dof_names):
 
-    #         indices, _ = self.metadict[dof_name]
+            indices, _, __ = self.metadict[dof_name]
 
-    #         if dof_name != ROOT_KEY:
-    #             euler_angle = pad2length(skel.q[indices[0]:indices[-1]+1],
-    #                                      3)
-    #         else:
-    #             euler_angle = skel.q[0:3]
+            euler_angle = pad2length(skel.q[indices[0]:indices[-1]+1],
+                                     3)
 
-    #         angles[dof_index] = euler2quat(*(euler_angle[::-1]))
+            angles[quat_index] = euler2quat(z=euler_angle[2],
+                                            y=euler_angle[1],
+                                            x=euler_angle[0])
 
-    #     return np.array(angles)
+        return np.array(angles)
 
     # def reward(self, skel, framenum):
 

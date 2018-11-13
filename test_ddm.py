@@ -49,7 +49,7 @@ def vddm_env(rng_seed):
     dir_prefix = os.path.dirname(os.path.realpath(__file__)) + "/"
     env = VisakDartDeepMimicEnv(
         skel_path=dir_prefix + "assets/skel/kima_original.skel",
-        # refmotion_path=None,
+        mocap_path=dir_prefix + "assets/mocap/jump/positions.txt",
         statemode=1,
         # actionmode=2,
         pos_noise=0.005, vel_noise=0.005,

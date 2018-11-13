@@ -13,41 +13,15 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
     def __init__(self, *args, **kwargs):
 
-        dir_prefix = os.path.dirname(os.path.realpath(__file__)) + "/"
-        skel_prefix = dir_prefix + "assets/skel/"
-        mocap_prefix = dir_prefix + "assets/mocap/jump/"
-
-        with open(mocap_prefix + "positions.txt","rb") as fp:
-            mp = np.loadtxt(fp)
-            self.num_frames = mp.shape[0]
-
         DartDeepMimicEnv.__init__(self, *args, **kwargs)
 
         self.action_dim = 32
 
-        with open(mocap_prefix + "rarm_endeffector.txt","rb") as fp:
-            self.rarm_endeffector = np.loadtxt(fp)
-
-        with open(mocap_prefix + "larm_endeffector.txt","rb") as fp:
-            self.larm_endeffector = np.loadtxt(fp)
-
-        with open(mocap_prefix + "lfoot_endeffector.txt","rb") as fp:
-            self.lfoot_endeffector = np.loadtxt(fp)
-
-        with open(mocap_prefix + "rfoot_endeffector.txt",'rb') as fp:
-            self.rfoot_endeffector = np.loadtxt(fp)
-
-        with open(mocap_prefix + "com.txt",'rb') as fp:
-            self.com = np.loadtxt(fp)
-        with open(mocap_prefix + "positions.txt","rb") as fp:
-            self.MotionPositions = np.loadtxt(fp)
-
-        with open(mocap_prefix + "velocities.txt","rb") as fp:
-            self.MotionVelocities = np.loadtxt(fp)
-
-        self.num_frames = self.MotionPositions.shape[0]
-
         self.control_bounds = np.array([10*np.ones(32,), -10*np.ones(32,)])
+
+        # TODO Alert! A bit of code duplication here...
+        dir_prefix = os.path.dirname(os.path.realpath(__file__)) + "/"
+        skel_prefix = dir_prefix + "assets/skel/"
 
         dart_env.DartEnv.__init__(self,
                                   [skel_prefix + 'kima_original.skel'],
@@ -83,6 +57,45 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
             return JointType.TRANS
         else:
             return JointType.ROT
+
+    def construct_frames(self, *args, **kwargs):
+
+        # TODO Rectify the below!!
+        # I throw away the DQs (because idk how to parse those yet)
+        # and also EEs and COMs because apparently those are
+        # different somehow
+
+        RefQs, RefDQs, RefQuats, RefEEs, \
+            RefComs = DartDeepMimicEnv.construct_frames(self, *args,
+                                                        **kwargs)
+
+        dir_prefix = os.path.dirname(os.path.realpath(__file__)) + "/"
+        skel_prefix = dir_prefix + "assets/skel/"
+        mocap_prefix = dir_prefix + "assets/mocap/jump/"
+
+        with open(mocap_prefix + "rarm_endeffector.txt","rb") as fp:
+            self.rarm_endeffector = np.loadtxt(fp)
+
+        with open(mocap_prefix + "larm_endeffector.txt","rb") as fp:
+            self.larm_endeffector = np.loadtxt(fp)
+
+        with open(mocap_prefix + "lfoot_endeffector.txt","rb") as fp:
+            self.lfoot_endeffector = np.loadtxt(fp)
+
+        with open(mocap_prefix + "rfoot_endeffector.txt",'rb') as fp:
+            self.rfoot_endeffector = np.loadtxt(fp)
+
+        with open(mocap_prefix + "com.txt",'rb') as fp:
+            RefComs = np.loadtxt(fp)
+
+        with open(mocap_prefix + "velocities.txt","rb") as fp:
+            RefDQs = np.loadtxt(fp)
+
+        return (RefQs, RefDQs, RefQuats, RefEEs, RefComs)
+
+    def _get_ee_positions(self, skel):
+        # TODO Actually implement this!
+        return 0
 
     def transformActions(self,actions):
 
@@ -155,7 +168,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         #### lthigh
         lthigh_euler = skel.q[6:9]
-        lthigh_mocap = self.MotionPositions[framenum,6:9]
+        lthigh_mocap = self.RefQs[framenum,6:9]
         quat_lthigh = euler2quat(z=lthigh_euler[2],
                                  y=lthigh_euler[1],
                                  x=lthigh_euler[0])
@@ -168,7 +181,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         ##### lknee
         lknee_euler = skel.q[9]
-        lknee_mocap = self.MotionPositions[framenum,9]
+        lknee_mocap = self.RefQs[framenum,9]
         quat_lknee = euler2quat(z=0.,y=0.,x=lknee_euler)
         quat_lknee_mocap = euler2quat(z=0.,y=0.,x=lknee_mocap)
         lknee_diff = mult(inverse(quat_lknee_mocap),quat_lknee)
@@ -177,7 +190,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         #### lfoot
         lfoot_euler = skel.q[10:12]
-        lfoot_mocap = self.MotionPositions[framenum,10:12]
+        lfoot_mocap = self.RefQs[framenum,10:12]
         quat_lfoot = euler2quat(z=lfoot_euler[1],y=0.,x=lfoot_euler[0])
         quat_lfoot_mocap = euler2quat(z=lfoot_mocap[1],y=0.,x=lfoot_mocap[0])
         lfoot_diff = mult(inverse(quat_lfoot_mocap),quat_lfoot)
@@ -186,7 +199,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         #### rthigh
         rthigh_euler = skel.q[12:15]
-        rthigh_mocap = self.MotionPositions[framenum,12:15]
+        rthigh_mocap = self.RefQs[framenum,12:15]
         quat_rthigh = euler2quat(z=rthigh_euler[2],
                                  y=rthigh_euler[1],
                                  x=rthigh_euler[0])
@@ -199,7 +212,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         ##### rknee
         rknee_euler = skel.q[15]
-        rknee_mocap = self.MotionPositions[framenum,15]
+        rknee_mocap = self.RefQs[framenum,15]
         quat_rknee = euler2quat(z=0.,y=0.,x=rknee_euler)
         quat_rknee_mocap = euler2quat(z=0.,y=0.,x=rknee_mocap)
         rknee_diff = mult(inverse(quat_rknee_mocap),quat_rknee)
@@ -208,7 +221,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         #### rfoot
         rfoot_euler = skel.q[16:18]
-        rfoot_mocap = self.MotionPositions[framenum,16:18]
+        rfoot_mocap = self.RefQs[framenum,16:18]
         quat_rfoot = euler2quat(z=rfoot_euler[1],y=0.,x=rfoot_euler[0])
         quat_rfoot_mocap = euler2quat(z=rfoot_mocap[1],y=0.,x=rfoot_mocap[0])
         rfoot_diff = mult(inverse(quat_rfoot_mocap),quat_rfoot)
@@ -216,16 +229,16 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         quaternion_difference.append(scalar_rfoot)
 
         ### Thorax
-        scalar_thoraxx = skel.q[18] - self.MotionPositions[framenum,18]
-        scalar_thoraxy = skel.q[19] - self.MotionPositions[framenum,19]
-        scalar_thoraxz = skel.q[20] - self.MotionPositions[framenum,20]
+        scalar_thoraxx = skel.q[18] - self.RefQs[framenum,18]
+        scalar_thoraxy = skel.q[19] - self.RefQs[framenum,19]
+        scalar_thoraxz = skel.q[20] - self.RefQs[framenum,20]
         quaternion_difference.append(scalar_thoraxx)
         quaternion_difference.append(scalar_thoraxy)
         quaternion_difference.append(scalar_thoraxz)
 
         #### l upper arm
         larm_euler = skel.q[21:24]
-        larm_mocap = self.MotionPositions[framenum,21:24]
+        larm_mocap = self.RefQs[framenum,21:24]
         quat_larm = euler2quat(z=larm_euler[2],y=larm_euler[1],x=larm_euler[0])
         quat_larm_mocap = euler2quat(z=larm_mocap[2],
                                      y=larm_mocap[1],
@@ -236,7 +249,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         ##### l elbow
         lelbow_euler = skel.q[24]
-        lelbow_mocap = self.MotionPositions[framenum,24]
+        lelbow_mocap = self.RefQs[framenum,24]
         quat_lelbow = euler2quat(z=0.,y=0.,x=lelbow_euler)
         quat_lelbow_mocap = euler2quat(z=0.,y=0.,x=lelbow_mocap)
         lelbow_diff = mult(inverse(quat_lelbow_mocap),quat_lelbow)
@@ -245,7 +258,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         #### r upper arm
         rarm_euler = skel.q[25:28]
-        rarm_mocap = self.MotionPositions[framenum,25:28]
+        rarm_mocap = self.RefQs[framenum,25:28]
         quat_rarm = euler2quat(z=rarm_euler[2],y=rarm_euler[1],x=rarm_euler[0])
         quat_rarm_mocap = euler2quat(z=rarm_mocap[2],
                                      y=rarm_mocap[1],
@@ -256,7 +269,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         ##### r elbow
         relbow_euler = skel.q[28]
-        relbow_mocap = self.MotionPositions[framenum,28]
+        relbow_mocap = self.RefQs[framenum,28]
         quat_relbow = euler2quat(z=0.,y=0.,x=relbow_euler)
         quat_relbow_mocap = euler2quat(z=0.,y=0.,x=relbow_mocap)
         relbow_diff = mult(inverse(quat_relbow_mocap),quat_relbow)
@@ -329,7 +342,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         return torqs[6:]
 
     def com_diff(self, skel, framenum):
-        return np.sum(np.square(self.com[framenum,:] \
+        return np.sum(np.square(self.RefComs[framenum,:] \
                                 - skel.bodynodes[0].com()))
 
     def ee_diff(self, skel, framenum):
@@ -361,7 +374,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         Joint_weights[[0,3,6,9,16,20,10,16]] = 10
         Weight_matrix = np.diag(Joint_weights)
 
-        vel_diff = self.MotionVelocities[framenum,6:] - skel.dq[6:]
+        vel_diff = self.RefDQs[framenum,6:] - skel.dq[6:]
 
         return np.sum(vel_diff.T*Weight_matrix*vel_diff)
 
