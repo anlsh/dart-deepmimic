@@ -328,30 +328,27 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
         return torques
 
     def PID(self, skel, target):
-        #print("#########################################################################3")
-        self.kp = np.array([250]*23)#350
+        self.kp = np.array([250]*23)
         self.kd = np.array([0.005]*23)
 
-        self.kp[0] = 600+25 #1000#
-        self.kp[3] = 225+25 #0#450#
+        self.kp[0] = 600+25
+        self.kp[3] = 225+25
         self.kp[9] = 225+25
         self.kp[10] = 200
         self.kp[16] = 200
         self.kp[[1,2]] = 150
         self.kp[[7,8]] = 150
-        self.kp[6] =600+25
-        #self.kd[[4,510,11]] = 0.005
+        self.kp[6] = 600+25
         self.kp[15:] = 155
         self.kd[15:]= 0.05
 
-        self.kp = [item/2  for item in self.kp]
-        self.kd = [item/2  for item in self.kd]
+        self.kp = [item/2 for item in self.kp]
+        self.kd = [item/2 for item in self.kd]
 
         q = skel.q
         qdot = skel.dq
         tau = np.zeros((self.ndofs,))
         for i in range(6, self.ndofs):
-            #print(q.shape)
             tau[i] = -self.kp[i - 6] * \
                 (q[i] - target[i]) - \
                 self.kd[i - 6] *qdot[i]
