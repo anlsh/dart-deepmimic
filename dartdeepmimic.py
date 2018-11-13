@@ -370,6 +370,11 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # TODO Enforce a finiteness check on the results!!
         return np.sum(np.square(posdiffs))
 
+    def vel_diff(self, skel, framenum):
+
+        # TODO I can just use [i] instead of [i,:], right?
+        return np.sum(np.square(self.skel.dq - self.RefDQs[framenum]))
+
     def reward(self, skel, framenum):
 
         diff_pos = self.pos_diff(skel, framenum)
