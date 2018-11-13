@@ -383,7 +383,10 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         return 0.10*R_ee + 0.10*R_vel + 0.25*R_com + 1.65*R_quat
 
-    def should_terminate(self, skel, obs):
+    def should_terminate(self):
+
+        skel = self.robot_skeleton
+        obs = self.state_vector()
 
         height = skel.bodynodes[0].com()[1]
 
@@ -402,8 +405,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         R_total = self.reward(self.robot_skeleton, self.framenum)
 
         s = self.state_vector()
-        done = self.should_terminate(self.robot_skeleton,
-                                     self.state_vector())
+        done = self.should_terminate()
 
         if done:
             R_total = 0.
