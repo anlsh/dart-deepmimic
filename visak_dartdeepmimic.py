@@ -70,20 +70,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
                                                         **kwargs)
 
         dir_prefix = os.path.dirname(os.path.realpath(__file__)) + "/"
-        skel_prefix = dir_prefix + "assets/skel/"
         mocap_prefix = dir_prefix + "assets/mocap/jump/"
-
-        with open(mocap_prefix + "rarm_endeffector.txt","rb") as fp:
-            self.rarm_endeffector = np.loadtxt(fp)
-
-        with open(mocap_prefix + "larm_endeffector.txt","rb") as fp:
-            self.larm_endeffector = np.loadtxt(fp)
-
-        with open(mocap_prefix + "lfoot_endeffector.txt","rb") as fp:
-            self.lfoot_endeffector = np.loadtxt(fp)
-
-        with open(mocap_prefix + "rfoot_endeffector.txt",'rb') as fp:
-            self.rfoot_endeffector = np.loadtxt(fp)
 
         with open(mocap_prefix + "com.txt",'rb') as fp:
             RefComs = np.loadtxt(fp)
@@ -94,8 +81,19 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         return (RefQs, RefDQs, RefQuats, RefEEs, RefComs)
 
     def _get_ee_positions(self, skel):
-        # TODO Actually implement this!
-        return 0
+
+        point_rarm = [0.,-0.60,-0.15]
+        point_larm = [0.,-0.60,-0.15]
+        point_rfoot = [0.,0.,-0.20]
+        point_lfoot = [0.,0.,-0.20]
+
+        global_rarm = skel.bodynodes[16].to_world(point_rarm)
+        global_larm = skel.bodynodes[13].to_world(point_larm)
+        global_lfoot = skel.bodynodes[4].to_world(point_lfoot)
+        global_rfoot = skel.bodynodes[7].to_world(point_rfoot)
+
+        return np.array([global_rarm, global_rarm,
+                         global_rfoot, global_lfoot])
 
     def transformActions(self,actions):
 
@@ -228,29 +226,6 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
     def com_diff(self, skel, framenum):
         return np.sum(np.square(self.RefComs[framenum,:] \
                                 - skel.bodynodes[0].com()))
-
-    def ee_diff(self, skel, framenum):
-
-        point_rarm = [0.,-0.60,-0.15]
-        point_larm = [0.,-0.60,-0.15]
-        point_rfoot = [0.,0.,-0.20]
-        point_lfoot = [0.,0.,-0.20]
-
-        global_rarm = skel.bodynodes[16].to_world(point_rarm)
-        global_larm = skel.bodynodes[13].to_world(point_larm)
-        global_lfoot = skel.bodynodes[4].to_world(point_lfoot)
-        global_rfoot = skel.bodynodes[7].to_world(point_rfoot)
-
-        rarm_term = np.sum(np.square(self.rarm_endeffector[framenum,:] \
-                                     - global_rarm))
-        larm_term = np.sum(np.square(self.larm_endeffector[framenum,:] \
-                                     - global_larm))
-        rfoot_term = np.sum(np.square(self.rfoot_endeffector[framenum,:] \
-                                      - global_rfoot))
-        lfoot_term = np.sum(np.square(self.lfoot_endeffector[framenum,:] \
-                                      - global_lfoot))
-
-        return (rarm_term + larm_term + rfoot_term + lfoot_term)
 
     def vel_diff(self, skel, framenum):
 

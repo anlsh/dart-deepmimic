@@ -375,6 +375,11 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # TODO I can just use [i] instead of [i,:], right?
         return np.sum(np.square(self.skel.dq - self.RefDQs[framenum]))
 
+    def ee_diff(self, skel, framenum):
+
+        offsets = self._get_ee_positions(skel) - self.RefEEs[framenum]
+        return np.sum(np.square(offsets))
+
     def reward(self, skel, framenum):
 
         diff_pos = self.pos_diff(skel, framenum)
@@ -455,6 +460,11 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         return self._get_obs()
 
     def _get_ee_positions(self, skel):
+        """
+        Return a numpy array w/ each row being position of an ee
+        """
+        # TODO I'd like to parse ee indices and offsets myself one day
+        # bit of a pipe dream IMO but it's certainly ideal
         raise NotImplementedError()
 
     def _get_obs(self, skel=None):
