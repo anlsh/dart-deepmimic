@@ -346,6 +346,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             ref_skel.set_positions(RefQs[i])
 
             RefQuats[i] = self.quaternion_angles(ref_skel)
+            # TODO TBH I'm still not sure bodynodes[0] is the thing to use
             RefComs[i] = ref_skel.bodynodes[0].com()
             RefEEs[i] = self._get_ee_positions(ref_skel)
 
@@ -391,6 +392,10 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         offsets = self._get_ee_positions(skel) - self.RefEEs[framenum]
         return np.sum(np.square(offsets))
+
+    def com_diff(self, skel, framenum):
+        # TODO TBH I'm still not sure bodynodes[0] is the thing to use
+        return np.sum(np.square(self.RefComs[framenum] - skel.bodynodes[0].com()))
 
     def reward(self, skel, framenum):
 
@@ -494,6 +499,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
             tpos = None
             # TODO Pass in an actual angular velocity instead of dq
             tvel = skel.dq[fi:li]
+            # TODO TBH I'm still not sure bodynodes[0] is the thing to use
             bpos = body.com() - skel.bodynodes[0].com()
             bvel = body.dC
 

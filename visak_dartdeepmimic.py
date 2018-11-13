@@ -58,9 +58,6 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         dir_prefix = os.path.dirname(os.path.realpath(__file__)) + "/"
         mocap_prefix = dir_prefix + "assets/mocap/jump/"
 
-        with open(mocap_prefix + "com.txt",'rb') as fp:
-            RefComs = np.loadtxt(fp)
-
         with open(mocap_prefix + "velocities.txt","rb") as fp:
             RefDQs = np.loadtxt(fp)
 
@@ -143,10 +140,6 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         torqs = self.ClampTorques(tau)
 
         return torqs[6:]
-
-    def com_diff(self, skel, framenum):
-        return np.sum(np.square(self.RefComs[framenum,:] \
-                                - skel.bodynodes[0].com()))
 
     def vel_diff(self, skel, framenum):
 
