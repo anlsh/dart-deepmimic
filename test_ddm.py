@@ -50,6 +50,7 @@ def vddm_env(rng_seed):
     env = VisakDartDeepMimicEnv(
         skel_path=dir_prefix + "assets/skel/kima_original.skel",
         mocap_path=dir_prefix + "assets/mocap/jump/positions.txt",
+        mocap_vel_path=dir_prefix + "assets/mocap/jump/velocities.txt",
         statemode=1,
         actionmode=2,
         pos_noise=0.005, vel_noise=0.005,

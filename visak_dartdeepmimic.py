@@ -11,7 +11,8 @@ from gym.envs.dart import dart_env
 
 class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, mocap_vel_path,
+                 *args, **kwargs):
 
         DartDeepMimicEnv.__init__(self, *args, **kwargs)
 
@@ -19,6 +20,9 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         #################################################
         # DART INITALIZATION STUFF #
         ############################
+
+        with open(mocap_vel_path,"rb") as fp:
+            self.RefDQs = np.loadtxt(fp)
 
         self.robot_skeleton = self.dart_world.skeletons[1]
 
@@ -43,25 +47,6 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
             return JointType.TRANS
         else:
             return JointType.ROT
-
-    def construct_frames(self, *args, **kwargs):
-
-        # TODO Rectify the below!!
-        # I throw away the DQs (because idk how to parse those yet)
-        # and also EEs and COMs because apparently those are
-        # different somehow
-
-        RefQs, RefDQs, RefQuats, RefEEs, \
-            RefComs = DartDeepMimicEnv.construct_frames(self, *args,
-                                                        **kwargs)
-
-        dir_prefix = os.path.dirname(os.path.realpath(__file__)) + "/"
-        mocap_prefix = dir_prefix + "assets/mocap/jump/"
-
-        with open(mocap_prefix + "velocities.txt","rb") as fp:
-            RefDQs = np.loadtxt(fp)
-
-        return (RefQs, RefDQs, RefQuats, RefEEs, RefComs)
 
     def _get_ee_positions(self, skel):
 
