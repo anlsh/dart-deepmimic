@@ -357,6 +357,19 @@ class DartDeepMimicEnv(dart_env.DartEnv):
     #     else:
     #         return actuated_angles
 
+    def pos_diff(self, skel, framenum):
+
+        quats = self.quaternion_angles(skel)
+        refquats = self.RefQuats[framenum]
+
+        quatdiffs = [mult(inverse(ra), a) for a, ra in zip(quats,
+                                                           refquats)]
+        # TODO Doesnt the Wikipedia page say to use atan2?
+        posdiffs = [2*np.arccos(quat[0]) for quat in quatdiffs]
+
+        # TODO Enforce a finiteness check on the results!!
+        return np.sum(np.square(posdiffs))
+
     def reward(self, skel, framenum):
 
         diff_pos = self.pos_diff(skel, framenum)
