@@ -23,11 +23,13 @@ import random
 
 class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
 
-    def __init__(self):
+    def __init__(self, seed=None):
 
         self.obs_dim = 127
         self.action_dim = 32
         self.random = random.Random()
+        if seed is not None:
+            self.random.seed(seed)
 
         self.framenum = 0
         self.qpos_node0 = np.zeros(29,)
@@ -577,7 +579,7 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
 
     def get_random_framenum(self, default=None):
         return default if default is not None \
-            else self.random.randint(1, self.num_frames - 1)
+            else self.random.randint(0, self.num_frames - 1)
 
     def reset(self):
         return self.reset_model()
