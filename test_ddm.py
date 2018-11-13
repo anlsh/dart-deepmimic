@@ -50,7 +50,8 @@ def vddm_env(rng_seed):
     env = VisakDartDeepMimicEnv(
         skel_path=dir_prefix + "assets/skel/kima_original.skel",
         # refmotion_path=None,
-        # statemode=1, actionmode=2,
+        statemode=1,
+        # actionmode=2,
         pos_noise=0.005, vel_noise=0.005,
         pos_weight=1.65, pos_decay=-2,
         vel_weight=0.1, vel_decay=-1e-1,

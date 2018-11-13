@@ -8,7 +8,7 @@ import pydart2 as pydart
 import random
 import warnings
 from copy import deepcopy
-from euclideanSpace import angle_axis2euler, euler2quat, quat2euler
+from euclideanSpace import angle_axis2euler, euler2quat
 from quaternions import mult, inverse
 from math import atan2
 
@@ -72,7 +72,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                  # refmotion_path,
                  # policy_query_frequency,
                  # refmotion_dt,
-                 # statemode,
+                 statemode,
                  # actionmode,
                  # p_gain, d_gain,
                  pos_noise, vel_noise,
@@ -97,6 +97,23 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.random = random.Random()
         if seed is not None:
             self.random.seed(seed)
+
+        ##############################################
+        # Set angle conversion methods appropriately #
+        ##############################################
+
+        self.statemode = statemode
+
+        self.angle_to_rep = lambda x: None
+
+        if self.statemode == StateMode.GEN_EULER:
+            self.angle_to_rep = lambda x: x
+        elif self.statemode == StateMode.GEN_QUAT:
+            self.angle_to_rep = lambda theta: euler2quat(z=theta[2],
+                                                         y=theta[1],
+                                                         x=theta[0])
+        elif self.statemode == StateMode.GEN_AXIS:
+            raise NotImplementedError()
 
         self.pos_noise, self.vel_noise = pos_noise, vel_noise
         if self.pos_noise < 0 or self.vel_noise < 0:
@@ -174,7 +191,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # self.step_resolution = (1 / self.policy_query_frequency) / self.refmotion_dt
         # self.step_resolution = 4
 
-        # self.angle_to_rep = lambda x: None
         # self.angle_from_rep = lambda x: None
 
         ##############################################
