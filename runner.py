@@ -1,4 +1,5 @@
-import ddm_argparse
+# import ddm_argparse
+from test_ddm import vddm_env
 import numpy as np
 
 class EnvPlayer:
@@ -9,13 +10,13 @@ class EnvPlayer:
 
     def play_motion_no_noise(self):
         for i in range(self.env.num_frames):
-            obs = self.env.reset(i, 0, 0)
-            # print(self.env.should_terminate(1, obs))
+            obs = self.env.reset(i, False)
+            # print(self.env.should_terminate())
             # print(env.reward(env.robot_skeleton, env.framenum))
             self.env.render()
 
     def take_single_step_zero_pos(self, init_frame=0):
-        obs = self.env.reset(init_frame, 0, 0)
+        obs = self.env.reset(init_frame, False)
         self.env.step(np.zeros(self.env.action_dim))
 
     def init_to_frame_passive(self, init_frame=0):
@@ -29,10 +30,11 @@ if __name__ == "__main__":
 
     # Don't run this as main, there's really not too much point
 
-    parser = ddm_argparse.DartDeepMimicArgParse()
-    args = parser.parse_args()
-    env = parser.get_env()
+    # parser = ddm_argparse.DartDeepMimicArgParse()
+    # args = parser.parse_args()
+    # env = parser.get_env()
 
+    env = vddm_env(3)
     player = EnvPlayer(env)
 
     player.play_motion_no_noise()
