@@ -62,7 +62,7 @@ def vddm_env(rng_seed):
         # visualize=False,
         # gravity=True,
         # self_collide=True,
-        # delta_actions=False,
+        delta_actions=True,
         seed=rng_seed,
     )
     # TODO Does this need to be enabled?

@@ -86,7 +86,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                  com_weight, com_decay,
                  # max_torque,
                  # max_angle,
-                 # delta_actions,
+                 delta_actions,
                  # default_damping,
                  # default_spring,
                  # default_friction,
@@ -107,6 +107,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         self.statemode = statemode
         self.actionmode = actionmode
+        self.delta_actions = delta_actions
 
         self.angle_to_rep = lambda x: None
         self.angle_from_rep = lambda x: None
@@ -358,11 +359,15 @@ class DartDeepMimicEnv(dart_env.DartEnv):
     def type_lambda(self, joint_name):
         raise NotImplementedError()
 
-    # def target_angles(self, actuated_angles):
-    #     if self.delta_actions:
-    #         return self.RefQs[self.framenum][6:] + actuated_angles
-    #     else:
-    #         return actuated_angles
+    def target_angles(self, actuated_angles):
+        """
+        Given a set of actuated angles, return the actuated angle targets
+        that we'll try to PID to
+        """
+        if self.delta_actions:
+            return self.RefQs[self.framenum][6:] + actuated_angles
+        else:
+            return actuated_angles
 
     def pos_diff(self, skel, framenum):
 
@@ -407,8 +412,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # TODO Do I need to clamp anything in this range?
         tau = np.zeros(self.robot_skeleton.ndofs)
         target = np.zeros(self.robot_skeleton.ndofs,)
-        target[6:] = self.angles_from_netvector(nvec) \
-                     + self.RefQs[self.framenum, 6:]
+        target[6:] = self.target_angles(self.angles_from_netvector(nvec))
 
         # TODO Should be step_resolution instead of 4
         for i in range(4):
