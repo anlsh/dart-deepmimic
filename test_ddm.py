@@ -59,7 +59,6 @@ def vddm_env(rng_seed):
         # default_damping=10, default_spring=0,
         # default_friction=20,
         # visualize=False,
-        # screen_width=80, screen_height=45,
         # gravity=True,
         # self_collide=True,
         # delta_actions=False,

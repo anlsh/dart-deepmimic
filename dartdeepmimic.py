@@ -89,8 +89,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                  # default_friction,
                  # visualize,
                  # simsteps_per_dataframe,
-                 # screen_width,
-                 # screen_height,
                  # gravity,
                  # self_collide,
                  seed,
