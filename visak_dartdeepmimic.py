@@ -10,13 +10,12 @@ from gym.envs.dart import dart_env
 
 class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
-    def __init__(self, seed=None):
+    def __init__(self, *args, **kwargs):
+
+        DartDeepMimicEnv.__init__(self, *args, **kwargs)
 
         self.obs_dim = 127
         self.action_dim = 32
-        self.random = random.Random()
-        if seed is not None:
-            self.random.seed(seed)
 
         self.framenum = 0
         self.ndofs = 29
@@ -507,10 +506,6 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         ##################################################################
 
         return state
-
-    def get_random_framenum(self, default=None):
-        return default if default is not None \
-            else self.random.randint(0, self.num_frames - 1)
 
     def reset(self):
         return self.reset_model()

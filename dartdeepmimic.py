@@ -93,14 +93,12 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                  # screen_height,
                  # gravity,
                  # self_collide,
-                 # rng_seed,
+                 seed,
     ):
 
-        pass
-
-        # self.random = random.Random()
-        # if rng_seed is not None:
-        #     self.random.seed(rng_seed)
+        self.random = random.Random()
+        if seed is not None:
+            self.random.seed(seed)
 
         #######################################
         # Just set a bunch of self.parameters #
