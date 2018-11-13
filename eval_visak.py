@@ -75,27 +75,10 @@ if __name__ == "__main__":
 
     while True:
         if not args.randinit:
-            # ob = env.reset(0, pos_stdv=0, vel_stdv=0)
-            # ob = env.reset()
-            env.framenum = 0
-            qpos = env.MotionPositions[env.framenum,
-                                        :].reshape(env.robot_skeleton.ndofs) \
-                + env.np_random.uniform(low=0, high=0,
-                                        size=env.robot_skeleton.ndofs)
-
-            qvel = env.MotionVelocities[env.framenum,
-                                        :].reshape(env.robot_skeleton.ndofs) \
-                + env.np_random.uniform(low=-0, high=0,
-                                        size=env.robot_skeleton.ndofs)
-
-            env.set_state(qpos, qvel)
-
-            ob = env._get_obs()
-
+            ob = env.reset(framenum=0, noise=False)
         else:
-            # ob = env.reset(random.randint(0, env.num_frames - 1),
-            #                pos_stdv=0, vel_stdv=0)
-            ob = env.reset(random.randint(0, env.num_frames - 1))
+            ob = env.reset(framenum=random.randint(0, env.num_frames - 1),
+                           noise=False)
 
         done = False
         cum_reward = 0

@@ -372,26 +372,33 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         return ob, R_total, done, {}
 
     def get_random_framenum(self, default=None):
-        return default if default is not None \
-            else self.random.randint(0, self.num_frames - 1)
+        if default is not None:
+            return default
+        else:
+            return self.random.randint(0, self.num_frames - 1)
 
-    # def reset(self, framenum=None, pos_stdv=None, vel_stdv=None):
-    #     """
-    #     Unfortunately, I have to provide default arguments for pos, vel_stdv
-    #     since this is the same method called by the learn function and it
-    #     doesn't expect those
-    #     """
+    def reset(self, framenum=None, noise=True):
 
-    #     # I dont actually know what this line of code
-    #     self.dart_world.reset()
+        pnoise = int(noise) * self.pos_noise
+        vnoise = int(noise) * self.vel_noise
 
-    #     # TODO Re-enable noise!
-    #     self.framenum = self.get_random_framenum(framenum)
+        self.dart_world.reset()
 
-    #     self.set_state(self.RefQs[self.framenum],
-    #                    self.RefDQs[self.framenum])
+        self.framenum = self.get_random_framenum(framenum)
 
-    #     return self._get_obs()
+        qpos = self.MotionPositions[self.framenum,
+                                    :].reshape(self.robot_skeleton.ndofs) \
+               + self.np_random.uniform(low=-pnoise, high=pnoise,
+                                        size=self.robot_skeleton.ndofs)
+
+        qvel = self.MotionVelocities[self.framenum,
+                                     :].reshape(self.robot_skeleton.ndofs) \
+               + self.np_random.uniform(low=-vnoise, high=vnoise,
+                                        size=self.robot_skeleton.ndofs)
+
+        self.set_state(qpos, qvel)
+
+        return self._get_obs()
 
     def construct_frames(self, ref_motion_path):
         raise NotImplementedError()

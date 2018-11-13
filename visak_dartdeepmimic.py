@@ -380,32 +380,6 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
                     and (skel.q[3] > -0.4)
                     and (skel.q[3] < 0.3))
 
-
-    def reset(self):
-        return self.reset_model()
-
-    def reset_model(self):
-
-        self.dart_world.reset()
-
-        self.framenum = self.get_random_framenum()
-
-        qpos = self.MotionPositions[self.framenum,
-                                    :].reshape(self.robot_skeleton.ndofs) \
-               + self.np_random.uniform(low=-self.pos_noise,
-                                        high=self.pos_noise,
-                                        size=self.robot_skeleton.ndofs)
-
-        qvel = self.MotionVelocities[self.framenum,
-                                     :].reshape(self.robot_skeleton.ndofs) \
-               + self.np_random.uniform(low=-self.vel_noise,
-                                        high=self.vel_noise,
-                                        size=self.robot_skeleton.ndofs)
-
-        self.set_state(qpos, qvel)
-
-        return self._get_obs()
-
     def viewer_setup(self):
         if not self.disableViewer:
             self._get_viewer().scene.tb.trans[0] = 5.0
