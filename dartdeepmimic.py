@@ -77,10 +77,10 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                  # p_gain, d_gain,
                  # pos_init_noise, vel_init_noise,
                  # reward_cutoff,
-                 # pos_weight, pos_inner_weight,
-                 # vel_weight, vel_inner_weight,
-                 # ee_weight, ee_inner_weight,
-                 # com_weight, com_inner_weight,
+                 pos_weight, pos_decay,
+                 vel_weight, vel_decay,
+                 ee_weight, ee_decay,
+                 com_weight, com_decay,
                  # max_torque,
                  # max_angle,
                  # delta_actions,
@@ -102,6 +102,17 @@ class DartDeepMimicEnv(dart_env.DartEnv):
 
         self.framenum = 0
 
+        self.pos_weight, self.pos_decay = pos_weight, pos_decay
+        self.vel_weight, self.vel_decay = vel_weight, vel_decay
+        self.ee_weight, self.ee_decay = ee_weight, ee_decay
+        self.com_weight, self.com_decay = com_weight, com_decay
+        if (pos_weight < 0) or (vel_weight < 0) or \
+           (ee_weight < 0) or (com_weight) < 0:
+            raise RuntimeError("Outer weights should be nonnegative")
+        if (pos_decay > 0) or (vel_decay > 0) or \
+           (ee_decay > 0) or (com_decay) > 0:
+            raise RuntimeError("Decay rates should be nonpositive")
+
         #######################################
         # Just set a bunch of self.parameters #
         #######################################
@@ -122,16 +133,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # self.reward_cutoff = reward_cutoff
         # self.gravity = gravity
         # self.self_collide = self_collide
-        # self.p_gain = p_gain
-        # self.d_gain = d_gain
-        # self.pos_weight = pos_weight
-        # self.pos_inner_weight = pos_inner_weight
-        # self.vel_weight = vel_weight
-        # self.vel_inner_weight = vel_inner_weight
-        # self.ee_weight = ee_weight
-        # self.ee_inner_weight = ee_inner_weight
-        # self.com_weight = com_weight
-        # self.com_inner_weight = com_inner_weight
         # self.__visualize = visualize
         # self._skeleton_path = skeleton_path
         # self.delta_actions = delta_actions
@@ -158,14 +159,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         ####################################
         # Self.parameters for internal use #
         ####################################
-
-        # self._outerweights = [self.pos_weight, self.vel_weight,
-        #                       self.ee_weight, self.com_weight]
-
-        # self._innerweights = [self.pos_inner_weight,
-        #                       self.vel_inner_weight,
-        #                       self.ee_inner_weight,
-        #                       self.com_inner_weight]
 
         # TODO Re-enable step resolution calculation
         # self.step_resolution = (1 / self.policy_query_frequency) / self.refmotion_dt
@@ -215,12 +208,6 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # if (self.p_gain < 0) or (self.d_gain < 0):
         #     raise RuntimeError("All PID gains should be positive")
 
-        # if (pos_inner_weight > 0) or (vel_inner_weight > 0) or \
-        #    (ee_inner_weight > 0) or (com_inner_weight) > 0:
-        #     raise RuntimeError("Inner weights should always be <= 0")
-        # if (pos_weight < 0) or (vel_weight < 0) or \
-        #    (ee_weight < 0) or (com_weight) < 0:
-        #     raise RuntimeError("Outer weights should always be >= 0")
 
         # if self.step_resolution % 1 != 0:
         #     raise RuntimeError("Refmotion dt doesn't divide query dt")
@@ -303,6 +290,18 @@ class DartDeepMimicEnv(dart_env.DartEnv):
     #         return self.RefQs[self.framenum][6:] + actuated_angles
     #     else:
     #         return actuated_angles
+
+    def reward(self, skel, framenum):
+
+        diff_pos = self.pos_diff(skel, framenum)
+        diff_vel = self.vel_diff(skel, framenum)
+        diff_ee = self.ee_diff(skel, framenum)
+        diff_com = self.com_diff(skel, framenum)
+
+        return self.pos_weight * np.exp(self.pos_decay * diff_pos) \
+            + self.vel_weight * np.exp(self.vel_decay * diff_vel) \
+            + self.ee_weight * np.exp(self.ee_decay * diff_ee) \
+            + self.com_weight * np.exp(self.com_decay * diff_com)
 
     def step(self, a):
         return self._step(a)

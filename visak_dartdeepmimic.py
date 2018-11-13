@@ -139,7 +139,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         return joint_targets
 
-    def quat_reward(self, skel, framenum):
+    def pos_diff(self, skel, framenum):
 
         quaternion_difference = []
 
@@ -253,7 +253,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         scalar_relbow = 2*np.arccos(relbow_diff[0])
         quaternion_difference.append(scalar_relbow)
 
-        return np.exp(-2*np.sum(np.square(quaternion_difference)))
+        return np.sum(np.square(quaternion_difference))
 
     def ClampTorques(self,torques):
         torqueLimits = np.array([150.0*5,
@@ -318,11 +318,11 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         return torqs[6:]
 
-    def com_reward(self, skel, framenum):
-        return np.exp(-40*np.sum(np.square(self.com[framenum,:] \
-                                           - skel.bodynodes[0].com())))
+    def com_diff(self, skel, framenum):
+        return np.sum(np.square(self.com[framenum,:] \
+                                - skel.bodynodes[0].com()))
 
-    def ee_reward(self, skel, framenum):
+    def ee_diff(self, skel, framenum):
 
         point_rarm = [0.,-0.60,-0.15]
         point_larm = [0.,-0.60,-0.15]
@@ -343,10 +343,9 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
         lfoot_term = np.sum(np.square(self.lfoot_endeffector[framenum,:] \
                                       - global_lfoot))
 
-        return np.exp(-40*(rarm_term + larm_term + \
-                           rfoot_term + lfoot_term))
+        return (rarm_term + larm_term + rfoot_term + lfoot_term)
 
-    def vel_reward(self, skel, framenum):
+    def vel_diff(self, skel, framenum):
 
         Joint_weights = np.ones(23,)
         Joint_weights[[0,3,6,9,16,20,10,16]] = 10
@@ -354,18 +353,7 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
 
         vel_diff = self.MotionVelocities[framenum,6:] - skel.dq[6:]
 
-        vel_pen = np.sum(vel_diff.T*Weight_matrix*vel_diff)
-
-        return 1*np.asarray(np.exp(-1e-1*vel_pen))
-
-    def reward(self, skel, framenum):
-
-        R_ee = self.ee_reward(skel, framenum)
-        R_com = self.com_reward(skel, framenum)
-        R_vel = self.vel_reward(skel, framenum)
-        R_quat = self.quat_reward(skel, framenum)
-
-        return 0.10*R_ee + 0.10*R_vel + 0.25*R_com + 1.65*R_quat
+        return np.sum(vel_diff.T*Weight_matrix*vel_diff)
 
     def should_terminate(self):
 
