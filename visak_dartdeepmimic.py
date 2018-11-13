@@ -1,4 +1,5 @@
 from dartdeepmimic import DartDeepMimicEnv
+from dartdeepmimic import JointType
 import numpy as np
 from euclideanSpace import euler2quat, angle_axis2euler
 from quaternions import mult, inverse
@@ -73,6 +74,12 @@ class VisakDartDeepMimicEnv(DartDeepMimicEnv):
                 self.robot_skeleton.joints[jt].set_position_limit_enforced(True)
 
         #################################################
+
+    def type_lambda(self, joint_name):
+        if joint_name == "root1":
+            return JointType.TRANS
+        else:
+            return JointType.ROT
 
     def transformActions(self,actions):
 

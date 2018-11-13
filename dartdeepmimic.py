@@ -37,17 +37,19 @@ class ActionMode:
     # type. For instance euler is 3 numbers, a quaternion is 4
     lengths = [3, 4, 4]
 
+class JointType:
+
+    TRANS = 0
+    ROT = 1
+    FREE = 2
 
 def pad2length(vector, length):
     padded = np.zeros(length)
     padded[:len(vector)] = deepcopy(vector)
     return padded
 
-def get_metadict(skel):
-    """
-    Creating a dictionary mapping joint names to list of indices oocupied in
-    dof array
-    """
+def get_metadict(skel, type_lambda):
+
     joint_names = [joint.name for joint in skel.joints]
     skel_dofs = skel.dofs
 
@@ -60,7 +62,8 @@ def get_metadict(skel):
             continue
         child_body_index = [i for i, body in enumerate(skel.bodynodes)
                             if body.name.startswith(dof_name)][0]
-        metadict[dof_name] = (indices, child_body_index)
+        metadict[dof_name] = (indices, child_body_index,
+                              type_lambda(dof_name))
 
     return metadict
 
@@ -136,12 +139,19 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self.skel_path = skel_path
         ref_skel = pydart.World(.0001, self.skel_path).skeletons[-1]
 
-        self.metadict = get_metadict(ref_skel)
+        # The lambda should, given a joint name, return a JointType code
+        self.metadict = get_metadict(ref_skel, self.type_lambda)
 
         self._dof_names = [key for key in self.metadict]
         self._dof_names.sort(key=lambda x:self.metadict[x][0][0])
+        # TODO Find a better way to distinguish actuated joints?
         self._actuated_dof_names = [name for name in self._dof_names
                                     if not name.startswith(ROOT_KEY)]
+        for name in self._actuated_dof_names:
+            _, __, joint_type = self.metadict[name]
+            if joint_type != JointType.ROT:
+                # TODO Support non-rotational actuated joints?
+                raise NotImplementedError("Non-rot actuated joints unsupported")
 
         #######################################
         # Just set a bunch of self.parameters #
@@ -301,6 +311,9 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         #     for body in skel.bodynodes:
         #         body.set_friction_coeff(self.default_friction)
 
+    def type_lambda(self, joint_name):
+        raise NotImplementedError()
+
     # def target_angles(self, actuated_angles):
     #     if self.delta_actions:
     #         return self.RefQs[self.framenum][6:] + actuated_angles
@@ -385,42 +398,44 @@ class DartDeepMimicEnv(dart_env.DartEnv):
     def _get_ee_positions(self, skel):
         raise NotImplementedError()
 
-    # def _get_obs(self, skel=None):
-    #     """
-    #     Return a 1-dimensional vector of the skeleton's state, as defined by
-    #     the state code. When skeleton is not specified, control_skel is used
-    #     """
+    def _get_obs(self, skel=None):
 
-    #     if skel is None:
-    #         skel = self.robot_skeleton
+        if skel is None:
+            skel = self.robot_skeleton
 
-    #     state = np.array([self.framenum / self.num_frames])
+        state = np.array([self.framenum / self.num_frames])
 
-    #     for dof_name in self._dof_names:
+        for dof_name in self._dof_names:
 
-    #         indices, body_index = self.metadict[dof_name]
-    #         body = skel.bodynodes[body_index]
-    #         fi, li = indices[0], indices[-1] + 1
+            indices, body_index, joint_type = self.metadict[dof_name]
+            body = skel.bodynodes[body_index]
+            fi, li = indices[0], indices[-1] + 1
 
-    #         if dof_name != ROOT_KEY:
-    #             if len(indices) > 1:
+            tpos = None
+            # TODO Pass in an actual angular velocity instead of dq
+            tvel = skel.dq[fi:li]
+            bpos = body.com() - skel.bodynodes[0].com()
+            bvel = body.dC
 
-    #                 converted_angle = self.angle_to_rep(pad2length(skel.q[fi:li],
-    #                                                                3))
-    #             else:
-    #                 converted_angle = skel.q[fi:fi+1]
-    #         else:
-    #             converted_angle = self.angle_to_rep(skel.q[0:3])
-    #             fi, li = 0, 4
+            if joint_type == JointType.TRANS:
+                tpos = skel.q[fi:li]
 
-    #         # TODO Pass in an actual angular velocity instead of dq
-    #         state = np.concatenate([state,
-    #                                 body.com() - skel.bodynodes[0].com(),
-    #                                 converted_angle,
-    #                                 body.dC,
-    #                                 skel.dq[fi:li]])
+            elif joint_type == JointType.ROT:
+                if len(indices) > 1:
+                    padded_angle = pad2length(skel.q[fi:li], 3)
+                    tpos = self.angle_to_rep(padded_angle)
+                else:
+                    tpos = skel.q[fi:fi+1]
 
-    #     return state
+            elif joint_type == JointType.FREE:
+                raise NotImplementedError()
+            else:
+                raise RuntimeError("Unrecognized joint type!")
+
+            state = np.concatenate([state,
+                                    bpos, tpos, bvel, tvel])
+
+        return state
 
     # def quaternion_angles(self, skel):
 
