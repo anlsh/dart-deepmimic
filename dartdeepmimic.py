@@ -146,8 +146,8 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         self._actuated_dof_names = None
 
         self.num_frames = -1
-        self.ref_q_frames = None
-        self.ref_dq_frames = None
+        self.RefQs = None
+        self.RefDQs = None
         self.ref_quat_frames = None
         self.ref_com_frames = None
         self.ref_ee_frames = None
@@ -228,7 +228,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         # Extract dof data from skeleton and construct reference frames #
         #################################################################
 
-        ref_skel = pydart.World(.00001,
+        ref_skel = pydart.World(.0001,
                                 self._skeleton_path).skeletons[-1]
 
         self.metadict = get_metadict(ref_skel)
@@ -247,11 +247,11 @@ class DartDeepMimicEnv(dart_env.DartEnv):
                                if len(self.metadict[name][0]) > 1 else 1
                                for name in self._actuated_dof_names])
 
-        self.ref_q_frames, self.ref_dq_frames, \
+        self.RefQs, self.RefDQs, \
             self.ref_quat_frames, self.ref_com_frames, \
             self.ref_ee_frames = self.construct_frames(ref_skel,
                                                        refmotion_path)
-        self.num_frames = len(self.ref_q_frames)
+        self.num_frames = len(self.RefQs)
 
         # TODO Replace the 10 with a max_angle variable
         action_limits = 10. * np.ones(self.action_dim)
@@ -295,64 +295,65 @@ class DartDeepMimicEnv(dart_env.DartEnv):
         #     for body in skel.bodynodes:
         #         body.set_friction_coeff(self.default_friction)
 
-    def target_angles(self, actuated_angles):
-        if self.delta_actions:
-            return self.ref_q_frames[self.framenum][6:] + actuated_angles
-        else:
-            return actuated_angles
+    # def target_angles(self, actuated_angles):
+    #     if self.delta_actions:
+    #         return self.RefQs[self.framenum][6:] + actuated_angles
+    #     else:
+    #         return actuated_angles
 
     def step(self, a):
         return self._step(a)
 
-    def _step(self, action_vector):
+    # def _step(self, action_vector):
 
-        self.dart_world.y_scale = np.clip(action_vector[6],-2,2)
-        nn_angles = self.angles_from_netvector(np.array(action_vector))
+    #     self.dart_world.y_scale = np.clip(action_vector[6],-2,2)
+    #     nn_angles = self.angles_from_netvector(np.array(action_vector))
 
-        # TODO Should be step_resolution instead of 4
-        for _ in range(4):
-            tau = self.PID(self.robot_skeleton,
-                           self.target_angles(nn_angles))
-            self.robot_skeleton.set_forces(np.concatenate([np.zeros(6),
-                                                           tau]))
-            self.dart_world.step()
+    #     # TODO Should be step_resolution instead of 4
+    #     for _ in range(4):
+    #         tau = self.PID(self.robot_skeleton,
+    #                        np.concatenate([np.zeros(6),
+    #                                        self.target_angles(nn_angles)]))
+    #         self.robot_skeleton.set_forces(np.concatenate([np.zeros(6),
+    #                                                        tau]))
+    #         self.dart_world.step()
 
-        newstate = self._get_obs()
-        reward = self.reward(self.robot_skeleton, self.framenum)
-        done, rude_term = self.should_terminate(self.state_vector())
-        self.framenum += 1
+    #     newstate = self._get_obs()
+    #     reward = self.reward(self.robot_skeleton, self.framenum)
+    #     done, rude_term = self.should_terminate(self.state_vector())
+    #     self.framenum += 1
 
-        if rude_term:
-            reward = 0
+    #     if rude_term:
+    #         reward = 0
 
-        if not np.isfinite(newstate).all():
-            raise RuntimeError("Ran into an infinite state")
-        if not np.isfinite(reward):
-            raise RuntimeError("Obtained infinite reward")
+    #     if not np.isfinite(newstate).all():
+    #         raise RuntimeError("Ran into an infinite state")
+    #     if not np.isfinite(reward):
+    #         raise RuntimeError("Obtained infinite reward")
 
-        return newstate, reward, done, {}
+    #     return newstate, reward, done, {}
 
     def get_random_framenum(self, default=None):
         return default if default is not None \
             else self.random.randint(0, self.num_frames - 1)
 
-    def reset(self, framenum=None, pos_stdv=None, vel_stdv=None):
-        """
-        Unfortunately, I have to provide default arguments for pos, vel_stdv
-        since this is the same method called by the learn function and it
-        doesn't expect those
-        """
+    # def reset(self, framenum=None, pos_stdv=None, vel_stdv=None):
+    #     """
+    #     Unfortunately, I have to provide default arguments for pos, vel_stdv
+    #     since this is the same method called by the learn function and it
+    #     doesn't expect those
+    #     """
 
-        # I dont actually know what this line of code
-        self.dart_world.reset()
+    #     # I dont actually know what this line of code
+    #     self.dart_world.reset()
 
-        # TODO Re-enable noise!
-        self.framenum = self.get_random_framenum(framenum)
+    #     # TODO Re-enable noise!
+    #     self.framenum = self.get_random_framenum(framenum)
 
-        self.set_state(self.ref_q_frames[self.framenum],
-                       self.ref_dq_frames[self.framenum])
+    #     self.set_state(self.RefQs[self.framenum],
+    #                    self.RefDQs[self.framenum])
 
-        return self._get_obs()
+    #     return self._get_obs()
 
     def construct_frames(self, ref_motion_path):
         raise NotImplementedError()
@@ -437,7 +438,7 @@ class DartDeepMimicEnv(dart_env.DartEnv):
     #     # VELOCITY REWARD #
     #     ###################
 
-    #     ref_dq = self.ref_dq_frames[framenum]
+    #     ref_dq = self.RefDQs[framenum]
     #     veldiffmag = norm(skel.dq - ref_dq)**2
 
     #     #######################
