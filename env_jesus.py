@@ -418,8 +418,10 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
                     and (skel.q[3] > -0.4)
                     and (skel.q[3] < 0.3))
 
-    def _step(self, a):
+    def step(self, a):
+        return self._step(a)
 
+    def _step(self, a):
 
         ##################################################################
         # Warning! Duplicated code
@@ -576,6 +578,9 @@ class DartHumanoid3D_cartesian(dart_env.DartEnv, utils.EzPickle):
     def get_random_framenum(self, default=None):
         return default if default is not None \
             else self.random.randint(1, self.num_frames - 1)
+
+    def reset(self):
+        return self.reset_model()
 
     def reset_model(self):
 
