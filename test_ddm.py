@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import random
 from visak_dartdeepmimic import VisakDartDeepMimicEnv
-from raw_env_reduced import raw_env_reduced
+from env_jesus import DartHumanoid3D_cartesian
 from baselines.ppo1 import mlp_policy
 import itertools
 from baselines.common import set_global_seeds, tf_util as U
@@ -21,9 +21,9 @@ NUM_TEST_RESETS = 20
 
 class RandomPolicyAgent:
     """The world's simplest agent!"""
-    def __init__(self, obs_space, action_space, hidden_dims):
+    def __init__(self, obs_space, action_space, hid_size, num_hid_layers):
         self.actor = mlp_policy.MlpPolicy("pi", obs_space, action_space,
-                                          hidden_dimension_list=hidden_dims)
+                                          hid_size, num_hid_layers)
 
     def act(self, observation, reward, done):
         a, _ = self.actor.act(True, observation)
@@ -40,7 +40,7 @@ def rng_seed():
 def policy(vddm_env):
     ret = RandomPolicyAgent(vddm_env.observation_space,
                             vddm_env.action_space,
-                            [128, 128])
+                            hid_size=128, num_hid_layers=2)
     U.initialize()
     return ret
 
@@ -69,9 +69,7 @@ def vddm_env(rng_seed):
 
 @pytest.fixture(scope="module")
 def raw_env(rng_seed):
-    env = raw_env_reduced(rng_seed)
-    # TODO Does this need to be enabled?
-    # env.seed(rng_seed)
+    env = DartHumanoid3D_cartesian(rng_seed)
     return env
 
 @pytest.fixture
